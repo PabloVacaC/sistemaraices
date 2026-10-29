@@ -1,0 +1,1434 @@
+<div class="inventario-container animate-fade-in">
+  <!-- ================================================================= -->
+  <!-- HEADER PRINCIPAL -->
+  <!-- ================================================================= -->
+  <header class="module-header">
+    <div class="header-titles">
+      <span class="pill-badge">SISTEMAS RAÍCES • GESTIÓN EMPRESARIAL</span>
+      <h1>Módulo de Inventario</h1>
+      <p class="subtitle">
+        Control de existencias en almacén, trazabilidad de compras y entregas, y registro de gastos menores.
+      </p>
+    </div>
+
+    <div class="header-actions">
+      @if (activeTab() === 'almacen') {
+        <button class="btn btn-secondary" (click)="abrirModalSalida()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+          <span>Registrar Salida</span>
+        </button>
+        <button class="btn btn-secondary" (click)="abrirModalNuevaCompra()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 5v14M5 12h14"/>
+          </svg>
+          <span>Nueva Compra</span>
+        </button>
+        <button class="btn btn-primary" (click)="abrirModalNuevoProducto()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/>
+          </svg>
+          <span>+ Nuevo Producto</span>
+        </button>
+      } @else if (activeTab() === 'gastos') {
+        <button class="btn btn-primary" (click)="abrirModalNuevoGasto()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect width="20" height="14" x="2" y="5" rx="2"/>
+            <line x1="2" x2="22" y1="10" y2="10"/>
+          </svg>
+          <span>+ Registrar Gasto Menor</span>
+        </button>
+      }
+    </div>
+  </header>
+
+  <!-- ================================================================= -->
+  <!-- BARRA DE KPIS SUPERIORES -->
+  <!-- ================================================================= -->
+  <div class="kpi-ribbon">
+    <div class="kpi-card">
+      <div class="kpi-icon-box bg-blue-subtle text-blue">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="m7.5 4.27 9 5.15M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/>
+        </svg>
+      </div>
+      <div class="kpi-details">
+        <span class="kpi-title">Productos en Almacén</span>
+        <div class="kpi-number">{{ reporteAlmacen()?.total_productos || productos().length }}</div>
+        <span class="kpi-subtext text-emerald">{{ reporteAlmacen()?.productos_normal || 0 }} en nivel óptimo</span>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon-box bg-emerald-subtle text-emerald">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="m16 10-4 4-2-2"/>
+        </svg>
+      </div>
+      <div class="kpi-details">
+        <span class="kpi-title">Valor Estimado Inventario</span>
+        <div class="kpi-number text-emerald">Bs {{ formatBs(reporteAlmacen()?.valor_estimado_inventario) }}</div>
+        <span class="kpi-subtext">Existencias físicas activas</span>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon-box" [ngClass]="(reporteAlmacen()?.productos_stock_bajo || 0) + (reporteAlmacen()?.productos_agotados || 0) > 0 ? 'bg-amber-subtle text-amber' : 'bg-slate-subtle text-slate-500'">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+          <line x1="12" x2="12" y1="9" y2="13"/>
+          <line x1="12" x2="12.01" y1="17" y2="17"/>
+        </svg>
+      </div>
+      <div class="kpi-details">
+        <span class="kpi-title">Alertas de Reposición</span>
+        <div class="kpi-number" [class.text-amber]="(reporteAlmacen()?.productos_stock_bajo || 0) > 0">
+          {{ (reporteAlmacen()?.productos_stock_bajo || 0) + (reporteAlmacen()?.productos_agotados || 0) }}
+        </div>
+        <span class="kpi-subtext">
+          {{ reporteAlmacen()?.productos_stock_bajo || 0 }} bajos • {{ reporteAlmacen()?.productos_agotados || 0 }} agotados
+        </span>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon-box bg-purple-subtle text-purple">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect width="20" height="14" x="2" y="5" rx="2"/>
+          <line x1="2" x2="22" y1="10" y2="10"/>
+        </svg>
+      </div>
+      <div class="kpi-details">
+        <span class="kpi-title">Gastos Menores Directos</span>
+        <div class="kpi-number">Bs {{ formatBs(reporteGastos()?.total_gastos_mes) }}</div>
+        <span class="kpi-subtext">{{ reporteGastos()?.cantidad_gastos_mes || 0 }} operaciones sin stock</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================================================================= -->
+  <!-- NAVEGACIÓN ENTRE SECCIONES (TABS) -->
+  <!-- ================================================================= -->
+  <nav class="tabs-nav">
+    <button
+      class="tab-btn"
+      [class.active]="activeTab() === 'almacen'"
+      (click)="activeTab.set('almacen')"
+    >
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/>
+      </svg>
+      <span>Almacén de Productos</span>
+      <span class="counter-chip">{{ productos().length }}</span>
+    </button>
+
+    <button
+      class="tab-btn"
+      [class.active]="activeTab() === 'gastos'"
+      (click)="activeTab.set('gastos')"
+    >
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect width="20" height="14" x="2" y="5" rx="2"/>
+        <line x1="2" x2="22" y1="10" y2="10"/>
+      </svg>
+      <span>Gastos Menores</span>
+      <span class="counter-chip">{{ gastos().length }}</span>
+    </button>
+
+    <button
+      class="tab-btn"
+      [class.active]="activeTab() === 'reportes'"
+      (click)="activeTab.set('reportes')"
+    >
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="18" x2="18" y1="20" y2="10"/>
+        <line x1="12" x2="12" y1="20" y2="4"/>
+        <line x1="6" x2="6" y1="20" y2="14"/>
+      </svg>
+      <span>Reportes & Movimientos</span>
+    </button>
+  </nav>
+
+  <!-- ================================================================= -->
+  <!-- SECCIÓN 1: ALMACÉN DE PRODUCTOS -->
+  <!-- ================================================================= -->
+  @if (activeTab() === 'almacen') {
+    <section class="section-card animate-fade-in">
+      <!-- Filtros de búsqueda rápida -->
+      <div class="filters-bar">
+        <div class="search-input-wrap">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/>
+            <line x1="21" x2="16.65" y1="21" y2="16.65"/>
+          </svg>
+          <input
+            type="text"
+            placeholder="Buscar por código, producto o descripción..."
+            class="input-search"
+            [ngModel]="filtroBusquedaAlmacen()"
+            (ngModelChange)="filtroBusquedaAlmacen.set($event); cargarProductosAlmacen()"
+          />
+        </div>
+
+        <div class="filter-controls">
+          <select
+            class="select-filter"
+            [ngModel]="filtroEstadoStock()"
+            (ngModelChange)="filtroEstadoStock.set($event); cargarProductosAlmacen()"
+          >
+            <option value="TODOS">Todos los Estados</option>
+            <option value="NORMAL">Normal</option>
+            <option value="BAJO">Stock bajo (Alerta)</option>
+            <option value="AGOTADO">Agotados (Sin existencias)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Tabla Principal de Almacén -->
+      <div class="table-responsive">
+        <table class="clean-table">
+          <thead>
+            <tr>
+              <th>Producto</th>
+              <th>Stock Actual</th>
+              <th>Stock Mínimo</th>
+              <th>Estado</th>
+              <th>Último Precio</th>
+              <th>Variación</th>
+              <th>Última Compra</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (p of productos(); track p.id) {
+              <tr [class.row-alert]="p.estado_stock !== 'Normal'">
+                <!-- Producto con imagen/avatar -->
+                <td>
+                  <div class="product-cell" (click)="abrirDetalleProducto(p)">
+                    @if (p.foto) {
+                      <img [src]="p.foto" class="product-thumb" alt="Foto producto" />
+                    } @else {
+                      <div class="product-thumb-placeholder">
+                        {{ getInitials(p.nombre) }}
+                      </div>
+                    }
+                    <div class="product-info-text">
+                      <span class="product-code mono-badge">{{ p.codigo }}</span>
+                      <strong class="product-name hover-link">{{ p.nombre }}</strong>
+                      @if (p.descripcion) {
+                        <small class="product-desc">{{ p.descripcion }}</small>
+                      }
+                    </div>
+                  </div>
+                </td>
+
+                <!-- Stock Actual -->
+                <td>
+                  <div class="stock-cell">
+                    <span class="stock-amount font-bold" [class.text-amber]="p.estado_stock === 'Stock bajo'" [class.text-rose]="p.estado_stock === 'Agotado'">
+                      {{ formatBs(p.stock_actual) }}
+                    </span>
+                  </div>
+                </td>
+
+                <!-- Stock Mínimo -->
+                <td class="text-slate-500 font-medium">
+                  {{ formatBs(p.stock_minimo) }}
+                </td>
+
+                <!-- Estado Stock -->
+                <td>
+                  <span
+                    class="badge-status"
+                    [class.normal]="p.estado_stock === 'Normal'"
+                    [class.stock-bajo]="p.estado_stock === 'Stock bajo'"
+                    [class.agotado]="p.estado_stock === 'Agotado'"
+                  >
+                    @if (p.estado_stock === 'Normal') { ✓ Normal }
+                    @else if (p.estado_stock === 'Stock bajo') { ⚠ Stock bajo }
+                    @else { ✕ Agotado }
+                  </span>
+                </td>
+
+                <!-- Precio última compra -->
+                <td>
+                  <div class="price-stack">
+                    <span class="current-price font-semibold">
+                      Bs {{ formatBs(p.precio_ultima_compra) }}/{{ p.unidad_control }}
+                    </span>
+                    @if (p.precio_anterior && p.precio_anterior !== p.precio_ultima_compra) {
+                      <span class="prev-price text-strikethrough text-rose">
+                        Bs {{ formatBs(p.precio_anterior) }}
+                      </span>
+                    }
+                  </div>
+                </td>
+
+                <!-- Variación porcentual -->
+                <td>
+                  @if (p.variacion_porcentual !== null && p.variacion_porcentual !== undefined) {
+                    <span
+                      class="variation-badge"
+                      [class.increase]="p.variacion_porcentual > 0"
+                      [class.decrease]="p.variacion_porcentual < 0"
+                      [class.neutral]="p.variacion_porcentual === 0"
+                    >
+                      @if (p.variacion_porcentual > 0) { ↑ +{{ p.variacion_porcentual }}% }
+                      @else if (p.variacion_porcentual < 0) { ↓ {{ p.variacion_porcentual }}% }
+                      @else { = 0.00% }
+                    </span>
+                  } @else {
+                    <span class="text-slate-400">—</span>
+                  }
+                </td>
+
+                <!-- Fecha última compra -->
+                <td class="text-slate-600 text-sm">
+                  {{ p.fecha_ultima_compra || '—' }}
+                </td>
+
+                <!-- Acciones -->
+                <td>
+                  <div class="actions-cluster">
+                    <button class="btn btn-xs btn-secondary" (click)="abrirDetalleProducto(p)" title="Ver ficha detallada">
+                      Ficha
+                    </button>
+                    <button class="btn btn-xs btn-primary" (click)="abrirModalNuevaCompra(p)" title="Registrar nueva compra">
+                      + Compra
+                    </button>
+                    <button
+                      class="btn btn-xs btn-dark"
+                      [disabled]="p.stock_actual <= 0"
+                      (click)="abrirModalSalida(p)"
+                      title="Registrar salida o entrega"
+                    >
+                      Salida
+                    </button>
+                    <button class="btn btn-xs btn-subtle" (click)="abrirModalAjuste(p)" title="Ajuste de inventario">
+                      ⚙
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="9" class="empty-row">
+                  No se encontraron productos registrados en el almacén.
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  }
+
+  <!-- ================================================================= -->
+  <!-- SECCIÓN 2: GASTOS MENORES DIRECTOS (SIN STOCK) -->
+  <!-- ================================================================= -->
+  @if (activeTab() === 'gastos') {
+    <section class="section-card animate-fade-in">
+      <div class="card-header-clean">
+        <div>
+          <h3>Libro de Gastos Menores</h3>
+          <span class="text-muted text-sm">Compras y servicios directos que no modifican existencias del almacén</span>
+        </div>
+      </div>
+
+      <!-- Filtros de Gastos -->
+      <div class="filters-bar">
+        <div class="search-input-wrap">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/>
+            <line x1="21" x2="16.65" y1="21" y2="16.65"/>
+          </svg>
+          <input
+            type="text"
+            placeholder="Buscar por concepto, comprobante, proveedor..."
+            class="input-search"
+            [ngModel]="filtroBusquedaGastos()"
+            (ngModelChange)="filtroBusquedaGastos.set($event); cargarGastosMenores()"
+          />
+        </div>
+
+        <div class="filter-controls">
+          <select
+            class="select-filter"
+            [ngModel]="filtroAreaGastos()"
+            (ngModelChange)="filtroAreaGastos.set($event); cargarGastosMenores()"
+          >
+            <option [ngValue]="null">Todas las Áreas</option>
+            @for (a of areas(); track a.id) {
+              <option [ngValue]="a.id">{{ a.nombre }}</option>
+            }
+          </select>
+
+          <select
+            class="select-filter"
+            [ngModel]="filtroEstadoGastos()"
+            (ngModelChange)="filtroEstadoGastos.set($event); cargarGastosMenores()"
+          >
+            <option value="TODOS">Todos los Estados</option>
+            <option value="REGISTRADO">Registrados</option>
+            <option value="CORREGIDO">Corregidos</option>
+            <option value="ANULADO">Anulados</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Tabla de Gastos Menores -->
+      <div class="table-responsive">
+        <table class="clean-table">
+          <thead>
+            <tr>
+              <th>Comprobante</th>
+              <th>Concepto del Gasto</th>
+              <th>Importe (Bs)</th>
+              <th>Fecha</th>
+              <th>Área</th>
+              <th>Responsable</th>
+              <th>Método</th>
+              <th>Registrado por</th>
+              <th>Estado</th>
+              <th>Acción</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (g of gastos(); track g.id) {
+              <tr [class.row-anulado]="g.estado === 'ANULADO'">
+                <td><span class="mono-badge">{{ g.numero_comprobante }}</span></td>
+                <td>
+                  <div class="gasto-concept-cell">
+                    <strong>{{ g.nombre }}</strong>
+                    @if (g.descripcion) {
+                      <small class="text-slate-500">{{ g.descripcion }}</small>
+                    }
+                    @if (g.proveedor) {
+                      <span class="proveedor-tag">Prov: {{ g.proveedor }}</span>
+                    }
+                  </div>
+                </td>
+                <td class="font-bold text-slate-900">
+                  Bs {{ formatBs(g.importe_total) }}
+                </td>
+                <td>{{ g.fecha_gasto }}</td>
+                <td>
+                  <span class="pill-mini">{{ g.area_nombre || 'General' }}</span>
+                </td>
+                <td>{{ g.trabajador_nombre || '—' }}</td>
+                <td><span class="pill-mini">{{ g.metodo_pago }}</span></td>
+                <td>
+                  <div class="user-cell">
+                    <span class="user-avatar-mini">{{ getInitials(g.usuario_registro_nombre) }}</span>
+                    <span class="user-name">{{ g.usuario_registro_nombre || 'Sistema' }}</span>
+                  </div>
+                </td>
+                <td>
+                  <span class="badge-status" [class.normal]="g.estado === 'REGISTRADO'" [class.parcial]="g.estado === 'CORREGIDO'" [class.agotado]="g.estado === 'ANULADO'">
+                    {{ g.estado }}
+                  </span>
+                </td>
+                <td>
+                  @if (g.estado !== 'ANULADO') {
+                    <button class="btn btn-xs btn-danger-clean" (click)="solicitarAnulacionGasto(g)">
+                      Anular
+                    </button>
+                  } @else {
+                    <span class="text-slate-400 text-xs">Anulado</span>
+                  }
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="10" class="empty-row">No se encontraron gastos menores registrados.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  }
+
+  <!-- ================================================================= -->
+  <!-- SECCIÓN 3: REPORTES & MOVIMIENTOS CONSOLIDADOS -->
+  <!-- ================================================================= -->
+  @if (activeTab() === 'reportes') {
+    <section class="section-card animate-fade-in">
+      <div class="card-header-clean">
+        <div>
+          <h3>Consolidado Operativo y Trazabilidad</h3>
+          <span class="text-muted text-sm">Resumen ejecutivo y distribución de consumo por centro de costos</span>
+        </div>
+      </div>
+
+      <!-- Métricas y desglose -->
+      <div class="report-grid-layout">
+        <!-- Distribución de gastos por área -->
+        <div class="panel-card-inner">
+          <h4>Gastos Menores por Área</h4>
+          <div class="area-bars-list">
+            @for (item of reporteGastos()?.total_por_area; track item.area) {
+              <div class="bar-item">
+                <div class="bar-labels">
+                  <span class="bar-name">{{ item.area }}</span>
+                  <span class="bar-val font-semibold">Bs {{ formatBs(item.total) }}</span>
+                </div>
+              </div>
+            } @empty {
+              <p class="text-muted text-sm">No hay consumos registrados en este período.</p>
+            }
+          </div>
+        </div>
+
+        <!-- Distribución de gastos por método de pago -->
+        <div class="panel-card-inner">
+          <h4>Métodos de Pago Utilizados</h4>
+          <div class="area-bars-list">
+            @for (item of reporteGastos()?.total_por_metodo; track item.metodo) {
+              <div class="bar-item">
+                <div class="bar-labels">
+                  <span class="bar-name">{{ item.metodo }}</span>
+                  <span class="bar-val font-semibold">Bs {{ formatBs(item.total) }}</span>
+                </div>
+              </div>
+            } @empty {
+              <p class="text-muted text-sm">Sin registros de pago.</p>
+            }
+          </div>
+        </div>
+      </div>
+    </section>
+  }
+
+  <!-- ================================================================= -->
+  <!-- MODAL: REGISTRAR NUEVO PRODUCTO CON PRIMERA COMPRA -->
+  <!-- ================================================================= -->
+  @if (showNuevoProductoModal()) {
+    <div class="modal-backdrop" (click)="showNuevoProductoModal.set(false)">
+      <div class="modal-card modal-lg animate-scale-up" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title">
+            <span class="pill-badge">ALMACÉN DE INVENTARIO</span>
+            <h3>Registrar Nuevo Producto & Primera Compra</h3>
+            <p class="modal-sub">Todo nuevo producto ingresa con su operación de compra inicial que respalda sus existencias.</p>
+          </div>
+          <button class="btn-close" (click)="showNuevoProductoModal.set(false)">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <!-- Bloque 1: Datos del Producto -->
+          <div class="form-section-title">1. FICHA DEL PRODUCTO</div>
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label>Nombre del Producto *</label>
+              <input
+                type="text"
+                class="input-clean font-semibold"
+                placeholder="Ej. Gasolina Especial, Diésel, Alimento Bovino, Fertilizante, Llantas..."
+                [(ngModel)]="nuevoProductoForm.nombre"
+              />
+            </div>
+
+            <div class="form-group">
+              <label>Stock Mínimo (Alerta de Reposición) *</label>
+              <input
+                type="number"
+                min="0"
+                class="input-clean font-semibold"
+                [(ngModel)]="nuevoProductoForm.stock_minimo"
+              />
+              <small class="helper-text">Se activará alerta visual cuando el stock sea menor o igual a este valor.</small>
+            </div>
+
+            <div class="form-group full-width">
+              <label>Descripción / Observaciones Generales</label>
+              <input
+                type="text"
+                class="input-clean"
+                placeholder="Detalles sobre uso, especificación técnica..."
+                [(ngModel)]="nuevoProductoForm.descripcion"
+              />
+            </div>
+
+            <!-- Fotografía opcional -->
+            <div class="form-group full-width">
+              <label>Fotografía del Producto (Opcional)</label>
+              <div class="photo-upload-wrapper">
+                @if (nuevoProductoForm.foto) {
+                  <div class="preview-box">
+                    <img [src]="nuevoProductoForm.foto" alt="Preview" class="photo-preview-img" />
+                    <button class="btn btn-xs btn-danger-clean" (click)="removerFoto('producto')">Eliminar Foto</button>
+                  </div>
+                } @else {
+                  <div class="upload-actions">
+                    <label class="btn btn-sm btn-secondary file-label">
+                      📁 Seleccionar Imagen
+                      <input type="file" accept="image/*" (change)="onImageFileSelected($event, 'producto')" hidden />
+                    </label>
+                    <label class="btn btn-sm btn-secondary file-label">
+                      📷 Tomar Foto
+                      <input type="file" accept="image/*" capture="environment" (change)="onImageFileSelected($event, 'producto')" hidden />
+                    </label>
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
+
+          <!-- Bloque 2: Datos de la Primera Compra -->
+          <div class="form-section-title mt-4">2. DATOS DE LA PRIMERA COMPRA</div>
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label>Cantidad Comprada *</label>
+              <input
+                type="number"
+                min="0.01"
+                step="0.01"
+                class="input-clean font-bold text-lg"
+                placeholder="0.00"
+                [(ngModel)]="nuevoProductoForm.cantidad_comprada"
+              />
+            </div>
+
+            <div class="form-group">
+              <label>Precio Total de la Compra (Bs) *</label>
+              <div class="currency-input-box">
+                <span>Bs</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  class="input-clean font-bold text-lg"
+                  placeholder="0.00"
+                  [(ngModel)]="nuevoProductoForm.precio_total"
+                />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Fecha de Compra *</label>
+              <input
+                type="date"
+                class="input-clean"
+                [(ngModel)]="nuevoProductoForm.fecha_compra"
+              />
+            </div>
+
+            <div class="form-group">
+              <label>Proveedor (Opcional)</label>
+              <input
+                type="text"
+                class="input-clean"
+                placeholder="Nombre del proveedor o distribuidor..."
+                [(ngModel)]="nuevoProductoForm.proveedor"
+              />
+            </div>
+          </div>
+
+          <!-- Resumen de Cálculo Automático -->
+          <div class="calculation-preview-card mt-3">
+            <div class="calc-metric">
+              <span class="calc-label">Existencias que Ingresarán:</span>
+              <strong class="calc-highlight text-emerald">
+                {{ nuevoProductoForm.cantidad_comprada || 0 }}
+              </strong>
+            </div>
+            <div class="calc-metric">
+              <span class="calc-label">Precio Unitario Calculado:</span>
+              <strong class="calc-highlight text-blue">
+                Bs {{ calcularIngresoPrimeraCompra().precioUnitario }}
+              </strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-secondary" (click)="showNuevoProductoModal.set(false)">Cancelar</button>
+          <button
+            class="btn btn-primary"
+            [disabled]="loading() || !nuevoProductoForm.nombre.trim() || !nuevoProductoForm.cantidad_comprada"
+            (click)="guardarNuevoProducto()"
+          >
+            Confirmar y Registrar Producto
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ================================================================= -->
+  <!-- MODAL: REGISTRAR COMPRA POSTERIOR (PRODUCTO EXISTENTE) -->
+  <!-- ================================================================= -->
+  @if (showNuevaCompraModal()) {
+    <div class="modal-backdrop" (click)="showNuevaCompraModal.set(false)">
+      <div class="modal-card animate-scale-up" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title">
+            <span class="pill-badge">REPOSICIÓN DE EXISTENCIAS</span>
+            <h3>Registrar Nueva Compra</h3>
+            <p class="modal-sub">Ingresa nuevas compras y compara automáticamente el precio con la compra anterior.</p>
+          </div>
+          <button class="btn-close" (click)="showNuevaCompraModal.set(false)">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <!-- Autocompletado del producto -->
+          <div class="form-group full-width">
+            <label>Producto a Reabastecer *</label>
+            <input
+              type="text"
+              class="input-clean font-bold"
+              placeholder="Escribe el nombre o código del producto..."
+              [ngModel]="searchAutocompleteQuery()"
+              (ngModelChange)="onSearchAutocomplete($event)"
+            />
+
+            <!-- Resultados desplegables -->
+            @if (autocompleteResults().length > 0) {
+              <div class="autocomplete-dropdown">
+                @for (item of autocompleteResults(); track item.id) {
+                  <div class="autocomplete-item" (click)="seleccionarProductoParaCompra(item)">
+                    <div class="item-name"><strong>{{ item.codigo }}</strong> - {{ item.nombre }}</div>
+                    <div class="item-sub">Stock: {{ item.stock_actual }} {{ item.unidad_control }} • Últ. precio: Bs {{ item.precio_ultima_compra }}</div>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+
+          @if (selectedProductoCompra()) {
+            <div class="product-banner-selected">
+              <div class="banner-title">{{ selectedProductoCompra()?.codigo }} • {{ selectedProductoCompra()?.nombre }}</div>
+              <div class="banner-meta">
+                <span>Stock actual: <strong>{{ selectedProductoCompra()?.stock_actual }} {{ selectedProductoCompra()?.unidad_control }}</strong></span>
+                <span>Último precio unitario: <strong>Bs {{ selectedProductoCompra()?.precio_ultima_compra }}/{{ selectedProductoCompra()?.unidad_control }}</strong></span>
+              </div>
+            </div>
+
+            <div class="form-grid-2 mt-3">
+              <div class="form-group">
+                <label>Cantidad Comprada *</label>
+                <input
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  class="input-clean font-bold text-lg"
+                  placeholder="0.00"
+                  [(ngModel)]="compraPosteriorForm.cantidad_comprada"
+                />
+              </div>
+
+              <div class="form-group">
+                <label>Precio Total de la Compra (Bs) *</label>
+                <div class="currency-input-box">
+                  <span>Bs</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    class="input-clean font-bold text-lg"
+                    placeholder="0.00"
+                    [(ngModel)]="compraPosteriorForm.precio_total"
+                  />
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>Fecha de Compra *</label>
+                <input
+                  type="date"
+                  class="input-clean"
+                  [(ngModel)]="compraPosteriorForm.fecha_compra"
+                />
+              </div>
+
+              <div class="form-group">
+                <label>Proveedor (Opcional)</label>
+                <input
+                  type="text"
+                  class="input-clean"
+                  placeholder="Nombre de la empresa proveedora..."
+                  [(ngModel)]="compraPosteriorForm.proveedor"
+                />
+              </div>
+            </div>
+
+            <!-- Comparación de Precios en tiempo real -->
+            <div class="calculation-preview-card mt-3">
+              <div class="calc-metric">
+                <span class="calc-label">Nuevo Stock Resultante:</span>
+                <strong class="calc-highlight text-emerald">
+                  {{ calcularNuevoStockPosterior() }}
+                </strong>
+              </div>
+              <div class="calc-metric">
+                <span class="calc-label">Nuevo Precio Unitario:</span>
+                <strong class="calc-highlight text-blue">
+                  Bs {{ calcularIngresoCompraPosterior().precioUnitario }}
+                </strong>
+              </div>
+              @if (calcularIngresoCompraPosterior().variacion !== null) {
+                <div class="calc-metric">
+                  <span class="calc-label">Variación vs Compra Anterior:</span>
+                  <span
+                    class="variation-badge"
+                    [class.increase]="calcularIngresoCompraPosterior().variacion! > 0"
+                    [class.decrease]="calcularIngresoCompraPosterior().variacion! < 0"
+                  >
+                    @if (calcularIngresoCompraPosterior().variacion! > 0) { ↑ +{{ calcularIngresoCompraPosterior().variacion }}% }
+                    @else if (calcularIngresoCompraPosterior().variacion! < 0) { ↓ {{ calcularIngresoCompraPosterior().variacion }}% }
+                    @else { = 0.00% }
+                  </span>
+                </div>
+              }
+            </div>
+          }
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-secondary" (click)="showNuevaCompraModal.set(false)">Cancelar</button>
+          <button
+            class="btn btn-primary"
+            [disabled]="loading() || !compraPosteriorForm.almacen_id || !compraPosteriorForm.cantidad_comprada"
+            (click)="guardarCompraPosterior()"
+          >
+            Confirmar e Ingresar al Almacén
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ================================================================= -->
+  <!-- MODAL: REGISTRAR SALIDA / ENTREGA DE ALMACÉN -->
+  <!-- ================================================================= -->
+  @if (showNuevaSalidaModal()) {
+    <div class="modal-backdrop" (click)="showNuevaSalidaModal.set(false)">
+      <div class="modal-card animate-scale-up" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title">
+            <span class="pill-badge">EGRESO DE MATERIAL</span>
+            <h3>Registrar Salida / Entrega de Producto</h3>
+            <p class="modal-sub">Registra qué trabajador recibe físicamente el producto y su área de destino.</p>
+          </div>
+          <button class="btn-close" (click)="showNuevaSalidaModal.set(false)">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="form-group full-width">
+            <label>Producto a Retirar *</label>
+            <select class="select-clean font-semibold" [(ngModel)]="salidaForm.almacen_id">
+              @for (p of productos(); track p.id) {
+                <option [ngValue]="p.id">
+                  {{ p.codigo }} - {{ p.nombre }} (Disponible: {{ p.stock_actual }} {{ p.unidad_control }})
+                </option>
+              }
+            </select>
+          </div>
+
+          @if (getProductoSeleccionadoSalida()) {
+            <div class="stock-check-banner" [class.alert-banner]="(salidaForm.cantidad || 0) > (getProductoSeleccionadoSalida()?.stock_actual || 0)">
+              <div class="sc-info">
+                <span>Stock Disponible: <strong>{{ getProductoSeleccionadoSalida()?.stock_actual }} {{ getProductoSeleccionadoSalida()?.unidad_control }}</strong></span>
+                @if (salidaForm.cantidad && salidaForm.cantidad > 0) {
+                  <span>Stock Resultante: <strong>{{ (getProductoSeleccionadoSalida()?.stock_actual || 0) - salidaForm.cantidad }} {{ getProductoSeleccionadoSalida()?.unidad_control }}</strong></span>
+                }
+              </div>
+              @if ((salidaForm.cantidad || 0) > (getProductoSeleccionadoSalida()?.stock_actual || 0)) {
+                <div class="error-msg-banner">
+                  ⚠ La cantidad solicitada supera las existencias disponibles en almacén.
+                </div>
+              }
+            </div>
+          }
+
+          <div class="form-grid-2 mt-3">
+            <div class="form-group">
+              <label>Cantidad a Retirar *</label>
+              <input
+                type="number"
+                min="0.01"
+                step="0.01"
+                class="input-clean font-bold text-lg"
+                placeholder="0.00"
+                [(ngModel)]="salidaForm.cantidad"
+              />
+            </div>
+
+            <div class="form-group">
+              <label>Fecha de Entrega *</label>
+              <input
+                type="date"
+                class="input-clean"
+                [(ngModel)]="salidaForm.fecha_movimiento"
+              />
+            </div>
+
+            <div class="form-group" style="position: relative;">
+              <label>Trabajador Receptor (Quien recibe) *</label>
+              <div class="search-input-wrapper" style="position: relative; display: flex; align-items: center;">
+                <input
+                  type="text"
+                  class="input-clean font-semibold"
+                  placeholder="Escribe el nombre o CI del trabajador..."
+                  [ngModel]="searchTrabajadorQuery()"
+                  (ngModelChange)="onSearchTrabajador($event)"
+                  (focus)="showTrabajadorDropdown.set(true)"
+                  (blur)="onTrabajadorBlur()"
+                  autocomplete="off"
+                />
+                @if (selectedTrabajadorSalida() || searchTrabajadorQuery()) {
+                  <button
+                    type="button"
+                    (mousedown)="$event.preventDefault(); limpiarTrabajadorSalida()"
+                    style="position: absolute; right: 8px; background: none; border: none; font-size: 15px; cursor: pointer; color: #a1a1aa; padding: 2px 6px;"
+                    title="Limpiar búsqueda"
+                  >
+                    ✕
+                  </button>
+                }
+              </div>
+
+              <!-- Resultados desplegables -->
+              @if (showTrabajadorDropdown() && filteredTrabajadoresSalida().length > 0) {
+                <div class="autocomplete-dropdown" style="max-height: 220px; overflow-y: auto; z-index: 1100;">
+                  @for (t of filteredTrabajadoresSalida(); track t.id) {
+                    <div class="autocomplete-item" (mousedown)="seleccionarTrabajadorSalida(t)">
+                      <div class="item-name">
+                        <strong>{{ t.nombres }} {{ t.apellidos }}</strong>
+                        @if (t.ci) {
+                          <span style="margin-left: 6px; font-size: 0.75rem; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; color: #475569; font-weight: normal;">CI: {{ t.ci }}</span>
+                        }
+                      </div>
+                      <div class="item-sub">
+                        {{ t.cargo }} &bull; {{ t.area?.nombre || 'General' }}
+                      </div>
+                    </div>
+                  }
+                </div>
+              } @else if (showTrabajadorDropdown() && searchTrabajadorQuery().trim().length > 0) {
+                <div class="autocomplete-dropdown" style="padding: 10px 14px; color: #71717a; font-size: 0.85rem; z-index: 1100;">
+                  No se encontraron trabajadores que coincidan con "{{ searchTrabajadorQuery() }}"
+                </div>
+              }
+            </div>
+
+            <div class="form-group">
+              <label>Área de Destino *</label>
+              <select class="select-clean" [(ngModel)]="salidaForm.area_id">
+                @for (a of areas(); track a.id) {
+                  <option [ngValue]="a.id">{{ a.nombre }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="form-group full-width">
+              <label>Motivo de la Entrega *</label>
+              <input
+                type="text"
+                class="input-clean"
+                placeholder="Ej. Abastecimiento de maquinaria, aplicación en siembra lote 3..."
+                [(ngModel)]="salidaForm.motivo"
+              />
+            </div>
+
+            <div class="form-group full-width">
+              <label>Vehículo / Maquinaria (Opcional)</label>
+              <input
+                type="text"
+                class="input-clean"
+                placeholder="Ej. Tractor John Deere 01, Camioneta Toyota..."
+                [(ngModel)]="salidaForm.vehiculo_maquinaria"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-secondary" (click)="showNuevaSalidaModal.set(false)">Cancelar</button>
+          <button
+            class="btn btn-primary"
+            [disabled]="loading() || !salidaForm.almacen_id || !salidaForm.cantidad || salidaForm.cantidad <= 0 || (salidaForm.cantidad > (getProductoSeleccionadoSalida()?.stock_actual || 0))"
+            (click)="guardarSalida()"
+          >
+            Confirmar y Descontar Stock
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ================================================================= -->
+  <!-- MODAL: FICHA DETALLADA DEL PRODUCTO (HISTORIAL COMPRAS Y MOVIMIENTOS) -->
+  <!-- ================================================================= -->
+  @if (showDetalleModal()) {
+    <div class="modal-backdrop" (click)="showDetalleModal.set(false)">
+      <div class="modal-card modal-xl animate-scale-up" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title">
+            <span class="mono-badge">{{ productoDetalle()?.codigo }}</span>
+            <h2>{{ productoDetalle()?.nombre }}</h2>
+            <p class="modal-sub">{{ productoDetalle()?.descripcion || 'Sin descripción técnica registrada.' }}</p>
+          </div>
+          <button class="btn-close" (click)="showDetalleModal.set(false)">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <!-- Tarjetas de resumen del producto -->
+          <div class="product-detail-overview">
+            <div class="pdo-card">
+              <span class="pdo-label">Stock Actual</span>
+              <div class="pdo-val font-bold" [class.text-amber]="productoDetalle()?.estado_stock === 'Stock bajo'" [class.text-rose]="productoDetalle()?.estado_stock === 'Agotado'">
+                {{ formatBs(productoDetalle()?.stock_actual) }} {{ productoDetalle()?.unidad_control }}
+              </div>
+              <span class="badge-status" [class.normal]="productoDetalle()?.estado_stock === 'Normal'" [class.stock-bajo]="productoDetalle()?.estado_stock === 'Stock bajo'" [class.agotado]="productoDetalle()?.estado_stock === 'Agotado'">
+                {{ productoDetalle()?.estado_stock }}
+              </span>
+            </div>
+
+            <div class="pdo-card">
+              <span class="pdo-label">Stock Mínimo Configurado</span>
+              <div class="pdo-val font-semibold">
+                {{ formatBs(productoDetalle()?.stock_minimo) }} {{ productoDetalle()?.unidad_control }}
+              </div>
+              <small class="text-muted">Umbral de alerta</small>
+            </div>
+
+            <div class="pdo-card">
+              <span class="pdo-label">Precio Unitario Actual</span>
+              <div class="pdo-val text-blue font-bold">
+                Bs {{ formatBs(productoDetalle()?.precio_ultima_compra) }}/{{ productoDetalle()?.unidad_control }}
+              </div>
+              @if (productoDetalle()?.precio_anterior) {
+                <small class="text-muted">Anterior: Bs {{ formatBs(productoDetalle()?.precio_anterior) }}</small>
+              }
+            </div>
+
+            <div class="pdo-card">
+              <span class="pdo-label">Variación de Precio</span>
+              @if (productoDetalle()?.variacion_porcentual !== null && productoDetalle()?.variacion_porcentual !== undefined) {
+                <div class="variation-badge-lg" [class.increase]="productoDetalle()!.variacion_porcentual! > 0" [class.decrease]="productoDetalle()!.variacion_porcentual! < 0">
+                  {{ productoDetalle()!.variacion_porcentual! > 0 ? '+' : '' }}{{ productoDetalle()?.variacion_porcentual }}%
+                </div>
+              } @else {
+                <span class="text-slate-400 font-semibold">—</span>
+              }
+              <small class="text-muted">Última compra: {{ productoDetalle()?.fecha_ultima_compra || '—' }}</small>
+            </div>
+          </div>
+
+          <!-- Sub-pestañas: Historial de Compras vs Historial de Movimientos -->
+          <div class="subtabs-nav mt-4">
+            <button
+              class="subtab-btn"
+              [class.active]="activeDetailSubTab() === 'compras'"
+              (click)="activeDetailSubTab.set('compras')"
+            >
+              Historial de Compras ({{ productoDetalle()?.compras?.length || 0 }})
+            </button>
+            <button
+              class="subtab-btn"
+              [class.active]="activeDetailSubTab() === 'movimientos'"
+              (click)="activeDetailSubTab.set('movimientos')"
+            >
+              Historial de Movimientos de Stock ({{ productoDetalle()?.movimientos?.length || 0 }})
+            </button>
+          </div>
+
+          <!-- Tabla de Historial de Compras -->
+          @if (activeDetailSubTab() === 'compras') {
+            <div class="table-responsive mt-3">
+              <table class="clean-table table-condensed">
+                <thead>
+                  <tr>
+                    <th>N° Comprobante</th>
+                    <th>Fecha</th>
+                    <th>Cant. Comprada</th>
+                    <th>Presentación</th>
+                    <th>Ingreso a Stock</th>
+                    <th>Total Pagado</th>
+                    <th>Precio Unitario</th>
+                    <th>Variación</th>
+                    <th>Registrado por</th>
+                    <th>Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (c of productoDetalle()?.compras; track c.id) {
+                    <tr>
+                      <td><span class="mono-badge">{{ c.numero_comprobante }}</span></td>
+                      <td>{{ c.fecha_compra }}</td>
+                      <td>{{ formatBs(c.cantidad_comprada) }}</td>
+                      <td><span class="pill-mini">{{ c.unidad_compra }}</span></td>
+                      <td class="font-bold text-emerald">+{{ formatBs(c.cantidad_en_unidad_control) }} {{ productoDetalle()?.unidad_control }}</td>
+                      <td class="font-semibold">Bs {{ formatBs(c.precio_total) }}</td>
+                      <td class="text-blue font-bold">Bs {{ formatBs(c.precio_unitario) }}</td>
+                      <td>
+                        @if (c.variacion_porcentual !== null && c.variacion_porcentual !== undefined) {
+                          <span class="variation-badge" [class.increase]="c.variacion_porcentual > 0" [class.decrease]="c.variacion_porcentual < 0">
+                            {{ c.variacion_porcentual > 0 ? '+' : '' }}{{ c.variacion_porcentual }}%
+                          </span>
+                        } @else {
+                          <span class="text-slate-400">—</span>
+                        }
+                      </td>
+                      <td>
+                        <div class="user-cell">
+                          <span class="user-avatar-mini">{{ getInitials(c.usuario_registro_nombre) }}</span>
+                          <span class="user-name">{{ c.usuario_registro_nombre || 'Sistema' }}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <span class="badge-status" [class.normal]="c.estado === 'COMPLETADO'" [class.agotado]="c.estado === 'ANULADO'">
+                          {{ c.estado }}
+                        </span>
+                      </td>
+                    </tr>
+                  } @empty {
+                    <tr><td colspan="10" class="empty-row">No hay compras registradas para este producto.</td></tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+
+          <!-- Tabla de Historial de Movimientos -->
+          @if (activeDetailSubTab() === 'movimientos') {
+            <div class="table-responsive mt-3">
+              <table class="clean-table table-condensed">
+                <thead>
+                  <tr>
+                    <th>Fecha / Hora</th>
+                    <th>Comprobante</th>
+                    <th>Tipo Operación</th>
+                    <th>Entrada</th>
+                    <th>Salida</th>
+                    <th>Stock Resultante</th>
+                    <th>Trabajador Receptor</th>
+                    <th>Área</th>
+                    <th>Motivo</th>
+                    <th>Registrado por</th>
+                    <th>Acción</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (m of productoDetalle()?.movimientos; track m.id) {
+                    <tr [class.row-anulado]="m.estado === 'ANULADO'">
+                      <td>{{ m.fecha_movimiento }} <small class="text-slate-400">{{ m.hora_movimiento }}</small></td>
+                      <td><span class="mono-badge">{{ m.numero_comprobante }}</span></td>
+                      <td>
+                        <span class="operation-pill" [class.anticipo]="m.cantidad_salida > 0" [class.pago]="m.cantidad_entrada > 0">
+                          {{ m.tipo_movimiento }}
+                        </span>
+                      </td>
+                      <td class="text-emerald font-semibold">{{ m.cantidad_entrada > 0 ? '+' + formatBs(m.cantidad_entrada) : '—' }}</td>
+                      <td class="text-rose font-semibold">{{ m.cantidad_salida > 0 ? '-' + formatBs(m.cantidad_salida) : '—' }}</td>
+                      <td class="font-bold text-slate-900">{{ formatBs(m.stock_resultante) }} {{ productoDetalle()?.unidad_control }}</td>
+                      <td>{{ m.trabajador_nombre || '—' }}</td>
+                      <td>{{ m.area_nombre || '—' }}</td>
+                      <td class="text-sm max-w-sm">{{ m.motivo }}</td>
+                      <td>
+                        <div class="user-cell">
+                          <span class="user-avatar-mini">{{ getInitials(m.usuario_registro_nombre) }}</span>
+                          <span class="user-name">{{ m.usuario_registro_nombre || 'Sistema' }}</span>
+                        </div>
+                      </td>
+                      <td>
+                        @if (m.estado !== 'ANULADO') {
+                          <button class="btn btn-xs btn-danger-clean" (click)="solicitarAnulacionMovimiento(m)">
+                            Anular
+                          </button>
+                        } @else {
+                          <span class="text-slate-400 text-xs">Anulado</span>
+                        }
+                      </td>
+                    </tr>
+                  } @empty {
+                    <tr><td colspan="11" class="empty-row">No hay movimientos registrados para este producto.</td></tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-secondary" (click)="showDetalleModal.set(false)">Cerrar Ficha</button>
+          <button class="btn btn-primary" (click)="abrirModalNuevaCompra(productoDetalle()!)">
+            + Registrar Compra
+          </button>
+          <button class="btn btn-dark" [disabled]="productoDetalle()!.stock_actual <= 0" (click)="abrirModalSalida(productoDetalle()!)">
+            Registrar Salida
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ================================================================= -->
+  <!-- MODAL: AJUSTE DE STOCK AUDITADO -->
+  <!-- ================================================================= -->
+  @if (showAjusteModal()) {
+    <div class="modal-backdrop" (click)="showAjusteModal.set(false)">
+      <div class="modal-card animate-scale-up" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title">
+            <span class="pill-badge">AUDITORÍA Y CORRECCIÓN</span>
+            <h3>Ajuste de Existencias</h3>
+            <p class="modal-sub">Permite registrar mermas justificadas, sobrantes de inventario físico o correcciones auditadas.</p>
+          </div>
+          <button class="btn-close" (click)="showAjusteModal.set(false)">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="form-group full-width">
+            <label>Producto a Ajustar *</label>
+            <select class="select-clean font-semibold" [(ngModel)]="ajusteForm.almacen_id">
+              @for (p of productos(); track p.id) {
+                <option [ngValue]="p.id">{{ p.codigo }} - {{ p.nombre }} (Stock: {{ p.stock_actual }} {{ p.unidad_control }})</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-grid-2 mt-3">
+            <div class="form-group">
+              <label>Tipo de Ajuste *</label>
+              <select class="select-clean" [(ngModel)]="ajusteForm.tipo_ajuste">
+                <option value="POSITIVO">(+) Ajuste Positivo (Sobrante / Entrada)</option>
+                <option value="NEGATIVO">(-) Ajuste Negativo (Merma / Faltante)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Cantidad *</label>
+              <input
+                type="number"
+                min="0.01"
+                step="0.01"
+                class="input-clean font-bold text-lg"
+                [(ngModel)]="ajusteForm.cantidad"
+              />
+            </div>
+
+            <div class="form-group full-width">
+              <label>Motivo Obligatorio del Ajuste *</label>
+              <input
+                type="text"
+                class="input-clean"
+                placeholder="Ej. Conteo físico trimestral de almacén, evaporación autorizada..."
+                [(ngModel)]="ajusteForm.motivo"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-secondary" (click)="showAjusteModal.set(false)">Cancelar</button>
+          <button class="btn btn-primary" [disabled]="loading() || !ajusteForm.motivo.trim() || !ajusteForm.cantidad" (click)="guardarAjuste()">
+            Aplicar Ajuste de Stock
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ================================================================= -->
+  <!-- MODAL: REGISTRAR GASTO MENOR -->
+  <!-- ================================================================= -->
+  @if (showNuevoGastoModal()) {
+    <div class="modal-backdrop" (click)="showNuevoGastoModal.set(false)">
+      <div class="modal-card animate-scale-up" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title">
+            <span class="pill-badge">COMPRAS DIRECTAS Y SERVICIOS</span>
+            <h3>Registrar Gasto Menor</h3>
+            <p class="modal-sub">Gasto que se paga y consume directamente sin generar existencias en almacén.</p>
+          </div>
+          <button class="btn-close" (click)="showNuevoGastoModal.set(false)">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="form-grid-2">
+            <div class="form-group full-width">
+              <label>Concepto o Nombre del Gasto *</label>
+              <input
+                type="text"
+                class="input-clean font-semibold"
+                placeholder="Ej. Cambio de aceite tractor, Almuerzo de trabajo, Compra de 2 llantas..."
+                [(ngModel)]="gastoForm.nombre"
+              />
+            </div>
+
+            <div class="form-group">
+              <label>Importe Total Pagado (Bs) *</label>
+              <div class="currency-input-box">
+                <span>Bs</span>
+                <input
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  class="input-clean font-bold text-lg"
+                  placeholder="0.00"
+                  [(ngModel)]="gastoForm.importe_total"
+                />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Fecha de la Operación *</label>
+              <input
+                type="date"
+                class="input-clean"
+                [(ngModel)]="gastoForm.fecha_gasto"
+              />
+            </div>
+
+            <div class="form-group">
+              <label>Área Imputada (Opcional)</label>
+              <select class="select-clean" [(ngModel)]="gastoForm.area_id">
+                <option [ngValue]="null">Gasto General / Sin Área</option>
+                @for (a of areas(); track a.id) {
+                  <option [ngValue]="a.id">{{ a.nombre }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Trabajador Responsable (Opcional)</label>
+              <select class="select-clean" [(ngModel)]="gastoForm.trabajador_responsable_id">
+                <option [ngValue]="null">Ninguno / General</option>
+                @for (t of trabajadores(); track t.id) {
+                  <option [ngValue]="t.id">{{ t.nombres }} {{ t.apellidos }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Método de Pago *</label>
+              <select class="select-clean" [(ngModel)]="gastoForm.metodo_pago">
+                <option value="EFECTIVO">Efectivo (Caja Chica)</option>
+                <option value="TRANSFERENCIA">Transferencia Bancaria</option>
+                <option value="CHEQUE">Cheque</option>
+                <option value="OTRO">Otro Método Autorizado</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Proveedor o Establecimiento</label>
+              <input
+                type="text"
+                class="input-clean"
+                placeholder="Ej. Taller Central, Restaurante El Pahuichi..."
+                [(ngModel)]="gastoForm.proveedor"
+              />
+            </div>
+
+            <div class="form-group full-width">
+              <label>N° Factura / Recibo / Comprobante Físico</label>
+              <input
+                type="text"
+                class="input-clean"
+                placeholder="Ej. Factura N° 10234, Recibo manual #88"
+                [(ngModel)]="gastoForm.numero_comprobante_fiscal"
+              />
+            </div>
+
+            <div class="form-group full-width">
+              <label>Descripción Detallada (Opcional)</label>
+              <input
+                type="text"
+                class="input-clean"
+                placeholder="Aclaraciones del servicio o compra..."
+                [(ngModel)]="gastoForm.descripcion"
+              />
+            </div>
+
+            <!-- Foto de comprobante opcional -->
+            <div class="form-group full-width">
+              <label>Fotografía de Factura / Recibo (Opcional)</label>
+              <div class="photo-upload-wrapper">
+                @if (gastoForm.foto_comprobante) {
+                  <div class="preview-box">
+                    <img [src]="gastoForm.foto_comprobante" alt="Preview Comprobante" class="photo-preview-img" />
+                    <button class="btn btn-xs btn-danger-clean" (click)="removerFoto('gasto')">Eliminar Comprobante</button>
+                  </div>
+                } @else {
+                  <div class="upload-actions">
+                    <label class="btn btn-sm btn-secondary file-label">
+                      📁 Subir Recibo / Factura
+                      <input type="file" accept="image/*" (change)="onImageFileSelected($event, 'gasto')" hidden />
+                    </label>
+                    <label class="btn btn-sm btn-secondary file-label">
+                      📷 Tomar Foto al Recibo
+                      <input type="file" accept="image/*" capture="environment" (change)="onImageFileSelected($event, 'gasto')" hidden />
+                    </label>
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-secondary" (click)="showNuevoGastoModal.set(false)">Cancelar</button>
+          <button
+            class="btn btn-primary"
+            [disabled]="loading() || !gastoForm.nombre.trim() || !gastoForm.importe_total"
+            (click)="guardarGastoMenor()"
+          >
+            Registrar Gasto Menor
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ================================================================= -->
+  <!-- MODAL: ANULACIÓN AUDITADA -->
+  <!-- ================================================================= -->
+  @if (showAnulacionModal()) {
+    <div class="modal-backdrop" (click)="showAnulacionModal.set(false)">
+      <div class="modal-card modal-sm animate-scale-up" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title">
+            <span class="pill-badge text-rose">ACCIÓN IRREVERSIBLE</span>
+            <h3>Confirmar Anulación</h3>
+          </div>
+          <button class="btn-close" (click)="showAnulacionModal.set(false)">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <p class="text-slate-600 text-sm">
+            Se anulará el registro <strong>{{ anulacionData()?.comprobante }}</strong>:
+            <br />
+            <em class="text-slate-500">{{ anulacionData()?.descripcion }}</em>
+          </p>
+
+          <div class="form-group mt-3">
+            <label>Motivo Obligatorio de Anulación *</label>
+            <input
+              type="text"
+              class="input-clean"
+              placeholder="Indica la razón formal (ej. Registro duplicado, error de digitación...)"
+              [ngModel]="anulacionData()?.motivo"
+              (ngModelChange)="anulacionData()!.motivo = $event"
+            />
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-secondary" (click)="showAnulacionModal.set(false)">Cancelar</button>
+          <button
+            class="btn btn-danger"
+            [disabled]="loading() || !anulacionData()?.motivo?.trim()"
+            (click)="confirmarAnulacion()"
+          >
+            Confirmar Anulación
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

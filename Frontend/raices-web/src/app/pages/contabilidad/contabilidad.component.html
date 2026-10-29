@@ -1,0 +1,702 @@
+<div class="contabilidad-container">
+  <!-- ENCABEZADO PRINCIPAL -->
+  <header class="page-header no-print">
+    <div class="header-content">
+      <div class="badge-tag">
+        <span class="badge-dot"></span>
+        CONTROL FINANCIERO Y CONTABLE
+      </div>
+      <h1 class="page-title">Contabilidad & Balance General</h1>
+      <p class="page-subtitle">
+        Consolidación de egresos operativos, nómina salarial, insumos de almacén y centros de costos en tiempo real.
+      </p>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-secondary" (click)="imprimirReporte()" title="Imprimir Balance Oficial">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="6 9 6 2 18 2 18 9"/>
+          <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+          <rect width="12" height="8" x="6" y="14"/>
+        </svg>
+        <span>Imprimir Reporte</span>
+      </button>
+      <button class="btn btn-primary" (click)="cargarReporte()" [disabled]="loading()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" [class.spin]="loading()">
+          <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+          <path d="M3 3v5h5"/>
+          <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/>
+          <path d="M16 21h5v-5"/>
+        </svg>
+        <span>Actualizar</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- BARRA DE FILTROS SUPERIOR (MES, AÑO, ÁREA) -->
+  <section class="filters-card no-print">
+    <div class="filters-grid">
+      <!-- Selector de Mes -->
+      <div class="form-group" *ngIf="activeTab() !== 'anual'">
+        <label class="form-label">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8" y1="2" x2="8" y2="6"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+          Mes Contable
+        </label>
+        <select 
+          class="form-select" 
+          [ngModel]="selectedMes()" 
+          (ngModelChange)="onMesChange($event)"
+        >
+          <option *ngFor="let m of mesesList" [value]="m.num">
+            {{ m.nombre }}
+          </option>
+        </select>
+      </div>
+
+      <!-- Selector de Año -->
+      <div class="form-group">
+        <label class="form-label">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="12 6 12 12 16 14"/>
+          </svg>
+          Gestión / Año
+        </label>
+        <select 
+          class="form-select" 
+          [ngModel]="selectedAnio()" 
+          (ngModelChange)="onAnioChange($event)"
+        >
+          <option *ngFor="let a of aniosDisponibles()" [value]="a">
+            Gestión {{ a }}
+          </option>
+        </select>
+      </div>
+
+      <!-- Selector de Área / Centro de Costos -->
+      <div class="form-group">
+        <label class="form-label">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
+          </svg>
+          Centro de Costo / Área
+        </label>
+        <select 
+          class="form-select" 
+          [ngModel]="selectedAreaId()" 
+          (ngModelChange)="onAreaChange($event)"
+        >
+          <option [ngValue]="null">-- Todas las Áreas y Centros --</option>
+          <option *ngFor="let a of areas()" [value]="a.id">
+            {{ a.nombre }}
+          </option>
+        </select>
+      </div>
+
+      <!-- Indicador del Período Activo -->
+      <div class="periodo-badge-box">
+        <span class="periodo-label">PERÍODO ACTIVO</span>
+        <strong class="periodo-val" *ngIf="activeTab() !== 'anual'">
+          {{ getMesNombre(selectedMes()) }} {{ selectedAnio() }}
+        </strong>
+        <strong class="periodo-val" *ngIf="activeTab() === 'anual'">
+          Año Completo {{ selectedAnio() }}
+        </strong>
+      </div>
+    </div>
+  </section>
+
+  <!-- PESTAÑAS DE VISTA -->
+  <div class="tabs-nav no-print">
+    <button 
+      class="tab-btn" 
+      [class.active]="activeTab() === 'mensual'" 
+      (click)="cambiarTab('mensual')"
+    >
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect width="18" height="18" x="3" y="3" rx="2"/>
+        <path d="M3 9h18"/>
+        <path d="M9 21V9"/>
+      </svg>
+      Resumen Mensual
+    </button>
+    <button 
+      class="tab-btn" 
+      [class.active]="activeTab() === 'anual'" 
+      (click)="cambiarTab('anual')"
+    >
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="18" y1="20" x2="18" y2="10"/>
+        <line x1="12" y1="20" x2="12" y2="4"/>
+        <line x1="6" y1="20" x2="6" y2="14"/>
+      </svg>
+      Comparativa Anual
+    </button>
+    <button 
+      class="tab-btn" 
+      [class.active]="activeTab() === 'libro_diario'" 
+      (click)="cambiarTab('libro_diario')"
+    >
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/>
+        <path d="M6 6h10"/>
+        <path d="M6 10h10"/>
+        <path d="M6 14h6"/>
+      </svg>
+      Libro Diario de Egresos
+      <span class="badge-count" *ngIf="reporteMensual()?.movimientos">
+        {{ reporteMensual()?.movimientos?.length }}
+      </span>
+    </button>
+  </div>
+
+  <!-- SPINNER DE CARGA -->
+  <div class="loading-state" *ngIf="loading()">
+    <div class="spinner"></div>
+    <p>Consolidando registros contables y movimientos financieros...</p>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- TAB 1: RESUMEN MENSUAL                     -->
+  <!-- ========================================== -->
+  <div *ngIf="!loading() && activeTab() === 'mensual' && reporteMensual()">
+    <!-- TARJETAS EJECUTIVAS KPI -->
+    <section class="kpis-grid">
+      <!-- Total Egresos -->
+      <div class="kpi-card highlight-main">
+        <div class="kpi-header">
+          <span class="kpi-title">TOTAL EGRESOS GLOBALES</span>
+          <div class="kpi-icon-box bg-emerald">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="1" x2="12" y2="23"/>
+              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+            </svg>
+          </div>
+        </div>
+        <div class="kpi-amount">
+          Bs {{ reporteMensual()!.kpis.total_egresos_global | number:'1.2-2' }}
+        </div>
+        <div class="kpi-meta">
+          <span>{{ reporteMensual()!.kpis.cantidad_transacciones }} transacciones en {{ reporteMensual()!.mes_nombre }}</span>
+        </div>
+      </div>
+
+      <!-- Nómina y Sueldos -->
+      <div class="kpi-card">
+        <div class="kpi-header">
+          <span class="kpi-title">NÓMINA & PLANILLA</span>
+          <div class="kpi-icon-box bg-blue">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+          </div>
+        </div>
+        <div class="kpi-amount">
+          Bs {{ reporteMensual()!.kpis.total_nomina_pagada | number:'1.2-2' }}
+        </div>
+        <div class="kpi-meta-split">
+          <span title="Anticipos quincenales pagados">Anticipos: <b>Bs {{ reporteMensual()!.kpis.total_anticipos_pagados | number:'1.2-2' }}</b></span>
+          <span title="Liquidaciones de saldo pagadas">Sueldos: <b>Bs {{ reporteMensual()!.kpis.total_sueldos_pagados | number:'1.2-2' }}</b></span>
+        </div>
+      </div>
+
+      <!-- Compras Almacén -->
+      <div class="kpi-card">
+        <div class="kpi-header">
+          <span class="kpi-title">COMPRAS DE ALMACÉN</span>
+          <div class="kpi-icon-box bg-purple">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/>
+              <path d="m3.3 7 8.7 5 8.7-5"/>
+              <path d="M12 22V12"/>
+            </svg>
+          </div>
+        </div>
+        <div class="kpi-amount">
+          Bs {{ reporteMensual()!.kpis.total_compras_inventario | number:'1.2-2' }}
+        </div>
+        <div class="kpi-meta">
+          <span>Insumos, semillas, agroquímicos y materiales</span>
+        </div>
+      </div>
+
+      <!-- Gastos Operativos Menores -->
+      <div class="kpi-card">
+        <div class="kpi-header">
+          <span class="kpi-title">GASTOS OPERATIVOS</span>
+          <div class="kpi-icon-box bg-amber">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect width="20" height="14" x="2" y="5" rx="2"/>
+              <line x1="2" y1="10" x2="22" y2="10"/>
+            </svg>
+          </div>
+        </div>
+        <div class="kpi-amount">
+          Bs {{ reporteMensual()!.kpis.total_gastos_menores | number:'1.2-2' }}
+        </div>
+        <div class="kpi-meta">
+          <span>Caja chica, mantenimiento, combustible y varios</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECCIÓN SECUNDARIA: CENTROS DE COSTOS & MÉTODOS DE PAGO -->
+    <div class="grid-two-columns">
+      <!-- Desglose por Centro de Costos -->
+      <div class="card-box">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">Desglose por Centro de Costos (Áreas)</h2>
+            <p class="card-subtitle">Distribución porcentual de los egresos en cada área operativa</p>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Área / Centro</th>
+                <th class="text-right">Nómina</th>
+                <th class="text-right">Gastos Menores</th>
+                <th class="text-right">Compras</th>
+                <th class="text-right">Total Egresos</th>
+                <th class="text-center" style="width: 140px;">% Participación</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let area of reporteMensual()!.desglose_areas">
+                <td>
+                  <span class="area-badge">{{ area.area_nombre }}</span>
+                </td>
+                <td class="text-right">Bs {{ area.total_nomina | number:'1.2-2' }}</td>
+                <td class="text-right">Bs {{ area.total_gastos_menores | number:'1.2-2' }}</td>
+                <td class="text-right">Bs {{ area.total_compras | number:'1.2-2' }}</td>
+                <td class="text-right font-bold text-dark">
+                  Bs {{ area.total_egresos | number:'1.2-2' }}
+                </td>
+                <td class="text-center">
+                  <div class="progress-bar-container">
+                    <div class="progress-bar-fill" [style.width.%]="area.porcentaje"></div>
+                  </div>
+                  <span class="percentage-label">{{ area.porcentaje }}%</span>
+                </td>
+              </tr>
+              <tr *ngIf="!reporteMensual()!.desglose_areas.length">
+                <td colspan="6" class="text-center text-muted py-4">
+                  No hay movimientos registrados para este mes y filtro seleccionado.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Métodos de Pago & Resumen Operativo -->
+      <div class="card-box">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">Canales & Métodos de Pago</h2>
+            <p class="card-subtitle">Flujo de salida por modalidad de pago</p>
+          </div>
+        </div>
+
+        <div class="metodos-list">
+          <div class="metodo-item" *ngFor="let m of metodosPagoArray()">
+            <div class="metodo-icon">
+              <svg *ngIf="m.metodo.includes('EFECTIVO')" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect width="20" height="12" x="2" y="6" rx="2"/>
+                <circle cx="12" cy="12" r="2"/>
+              </svg>
+              <svg *ngIf="m.metodo.includes('TRANSF') || m.metodo.includes('BANCO')" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"/>
+                <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+                <path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"/>
+                <path d="M2 7h20"/>
+              </svg>
+              <svg *ngIf="m.metodo.includes('CHEQUE')" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="16" y1="13" x2="8" y2="13"/>
+                <line x1="16" y1="17" x2="8" y2="17"/>
+              </svg>
+            </div>
+            <div class="metodo-info">
+              <span class="metodo-nombre">{{ m.metodo }}</span>
+              <span class="metodo-sub">Desembolsado en el período</span>
+            </div>
+            <div class="metodo-total">
+              Bs {{ m.total | number:'1.2-2' }}
+            </div>
+          </div>
+        </div>
+
+        <div class="stat-highlight-box mt-4">
+          <div class="stat-item">
+            <span class="stat-label">Promedio Diario Egresos</span>
+            <span class="stat-value">Bs {{ reporteMensual()!.kpis.promedio_diario_egresos | number:'1.2-2' }}</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Rango Calendario</span>
+            <span class="stat-value">{{ reporteMensual()!.rango_fechas }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- TAB 2: COMPARATIVA ANUAL                   -->
+  <!-- ========================================== -->
+  <div *ngIf="!loading() && activeTab() === 'anual' && reporteAnual()">
+    <!-- RESUMEN ANUAL KPI -->
+    <section class="kpis-grid">
+      <div class="kpi-card highlight-main">
+        <div class="kpi-header">
+          <span class="kpi-title">TOTAL EGRESOS ANUAL {{ reporteAnual()!.anio }}</span>
+          <div class="kpi-icon-box bg-emerald">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="1" x2="12" y2="23"/>
+              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+            </svg>
+          </div>
+        </div>
+        <div class="kpi-amount">
+          Bs {{ reporteAnual()!.kpis.total_egresos_global | number:'1.2-2' }}
+        </div>
+        <div class="kpi-meta">
+          <span>Total acumulado en los 12 meses de gestión</span>
+        </div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-header">
+          <span class="kpi-title">NÓMINA ANUAL</span>
+          <div class="kpi-icon-box bg-blue">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+            </svg>
+          </div>
+        </div>
+        <div class="kpi-amount">
+          Bs {{ reporteAnual()!.kpis.total_nomina_pagada | number:'1.2-2' }}
+        </div>
+        <div class="kpi-meta">
+          <span>Anticipos + Sueldos liquidados</span>
+        </div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-header">
+          <span class="kpi-title">COMPRAS DE INSUMOS ANUAL</span>
+          <div class="kpi-icon-box bg-purple">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/>
+            </svg>
+          </div>
+        </div>
+        <div class="kpi-amount">
+          Bs {{ reporteAnual()!.kpis.total_compras_inventario | number:'1.2-2' }}
+        </div>
+        <div class="kpi-meta">
+          <span>Inversión en almacén general</span>
+        </div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-header">
+          <span class="kpi-title">GASTOS OPERATIVOS ANUAL</span>
+          <div class="kpi-icon-box bg-amber">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect width="20" height="14" x="2" y="5" rx="2"/>
+            </svg>
+          </div>
+        </div>
+        <div class="kpi-amount">
+          Bs {{ reporteAnual()!.kpis.total_gastos_menores | number:'1.2-2' }}
+        </div>
+        <div class="kpi-meta">
+          <span>Gastos menores y caja chica</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- TABLA MENSUAL COMPARATIVA -->
+    <div class="card-box mt-4">
+      <div class="card-header">
+        <div>
+          <h2 class="card-title">Evolución y Desglose Mensual (Gestión {{ reporteAnual()!.anio }})</h2>
+          <p class="card-subtitle">Comparativa mes a mes de los diferentes rubros financieros</p>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Mes</th>
+              <th class="text-right">Nómina Pagada</th>
+              <th class="text-right">Compras Insumos</th>
+              <th class="text-right">Gastos Menores</th>
+              <th class="text-right font-bold">Total Mes</th>
+              <th class="text-center" style="width: 130px;">Acción</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let mes of reporteAnual()!.meses">
+              <td class="font-medium">
+                <span class="mes-circle">{{ mes.mes }}</span>
+                {{ mes.mes_nombre }}
+              </td>
+              <td class="text-right">Bs {{ mes.total_nomina | number:'1.2-2' }}</td>
+              <td class="text-right">Bs {{ mes.total_compras | number:'1.2-2' }}</td>
+              <td class="text-right">Bs {{ mes.total_gastos | number:'1.2-2' }}</td>
+              <td class="text-right font-bold text-dark">
+                Bs {{ mes.total_global | number:'1.2-2' }}
+              </td>
+              <td class="text-center">
+                <button 
+                  class="btn-sm btn-outline" 
+                  (click)="onMesChange(mes.mes); cambiarTab('mensual')"
+                  title="Ver detalle del mes"
+                >
+                  Ver Detalle
+                </button>
+              </td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr class="table-total-row">
+              <td><strong>TOTAL ANUAL</strong></td>
+              <td class="text-right font-bold">Bs {{ reporteAnual()!.kpis.total_nomina_pagada | number:'1.2-2' }}</td>
+              <td class="text-right font-bold">Bs {{ reporteAnual()!.kpis.total_compras_inventario | number:'1.2-2' }}</td>
+              <td class="text-right font-bold">Bs {{ reporteAnual()!.kpis.total_gastos_menores | number:'1.2-2' }}</td>
+              <td class="text-right font-bold text-emerald">Bs {{ reporteAnual()!.kpis.total_egresos_global | number:'1.2-2' }}</td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- TAB 3: LIBRO DIARIO DE EGRESOS             -->
+  <!-- ========================================== -->
+  <div *ngIf="!loading() && activeTab() === 'libro_diario' && reporteMensual()">
+    <div class="card-box">
+      <!-- FILTROS Y BÚSQUEDA INTERNA -->
+      <div class="journal-controls no-print">
+        <!-- Input de Búsqueda -->
+        <div class="search-box">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input 
+            type="text" 
+            class="search-input" 
+            placeholder="Buscar por comprobante, beneficiario, concepto..."
+            [ngModel]="searchJournal()"
+            (ngModelChange)="searchJournal.set($event)"
+          />
+        </div>
+
+        <!-- Filtro por Categoría -->
+        <div class="filter-pill-group">
+          <button 
+            class="pill-btn" 
+            [class.active]="categoriaFilter() === 'TODAS'"
+            (click)="categoriaFilter.set('TODAS')"
+          >
+            Todos
+          </button>
+          <button 
+            class="pill-btn" 
+            [class.active]="categoriaFilter() === 'NOMINA_ANTICIPO'"
+            (click)="categoriaFilter.set('NOMINA_ANTICIPO')"
+          >
+            Anticipos
+          </button>
+          <button 
+            class="pill-btn" 
+            [class.active]="categoriaFilter() === 'NOMINA_SUELDO'"
+            (click)="categoriaFilter.set('NOMINA_SUELDO')"
+          >
+            Sueldos / Liquidaciones
+          </button>
+          <button 
+            class="pill-btn" 
+            [class.active]="categoriaFilter() === 'COMPRA_INVENTARIO'"
+            (click)="categoriaFilter.set('COMPRA_INVENTARIO')"
+          >
+            Compras Almacén
+          </button>
+          <button 
+            class="pill-btn" 
+            [class.active]="categoriaFilter() === 'GASTO_OPERATIVO'"
+            (click)="categoriaFilter.set('GASTO_OPERATIVO')"
+          >
+            Gastos Menores
+          </button>
+        </div>
+      </div>
+
+      <!-- TABLA DEL LIBRO DIARIO -->
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th style="width: 100px;">Fecha</th>
+              <th style="width: 140px;">N° Comprobante</th>
+              <th style="width: 160px;">Tipo / Rubro</th>
+              <th>Beneficiario / Proveedor</th>
+              <th>Concepto / Glosa</th>
+              <th>Centro de Costo</th>
+              <th>Método de Pago</th>
+              <th class="text-right" style="width: 130px;">Monto (Bs)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let m of movimientosFiltrados()">
+              <td class="font-medium text-muted">
+                {{ m.fecha }}
+              </td>
+              <td>
+                <span class="badge-comprobante">{{ m.numero_comprobante }}</span>
+              </td>
+              <td>
+                <span 
+                  class="badge-category" 
+                  [ngClass]="{
+                    'cat-anticipo': m.tipo_categoria === 'NOMINA_ANTICIPO',
+                    'cat-sueldo': m.tipo_categoria === 'NOMINA_SUELDO',
+                    'cat-compra': m.tipo_categoria === 'COMPRA_INVENTARIO',
+                    'cat-gasto': m.tipo_categoria === 'GASTO_OPERATIVO'
+                  }"
+                >
+                  {{ m.tipo_label }}
+                </span>
+              </td>
+              <td class="font-medium text-dark">
+                {{ m.beneficiario_proveedor }}
+              </td>
+              <td class="text-muted text-sm">
+                {{ m.concepto }}
+              </td>
+              <td>
+                <span class="area-badge-sm">{{ m.area_nombre }}</span>
+              </td>
+              <td>
+                <span class="metodo-badge">{{ m.metodo_pago }}</span>
+              </td>
+              <td class="text-right font-bold text-dark">
+                Bs {{ m.monto | number:'1.2-2' }}
+              </td>
+            </tr>
+            <tr *ngIf="!movimientosFiltrados().length">
+              <td colspan="8" class="text-center text-muted py-5">
+                No se encontraron movimientos contables con los filtros seleccionados.
+              </td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr class="table-total-row">
+              <td colspan="7">
+                <strong>TOTAL REGISTRADO EN ESTA VISTA ({{ movimientosFiltrados().length }} asientos)</strong>
+              </td>
+              <td class="text-right font-bold text-emerald">
+                Bs {{ totalMovimientosFiltrados() | number:'1.2-2' }}
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- VISTA DE IMPRESIÓN OFICIAL (PRINT SHEET)   -->
+  <!-- ========================================== -->
+  <div class="print-sheet-only">
+    <div class="print-header">
+      <div class="print-title-box">
+        <h2>SISTEMAS RAÍCES S.A.</h2>
+        <h3>REPORTE Y BALANCE CONTABLE DE EGRESOS</h3>
+        <p>Período: {{ getMesNombre(selectedMes()) }} {{ selectedAnio() }}</p>
+      </div>
+      <div class="print-meta-box">
+        <p><b>Fecha de emisión:</b> {{ reporteMensual()?.rango_fechas }}</p>
+        <p><b>Usuario Auditor:</b> {{ auth.currentUser()?.nombre }} {{ auth.currentUser()?.apellido }}</p>
+      </div>
+    </div>
+
+    <div class="print-kpis">
+      <div class="print-kpi-item">
+        <span>Total Egresos:</span>
+        <strong>Bs {{ reporteMensual()?.kpis?.total_egresos_global | number:'1.2-2' }}</strong>
+      </div>
+      <div class="print-kpi-item">
+        <span>Nómina Salarial:</span>
+        <strong>Bs {{ reporteMensual()?.kpis?.total_nomina_pagada | number:'1.2-2' }}</strong>
+      </div>
+      <div class="print-kpi-item">
+        <span>Compras Almacén:</span>
+        <strong>Bs {{ reporteMensual()?.kpis?.total_compras_inventario | number:'1.2-2' }}</strong>
+      </div>
+      <div class="print-kpi-item">
+        <span>Gastos Operativos:</span>
+        <strong>Bs {{ reporteMensual()?.kpis?.total_gastos_menores | number:'1.2-2' }}</strong>
+      </div>
+    </div>
+
+    <table class="print-table">
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>N° Comprobante</th>
+          <th>Tipo</th>
+          <th>Beneficiario</th>
+          <th>Concepto</th>
+          <th>Área</th>
+          <th style="text-align: right;">Monto (Bs)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let m of reporteMensual()?.movimientos">
+          <td>{{ m.fecha }}</td>
+          <td>{{ m.numero_comprobante }}</td>
+          <td>{{ m.tipo_label }}</td>
+          <td>{{ m.beneficiario_proveedor }}</td>
+          <td>{{ m.concepto }}</td>
+          <td>{{ m.area_nombre }}</td>
+          <td style="text-align: right;">Bs {{ m.monto | number:'1.2-2' }}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="print-signatures">
+      <div class="signature-box">
+        <div class="signature-line"></div>
+        <p>Elaborado por (Contabilidad)</p>
+      </div>
+      <div class="signature-box">
+        <div class="signature-line"></div>
+        <p>Revisado por (Administración)</p>
+      </div>
+      <div class="signature-box">
+        <div class="signature-line"></div>
+        <p>Aprobado por (Gerencia General)</p>
+      </div>
+    </div>
+  </div>
+</div>
+

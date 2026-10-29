@@ -1,0 +1,1495 @@
+<div class="pagos-container">
+  <!-- Header del Módulo -->
+  <div class="module-header">
+    <div class="title-meta">
+      <div class="pill-badge">CONTABILIDAD Y PLANILLA</div>
+      <h1>Pagos y Anticipos</h1>
+      <p class="subtitle">Administración de anticipos, liquidaciones salariales y pagos a los trabajadores</p>
+    </div>
+
+    <!-- Selector de Período Salarial -->
+    <div class="periodo-selector-card">
+      <div class="periodo-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
+          <line x1="16" x2="16" y1="2" y2="6"/>
+          <line x1="8" x2="8" y1="2" y2="6"/>
+          <line x1="3" x2="21" y1="10" y2="10"/>
+        </svg>
+      </div>
+      <div class="periodo-info">
+        <label>Período Salarial</label>
+        <select
+          [ngModel]="selectedPeriodoId()"
+          (ngModelChange)="onPeriodoChange($event)"
+          class="select-clean"
+        >
+          @for (p of periodos(); track p.id) {
+            <option [ngValue]="p.id">{{ p.descripcion }} ({{ p.estado }})</option>
+          }
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Navegación por Pestañas -->
+  <div class="tabs-nav">
+    <button
+      class="tab-btn"
+      [class.active]="activeTab() === 'panel'"
+      (click)="setTab('panel')"
+    >
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect width="7" height="9" x="3" y="3" rx="1"/>
+        <rect width="7" height="5" x="14" y="3" rx="1"/>
+        <rect width="7" height="9" x="14" y="12" rx="1"/>
+        <rect width="7" height="5" x="3" y="16" rx="1"/>
+      </svg>
+      <span>Panel General</span>
+    </button>
+
+    <button
+      class="tab-btn"
+      [class.active]="activeTab() === 'anticipos'"
+      (click)="setTab('anticipos')"
+    >
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/>
+        <polyline points="12 6 12 12 16 14"/>
+      </svg>
+      <span>Registrar Anticipo</span>
+    </button>
+
+    <button
+      class="tab-btn"
+      [class.active]="activeTab() === 'pagos_parciales'"
+      (click)="setTab('pagos_parciales')"
+    >
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect width="20" height="14" x="2" y="5" rx="2"/>
+        <line x1="2" x2="22" y1="10" y2="10"/>
+      </svg>
+      <span>Pagos Parciales & Liquidación</span>
+      @if (panelIndicadores()?.liquidaciones_parciales_count) {
+        <span class="tab-badge">{{ panelIndicadores()?.liquidaciones_parciales_count }}</span>
+      }
+    </button>
+
+    <button
+      class="tab-btn"
+      [class.active]="activeTab() === 'historial'"
+      (click)="setTab('historial')"
+    >
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 20h9"/>
+        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+      </svg>
+      <span>Historial & Movimientos</span>
+    </button>
+  </div>
+
+  <!-- ================================================================= -->
+  <!-- TAB 1: PANEL GENERAL (KPIs E INDICADORES) -->
+  <!-- ================================================================= -->
+  @if (activeTab() === 'panel') {
+    <div class="tab-content animate-in">
+      <!-- Banner Prominente de Estado de Liquidación Mensual -->
+      @if (panelIndicadores()) {
+        <div class="nomina-status-banner" [class.complete]="panelIndicadores()?.periodo_completamente_liquidado" [class.pending]="!panelIndicadores()?.periodo_completamente_liquidado">
+          <div class="banner-icon">
+            @if (panelIndicadores()?.periodo_completamente_liquidado) {
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                <polyline points="22 4 12 14.01 9 11.01"/>
+              </svg>
+            } @else {
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+            }
+          </div>
+          <div class="banner-info">
+            <div class="banner-title">
+              @if (panelIndicadores()?.periodo_completamente_liquidado) {
+                <span>Nómina Salarial Completada</span>
+              } @else {
+                <span>Estado de Nómina Salarial del Mes</span>
+              }
+              <span class="banner-counter">
+                ({{ panelIndicadores()?.trabajadores_liquidados_count || 0 }} de {{ panelIndicadores()?.total_trabajadores_activos || 0 }} trabajadores liquidados)
+              </span>
+            </div>
+            <p class="banner-desc">{{ panelIndicadores()?.resumen_estado_mes }}</p>
+          </div>
+          <div class="banner-action">
+            <button class="btn btn-sm" [class.btn-success]="panelIndicadores()?.periodo_completamente_liquidado" [class.btn-primary]="!panelIndicadores()?.periodo_completamente_liquidado" (click)="setTab('pagos_parciales')">
+              {{ panelIndicadores()?.periodo_completamente_liquidado ? 'Ver Nómina →' : 'Pagar / Liquidar Pendientes →' }}
+            </button>
+          </div>
+        </div>
+      }
+
+      <div class="kpi-grid">
+        <!-- Tarjeta 1: Total Entregado -->
+        <div class="kpi-card highlight">
+          <div class="kpi-icon emerald">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect width="20" height="12" x="2" y="6" rx="2"/>
+              <circle cx="12" cy="12" r="2"/>
+              <path d="M6 12h.01M18 12h.01"/>
+            </svg>
+          </div>
+          <div class="kpi-body">
+            <span class="kpi-label">Total Dinero Entregado</span>
+            <div class="kpi-value">Bs {{ (panelIndicadores()?.total_dinero_entregado || 0) | number:'1.2-2' }}</div>
+            <span class="kpi-desc">Suma de anticipos y pagos del período</span>
+          </div>
+        </div>
+
+        <!-- Tarjeta 2: Total Pendiente -->
+        <div class="kpi-card warning">
+          <div class="kpi-icon amber">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" x2="12" y1="8" y2="12"/>
+              <line x1="12" x2="12.01" y1="16" y2="16"/>
+            </svg>
+          </div>
+          <div class="kpi-body">
+            <span class="kpi-label">Saldo Pendiente de Pago</span>
+            <div class="kpi-value">Bs {{ (panelIndicadores()?.total_dinero_pendiente || 0) | number:'1.2-2' }}</div>
+            <span class="kpi-desc">{{ panelIndicadores()?.trabajadores_con_pendientes_count || 0 }} trabajadores con saldos</span>
+          </div>
+        </div>
+
+        <!-- Tarjeta 3: Anticipos del Mes -->
+        <div class="kpi-card">
+          <div class="kpi-icon blue">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+            </svg>
+          </div>
+          <div class="kpi-body">
+            <span class="kpi-label">Anticipos Entregados</span>
+            <div class="kpi-value">Bs {{ (panelIndicadores()?.total_anticipos_mes || 0) | number:'1.2-2' }}</div>
+            <span class="kpi-desc">{{ anticiposList().length }} anticipos registrados</span>
+          </div>
+        </div>
+
+        <!-- Tarjeta 4: Sueldos Pagados -->
+        <div class="kpi-card">
+          <div class="kpi-icon purple">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+              <polyline points="22 4 12 14.01 9 11.01"/>
+            </svg>
+          </div>
+          <div class="kpi-body">
+            <span class="kpi-label">Sueldos Pagados</span>
+            <div class="kpi-value">Bs {{ (panelIndicadores()?.total_sueldos_pagados_mes || 0) | number:'1.2-2' }}</div>
+            <span class="kpi-desc">{{ panelIndicadores()?.liquidaciones_completadas_count || 0 }} liquidaciones completadas</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tablas de Actividad Reciente en el Panel -->
+      <div class="recent-grids">
+        <!-- Liquidaciones Activas -->
+        <div class="panel-card">
+          <div class="card-header-clean">
+            <div class="header-text">
+              <h3>Liquidaciones del Período</h3>
+              <span>Estado de nómina salarial</span>
+            </div>
+            <button class="btn-action-text" (click)="setTab('pagos_parciales')">Gestionar Nómina / Liquidaciones →</button>
+          </div>
+
+          <div class="table-responsive">
+            <table class="clean-table">
+              <thead>
+                <tr>
+                  <th>Comprobante</th>
+                  <th>Trabajador</th>
+                  <th>Neto</th>
+                  <th>Pagado</th>
+                  <th>Saldo</th>
+                  <th>Estado</th>
+                  <th>Cancelado por</th>
+                  <th>Acción</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (liq of liquidacionesList(); track liq.id) {
+                  <tr>
+                    <td><span class="mono-badge">{{ liq.numero_comprobante }}</span></td>
+                    <td class="font-medium">{{ getNombreTrabajador(liq.trabajador_id) }}</td>
+                    <td>Bs {{ liq.monto_neto | number:'1.2-2' }}</td>
+                    <td class="text-emerald">Bs {{ liq.monto_pagado | number:'1.2-2' }}</td>
+                    <td class="font-semibold" [class.text-amber]="liq.saldo_pendiente > 0">
+                      Bs {{ liq.saldo_pendiente | number:'1.2-2' }}
+                    </td>
+                    <td>
+                      <span class="badge-status" [ngClass]="liq.estado.toLowerCase()">
+                        {{ liq.estado }}
+                      </span>
+                    </td>
+                    <td>
+                      <div class="user-cell" [title]="liq.usuario_nombre ? ('CI: ' + (liq.usuario_id || 'N/A')) : ''">
+                        <span class="user-avatar-mini">{{ getInitials(liq.usuario_nombre || liq.usuario_id) }}</span>
+                        <span class="user-name">{{ getUsuarioDisplay(liq.usuario_nombre, liq.usuario_id) }}</span>
+                      </div>
+                    </td>
+                    <td>
+                      @if (liq.saldo_pendiente > 0 && liq.estado !== 'ANULADO') {
+                        <button class="btn btn-xs btn-primary" (click)="abrirModalPagoParcial(liq)">
+                          Pagar Saldo
+                        </button>
+                      } @else {
+                        <button class="btn btn-xs btn-secondary" (click)="verHistorialTrabajador(liq.trabajador_id)">
+                          Historial
+                        </button>
+                      }
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="8" class="empty-row">No hay liquidaciones en el período seleccionado.</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Anticipos Recientes -->
+        <div class="panel-card">
+          <div class="card-header-clean">
+            <div class="header-text">
+              <h3>Anticipos Entregados</h3>
+              <span>Vales de caja y transferencias</span>
+            </div>
+            <button class="btn-action-text" (click)="activeTab.set('anticipos')">Registrar Anticipo →</button>
+          </div>
+
+          <div class="table-responsive">
+            <table class="clean-table">
+              <thead>
+                <tr>
+                  <th>N° Vale</th>
+                  <th>Trabajador</th>
+                  <th>Fecha</th>
+                  <th>Importe</th>
+                  <th>Método</th>
+                  <th>Estado</th>
+                  <th>Cancelado por</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (ant of anticiposList(); track ant.id) {
+                  <tr>
+                    <td><span class="mono-badge">{{ ant.numero_comprobante }}</span></td>
+                    <td class="font-medium">{{ getNombreTrabajador(ant.trabajador_id) }}</td>
+                    <td>{{ ant.fecha_entrega }}</td>
+                    <td class="font-semibold text-slate-900">Bs {{ ant.importe | number:'1.2-2' }}</td>
+                    <td><span class="pill-mini">{{ ant.metodo_pago }}</span></td>
+                    <td>
+                      <span class="badge-status" [ngClass]="ant.estado.toLowerCase()">{{ ant.estado }}</span>
+                    </td>
+                    <td>
+                      <div class="user-cell" [title]="ant.usuario_nombre ? ('CI: ' + (ant.usuario_id || 'N/A')) : ''">
+                        <span class="user-avatar-mini">{{ getInitials(ant.usuario_nombre || ant.usuario_id) }}</span>
+                        <span class="user-name">{{ getUsuarioDisplay(ant.usuario_nombre, ant.usuario_id) }}</span>
+                      </div>
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="7" class="empty-row">No hay anticipos entregados en este período.</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ================================================================= -->
+  <!-- TAB 2: REGISTRAR ANTICIPO -->
+  <!-- ================================================================= -->
+  @if (activeTab() === 'anticipos') {
+    <div class="tab-content animate-in">
+      <div class="two-column-layout">
+        <!-- Columna Izquierda: Buscador de Trabajadores -->
+        <div class="card-panel">
+          <div class="panel-title-bar">
+            <h3>1. Seleccionar Trabajador de Planilla</h3>
+            <span class="step-desc">Busca por carné, nombre o filtra por área</span>
+          </div>
+
+          <!-- Filtro de Áreas -->
+          <div class="area-chips">
+            <button
+              class="chip-btn"
+              [class.active]="selectedAreaFilter() === null"
+              (click)="selectedAreaFilter.set(null)"
+            >
+              Todas las Áreas
+            </button>
+            @for (area of areas(); track area.id) {
+              <button
+                class="chip-btn"
+                [class.active]="selectedAreaFilter() === area.id"
+                (click)="selectedAreaFilter.set(area.id)"
+              >
+                {{ area.nombre }}
+              </button>
+            }
+          </div>
+
+          <!-- Input Buscador -->
+          <div class="search-box-large">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"/>
+              <line x1="21" x2="16.65" y1="21" y2="16.65"/>
+            </svg>
+            <input
+              type="text"
+              placeholder="Buscar por Carné de Identidad (CI), Nombre o Cargo..."
+              [ngModel]="searchTerm()"
+              (ngModelChange)="searchTerm.set($event)"
+            />
+          </div>
+
+          <!-- Lista de Trabajadores -->
+          <div class="worker-selection-list">
+            @for (t of filteredTrabajadores(); track t.id) {
+              <div
+                class="worker-row-card"
+                [class.selected]="selectedTrabajador()?.id === t.id"
+                (click)="selectTrabajador(t)"
+              >
+                <div class="worker-avatar">
+                  {{ t.nombres.charAt(0) }}{{ t.apellidos.charAt(0) }}
+                </div>
+                <div class="worker-details">
+                  <div class="worker-name">{{ t.nombres }} {{ t.apellidos }}</div>
+                  <div class="worker-sub">
+                    <span class="ci-tag">CI: {{ t.ci || 'S/N' }}</span>
+                    <span class="area-tag">{{ t.area?.nombre || 'General' }}</span>
+                    <span class="cargo-tag">{{ t.cargo }}</span>
+                  </div>
+                </div>
+                <div class="worker-salary">
+                  <span class="salary-label">Sueldo Base</span>
+                  <span class="salary-value">Bs {{ t.sueldoBase | number:'1.2-2' }}</span>
+                </div>
+              </div>
+            } @empty {
+              <div class="empty-search">No se encontraron trabajadores con esos criterios.</div>
+            }
+          </div>
+        </div>
+
+        <!-- Columna Derecha: Tarjeta Salarial y Formulario de Anticipo -->
+        <div class="card-panel">
+          @if (selectedTrabajador()) {
+            <!-- Resumen Salarial Dinámico -->
+            <div class="salary-breakdown-card">
+              <div class="breakdown-header">
+                <div>
+                  <h4>{{ selectedTrabajador()?.nombres }} {{ selectedTrabajador()?.apellidos }}</h4>
+                  <span class="breakdown-subtitle">{{ selectedTrabajador()?.cargo }} • {{ selectedTrabajador()?.area?.nombre || 'General' }}</span>
+                </div>
+                <span class="badge-status" [ngClass]="resumenSalarial()?.estado_liquidacion?.toLowerCase() || 'sin_liquidar'">
+                  {{ resumenSalarial()?.estado_liquidacion }}
+                </span>
+              </div>
+
+              <!-- Grid de Indicadores Salariales de la Ficha -->
+              <div class="breakdown-metrics-grid">
+                <div class="metric-item">
+                  <span class="m-label">Sueldo Base Mensual</span>
+                  <span class="m-val">Bs {{ (resumenSalarial()?.sueldo_base || selectedTrabajador()?.sueldoBase || 0) | number:'1.2-2' }}</span>
+                </div>
+                <div class="metric-item">
+                  <span class="m-label">Quincena de Referencia</span>
+                  <span class="m-val text-blue">Bs {{ (resumenSalarial()?.quincena_referencia || 1000) | number:'1.2-2' }}</span>
+                </div>
+                <div class="metric-item">
+                  <span class="m-label">Total Anticipos Período</span>
+                  <span class="m-val text-amber">Bs {{ (resumenSalarial()?.total_anticipos || 0) | number:'1.2-2' }}</span>
+                </div>
+                <div class="metric-item">
+                  <span class="m-label">Anticipos hasta Día 18</span>
+                  <span class="m-val">Bs {{ (resumenSalarial()?.anticipos_antes_dia_18 || 0) | number:'1.2-2' }}</span>
+                </div>
+                <div class="metric-item">
+                  <span class="m-label">Diferencia Quincena</span>
+                  @if (resumenSalarial()?.supera_quincena) {
+                    <span class="m-val text-red font-bold" title="Superó el monto referencial">
+                      - Bs {{ (resumenSalarial()?.excedente_quincena || 0) | number:'1.2-2' }}
+                    </span>
+                  } @else {
+                    <span class="m-val text-emerald font-bold">
+                      Bs {{ (resumenSalarial()?.diferencia_quincena || 0) | number:'1.2-2' }}
+                    </span>
+                  }
+                </div>
+                <div class="metric-item">
+                  <span class="m-label">Saldo Salarial Estimado</span>
+                  <span class="m-val text-emerald font-bold">
+                    Bs {{ (resumenSalarial()?.saldo_salarial_pendiente || 0) | number:'1.2-2' }}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Alerta Informativa de Quincena -->
+              @if (resumenSalarial()?.supera_quincena) {
+                <div class="quincena-alert-box warning mt-3">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="8" x2="12" y2="12"/>
+                    <line x1="12" y1="16" x2="12.01" y2="16"/>
+                  </svg>
+                  <span>
+                    El trabajador ya superó la quincena de referencia en <strong>Bs {{ (resumenSalarial()?.excedente_quincena || 0) | number:'1.2-2' }}</strong>.
+                    El importe sugerido para pago adicional de quincena es <strong>Bs 0.00</strong>.
+                  </span>
+                </div>
+              }
+
+              <div class="last-advance-date mt-2">
+                <span>Último anticipo registrado: <strong>{{ resumenSalarial()?.fecha_ultimo_anticipo || 'Ninguno en este período' }}</strong></span>
+              </div>
+            </div>
+
+            <!-- Formulario de Entrega de Anticipo -->
+            <div class="action-form-box">
+              <div class="panel-title-bar">
+                <h3>2. Registrar Entrega de Anticipo</h3>
+                <span class="step-desc">Se generará un vale oficial con comprobante correlativo único e inmutable</span>
+              </div>
+
+              <div class="form-grid">
+                <div class="form-group">
+                  <label>Importe Solicitado (Bs) *</label>
+                  <div class="input-currency-wrapper">
+                    <span class="currency-prefix">Bs</span>
+                    <input
+                      type="number"
+                      min="1"
+                      placeholder="0.00"
+                      class="input-clean font-bold text-lg"
+                      [(ngModel)]="anticipoForm.importe"
+                    />
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label>Método de Entrega *</label>
+                  <select class="select-clean" [(ngModel)]="anticipoForm.metodo_pago">
+                    <option value="EFECTIVO">Efectivo (Caja Chica)</option>
+                    <option value="TRANSFERENCIA">Transferencia Bancaria</option>
+                    <option value="CHEQUE">Cheque</option>
+                    <option value="OTRO">Otro Método Autorizado</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label>Fecha de Entrega *</label>
+                  <input
+                    type="date"
+                    class="input-clean"
+                    [(ngModel)]="anticipoForm.fecha_entrega"
+                  />
+                </div>
+
+                <div class="form-group">
+                  <label>Motivo / Observaciones (Opcional)</label>
+                  <input
+                    type="text"
+                    placeholder="Ej. Anticipo para víveres, salud, emergencia..."
+                    class="input-clean"
+                    [(ngModel)]="anticipoForm.observaciones"
+                  />
+                </div>
+              </div>
+
+              <!-- Vista Previa de Cálculos en Pantalla -->
+              @if (anticipoForm.importe && anticipoForm.importe > 0) {
+                <div class="live-simulation-card mt-4">
+                  <div class="sim-header">
+                    <span class="sim-title">Vista Previa de la Operación</span>
+                    @if (simulacionAnticipo()?.superaQuincena) {
+                      <span class="pill-warning">Supera Quincena Referencial</span>
+                    }
+                  </div>
+                  <div class="sim-grid">
+                    <div class="sim-item">
+                      <span class="s-label">Nuevo Total Anticipos:</span>
+                      <strong class="text-amber">Bs {{ simulacionAnticipo()?.nuevoTotalAnticipos | number:'1.2-2' }}</strong>
+                    </div>
+                    <div class="sim-item">
+                      <span class="s-label">Saldo Salarial Resultante:</span>
+                      <strong [class.text-emerald]="(simulacionAnticipo()?.nuevoSaldoRestante || 0) >= 0" [class.text-red]="(simulacionAnticipo()?.nuevoSaldoRestante || 0) < 0">
+                        Bs {{ simulacionAnticipo()?.nuevoSaldoRestante | number:'1.2-2' }}
+                      </strong>
+                    </div>
+                    <div class="sim-item">
+                      <span class="s-label">Diferencia Quincena Resultante:</span>
+                      @if (simulacionAnticipo()?.superaQuincena) {
+                        <strong class="text-red">- Bs {{ simulacionAnticipo()?.excedenteQuincena | number:'1.2-2' }}</strong>
+                      } @else {
+                        <strong class="text-emerald">Bs {{ simulacionAnticipo()?.nuevaDiferenciaQuincena | number:'1.2-2' }}</strong>
+                      }
+                    </div>
+                  </div>
+                  @if (simulacionAnticipo()?.superaQuincena) {
+                    <p class="sim-note text-amber mt-2">
+                      ⚠️ Este anticipo supera el importe de referencia de la quincena (Bs 1.000). El sistema permite registrar la operación con su autorización correspondiente.
+                    </p>
+                  }
+                  @if (simulacionAnticipo()?.superaSueldoBase) {
+                    <p class="sim-note text-red mt-2">
+                      ⛔ Advertencia: El acumulado superaría el sueldo base mensual del trabajador.
+                    </p>
+                  }
+                </div>
+              }
+
+              <div class="form-actions mt-4">
+                <button
+                  class="btn btn-primary btn-lg w-full"
+                  [disabled]="!anticipoForm.importe || anticipoForm.importe <= 0 || loading() || simulacionAnticipo()?.superaSueldoBase"
+                  (click)="prepararAnticipo()"
+                >
+                  Confirmar y Generar Comprobante de Anticipo
+                </button>
+              </div>
+            </div>
+          } @else {
+            <div class="empty-state-card">
+              <div class="empty-icon">👈</div>
+              <h3>Selecciona un trabajador</h3>
+              <p>Elige un trabajador de la lista izquierda para cargar su información salarial y registrar el anticipo.</p>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ================================================================= -->
+  <!-- TAB 3: PAGOS PARCIALES & LIQUIDACIÓN (CONTROL DE QUINCENAS, SUELDOS Y ADELANTOS) -->
+  <!-- ================================================================= -->
+  @if (activeTab() === 'pagos_parciales') {
+    <div class="tab-content animate-in">
+      <div class="panel-card">
+        <div class="card-header-clean">
+          <div>
+            <h3>Gestión de Pagos de Quincena (Día 18) y Pagos Parciales</h3>
+            <span>Control consolidado de anticipos, saldo referencial de quincena y pagos salariales por trabajador</span>
+          </div>
+          <!-- Buscador de Pagos Parciales -->
+          <div class="search-mini-box">
+            <input
+              type="text"
+              placeholder="Buscar trabajador o carné..."
+              class="input-clean input-sm"
+              [ngModel]="searchTermPagosParciales()"
+              (ngModelChange)="searchTermPagosParciales.set($event)"
+            />
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="clean-table table-pagos-parciales">
+            <thead>
+              <tr>
+                <th>Trabajador</th>
+                <th>Sueldo Base</th>
+                <th>Quincena Ref.</th>
+                <th>Anticipos &le; Día 18</th>
+                <th>Dif. Quincena</th>
+                <th>Pago Quincena</th>
+                <th>Anticipos &gt; Día 18</th>
+                <th>Total Anticipos</th>
+                <th>Pagos Parciales</th>
+                <th>Saldo Pendiente</th>
+                <th>Estado</th>
+                <th>Acción</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (t of filteredPagosParciales(); track t.trabajador_id) {
+                <tr>
+                  <td>
+                    <div class="worker-name-block">
+                      <span class="font-bold text-slate-900">{{ t.nombre_completo }}</span>
+                      <span class="text-xs text-slate-500">CI: {{ t.ci || 'S/N' }} • {{ t.cargo }}</span>
+                    </div>
+                  </td>
+                  <td class="font-semibold">Bs {{ t.sueldo_base | number:'1.2-2' }}</td>
+                  <td class="text-slate-600">Bs {{ t.quincena_referencia | number:'1.2-2' }}</td>
+                  <td class="text-amber">Bs {{ t.anticipos_antes_dia_18 | number:'1.2-2' }}</td>
+                  <td>
+                    @if (t.supera_quincena) {
+                      <span class="badge-quincena-excedida" [title]="'Superó quincena en Bs ' + (t.excedente_quincena | number:'1.2-2')">
+                        - Bs {{ t.excedente_quincena | number:'1.2-2' }} (Superó)
+                      </span>
+                    } @else {
+                      <span class="badge-quincena-pendiente font-medium">
+                        Bs {{ t.diferencia_quincena | number:'1.2-2' }}
+                      </span>
+                    }
+                  </td>
+                  <td class="text-emerald font-semibold">
+                    Bs {{ t.pago_quincena_realizado | number:'1.2-2' }}
+                  </td>
+                  <td class="text-slate-600">Bs {{ t.anticipos_posteriores_dia_18 | number:'1.2-2' }}</td>
+                  <td class="font-bold text-amber">Bs {{ t.total_anticipos_periodo | number:'1.2-2' }}</td>
+                  <td class="font-bold text-emerald">Bs {{ t.total_pagos_parciales | number:'1.2-2' }}</td>
+                  <td class="font-bold" [class.text-red]="t.saldo_salarial_pendiente < 0" [class.text-blue]="t.saldo_salarial_pendiente >= 0">
+                    Bs {{ t.saldo_salarial_pendiente | number:'1.2-2' }}
+                  </td>
+                  <td>
+                    <span class="badge-status" [ngClass]="t.estado_periodo.toLowerCase()">
+                      {{ t.estado_periodo }}
+                    </span>
+                  </td>
+                  <td>
+                    <div class="row-actions-group">
+                      @if (t.quincena_pagada) {
+                        <span class="badge-quincena-pagada" title="La quincena de este período ya fue registrada y pagada">
+                          ✓ Quincena (Bs {{ t.pago_quincena_realizado | number:'1.2-2' }})
+                        </span>
+                      } @else if (t.estado_periodo !== 'LIQUIDADO') {
+                        <button
+                          class="btn btn-xs btn-primary whitespace-nowrap"
+                          (click)="abrirModalPagoQuincena(t)"
+                          title="Pagar Quincena (Día 18)"
+                        >
+                          Pagar Quincena
+                        </button>
+                      }
+
+                      @if (t.estado_periodo !== 'LIQUIDADO') {
+                        <button
+                          class="btn btn-xs btn-success whitespace-nowrap"
+                          (click)="abrirModalLiquidarTrabajador(t)"
+                          title="Liquidar sueldo restante (Día 5)"
+                        >
+                          Liquidar Sueldo
+                        </button>
+                      } @else {
+                        <span class="badge-liquidado-check">✓ Liquidado</span>
+                      }
+
+                      <button
+                        class="btn btn-xs btn-secondary whitespace-nowrap"
+                        (click)="verHistorialTrabajador(t.trabajador_id)"
+                        title="Ver historial de anticipos y liquidaciones del trabajador"
+                      >
+                        Historial
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="12" class="empty-row">No hay trabajadores activos en el período seleccionado.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Tabla Complementaria: Liquidaciones del Período con Saldo -->
+      <div class="panel-card mt-5">
+        <div class="card-header-clean">
+          <div>
+            <h3>Liquidaciones Formales con Saldo Pendiente</h3>
+            <span>Entregas contra liquidación final de sueldo</span>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="clean-table">
+            <thead>
+              <tr>
+                <th>Comprobante</th>
+                <th>Trabajador</th>
+                <th>Área</th>
+                <th>Fecha Liq.</th>
+                <th>Monto Neto</th>
+                <th>Monto Pagado</th>
+                <th>Saldo Pendiente</th>
+                <th>Estado</th>
+                <th>Cancelado por</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (liq of liquidacionesList(); track liq.id) {
+                <tr>
+                  <td><span class="mono-badge">{{ liq.numero_comprobante }}</span></td>
+                  <td class="font-medium">{{ getNombreTrabajador(liq.trabajador_id) }}</td>
+                  <td>{{ getAreaTrabajador(liq.trabajador_id) }}</td>
+                  <td>{{ liq.fecha_liquidacion }}</td>
+                  <td>Bs {{ liq.monto_neto | number:'1.2-2' }}</td>
+                  <td class="text-emerald">Bs {{ liq.monto_pagado | number:'1.2-2' }}</td>
+                  <td class="font-bold" [class.text-amber]="liq.saldo_pendiente > 0">
+                    Bs {{ liq.saldo_pendiente | number:'1.2-2' }}
+                  </td>
+                  <td>
+                    <span class="badge-status" [ngClass]="liq.estado.toLowerCase()">
+                      {{ liq.estado }}
+                    </span>
+                  </td>
+                  <td>
+                    <div class="user-cell" [title]="liq.usuario_nombre ? ('CI: ' + (liq.usuario_id || 'N/A')) : ''">
+                      <span class="user-avatar-mini">{{ getInitials(liq.usuario_nombre || liq.usuario_id) }}</span>
+                      <span class="user-name">{{ getUsuarioDisplay(liq.usuario_nombre, liq.usuario_id) }}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="actions-cluster">
+                      @if (liq.saldo_pendiente > 0 && liq.estado !== 'ANULADO') {
+                        <button class="btn btn-sm btn-primary" (click)="abrirModalPagoParcial(liq)">
+                          Registrar Entrega
+                        </button>
+                      }
+                      <button class="btn btn-sm btn-secondary" (click)="verHistorialTrabajador(liq.trabajador_id)">
+                        Historial
+                      </button>
+                      @if (liq.estado !== 'ANULADO') {
+                        <button class="btn btn-sm btn-danger-clean" (click)="abrirModalAnulacion('LIQUIDACION', liq.id, liq.numero_comprobante)">
+                          Anular
+                        </button>
+                      }
+                    </div>
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="10" class="empty-row">No hay liquidaciones pendientes en este período.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ================================================================= -->
+  <!-- TAB 5: HISTORIAL Y AUDITORÍA DE MOVIMIENTOS -->
+  <!-- ================================================================= -->
+  @if (activeTab() === 'historial') {
+    <div class="tab-content animate-in">
+      @if (historialData()) {
+        <div class="historial-worker-banner">
+          <div class="banner-avatar">
+            {{ historialData()?.trabajador?.nombre_completo?.charAt(0) }}
+          </div>
+          <div class="banner-info">
+            <h2>{{ historialData()?.trabajador?.nombre_completo }}</h2>
+            <div class="banner-meta">
+              <span>CI: <strong>{{ historialData()?.trabajador?.ci || 'S/N' }}</strong></span>
+              <span>Cargo: <strong>{{ historialData()?.trabajador?.cargo }}</strong></span>
+              <span>Área: <strong>{{ historialData()?.trabajador?.area }}</strong></span>
+              <span>Sueldo Base: <strong>Bs {{ (historialData()?.trabajador?.sueldo_base || 0) | number:'1.2-2' }}</strong></span>
+            </div>
+          </div>
+          <button class="btn btn-secondary" (click)="historialData.set(null)">
+            Buscar Otro Trabajador
+          </button>
+        </div>
+
+        <div class="panel-card mt-4">
+          <div class="card-header-clean">
+            <h3>Libro de Movimientos Salariales</h3>
+            <span>Historial ordenado cronológicamente</span>
+          </div>
+
+          <div class="table-responsive">
+            <table class="clean-table">
+              <thead>
+                <tr>
+                  <th>Tipo Operación</th>
+                  <th>N° Comprobante</th>
+                  <th>Fecha</th>
+                  <th>Período</th>
+                  <th>Importe</th>
+                  <th>Método Pago</th>
+                  <th>Estado</th>
+                  <th>Cancelado por</th>
+                  <th>Observaciones</th>
+                  <th>Acción</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (m of historialData()?.movimientos; track m.id) {
+                  <tr>
+                    <td>
+                      <span class="operation-pill" [class.anticipo]="m.tipo === 'ANTICIPO'" [class.pago]="m.tipo !== 'ANTICIPO'">
+                        {{ m.tipo }}
+                      </span>
+                    </td>
+                    <td><span class="mono-badge">{{ m.numero_comprobante }}</span></td>
+                    <td>{{ m.fecha }}</td>
+                    <td>{{ m.periodo }}</td>
+                    <td class="font-bold text-slate-900">Bs {{ m.monto | number:'1.2-2' }}</td>
+                    <td><span class="pill-mini">{{ m.metodo_pago }}</span></td>
+                    <td>
+                      <span class="badge-status" [ngClass]="m.estado.toLowerCase()">{{ m.estado }}</span>
+                    </td>
+                    <td>
+                      <div class="user-cell" [title]="m.usuario_nombre ? ('CI: ' + (m.usuario_id || 'N/A')) : ''">
+                        <span class="user-avatar-mini">{{ getInitials(m.usuario_nombre || m.usuario_id) }}</span>
+                        <span class="user-name">{{ getUsuarioDisplay(m.usuario_nombre, m.usuario_id) }}</span>
+                      </div>
+                    </td>
+                    <td class="text-sm text-slate-600">{{ m.observaciones || '—' }}</td>
+                    <td>
+                      @if (m.tipo === 'ANTICIPO') {
+                        <button
+                          class="btn btn-xs btn-secondary"
+                          (click)="abrirComprobanteAnticipoDetallado(m.id)"
+                        >
+                          Ver Vale
+                        </button>
+                      } @else {
+                        <button
+                          class="btn btn-xs btn-secondary"
+                          (click)="abrirComprobante({
+                            tipo: m.tipo,
+                            numero_comprobante: m.numero_comprobante,
+                            trabajador_nombre: historialData()?.trabajador?.nombre_completo || '',
+                            trabajador_ci: historialData()?.trabajador?.ci,
+                            trabajador_cargo: historialData()?.trabajador?.cargo,
+                            trabajador_area: historialData()?.trabajador?.area,
+                            periodo_descripcion: m.periodo,
+                            fecha: m.fecha,
+                            importe: m.monto,
+                            metodo_pago: m.metodo_pago,
+                            observaciones: m.observaciones,
+                            usuario_nombre: m.usuario_nombre,
+                            usuario_id: m.usuario_id
+                          })"
+                        >
+                          Ver Recibo
+                        </button>
+                      }
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="10" class="empty-row">El trabajador no registra movimientos económicos.</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      } @else {
+        <!-- Selector para ver historial -->
+        <div class="card-panel">
+          <div class="panel-title-bar">
+            <h3>Seleccionar Trabajador para Consultar Historial Completo</h3>
+            <span class="step-desc">Visualiza vales de anticipo, pagos de liquidación y auditoría de comprobantes</span>
+          </div>
+
+          <div class="search-box-large">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"/>
+              <line x1="21" x2="16.65" y1="21" y2="16.65"/>
+            </svg>
+            <input
+              type="text"
+              placeholder="Buscar por carné de identidad o nombre..."
+              [ngModel]="searchTerm()"
+              (ngModelChange)="searchTerm.set($event)"
+            />
+          </div>
+
+          <div class="worker-selection-list">
+            @for (t of filteredTrabajadores(); track t.id) {
+              <div class="worker-row-card" (click)="verHistorialTrabajador(t.id)">
+                <div class="worker-avatar">{{ t.nombres.charAt(0) }}{{ t.apellidos.charAt(0) }}</div>
+                <div class="worker-details">
+                  <div class="worker-name">{{ t.nombres }} {{ t.apellidos }}</div>
+                  <div class="worker-sub">
+                    <span class="ci-tag">CI: {{ t.ci || 'S/N' }}</span>
+                    <span class="area-tag">{{ t.area?.nombre }}</span>
+                    <span class="cargo-tag">{{ t.cargo }}</span>
+                  </div>
+                </div>
+                <button class="btn btn-sm btn-secondary">Consultar Historial →</button>
+              </div>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- ================================================================= -->
+  <!-- MODAL 1: CONFIRMAR ANTICIPO -->
+  <!-- ================================================================= -->
+  @if (showConfirmAnticipoModal()) {
+    <div class="modal-backdrop">
+      <div class="modal-card animate-scale-up">
+        <div class="modal-icon-badge blue">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" x2="12" y1="16" y2="12"/>
+            <line x1="12" x2="12.01" y1="8" y2="8"/>
+          </svg>
+        </div>
+        <h3>¿Confirmar Registro de Anticipo?</h3>
+        <p class="modal-desc">
+          Se registrará la salida efectiva de dinero a nombre de
+          <strong>{{ selectedTrabajador()?.nombres }} {{ selectedTrabajador()?.apellidos }}</strong>.
+        </p>
+
+        <div class="confirmation-summary-box">
+          <div class="summary-line">
+            <span>Importe a entregar:</span>
+            <strong class="text-emerald">Bs {{ anticipoForm.importe | number:'1.2-2' }}</strong>
+          </div>
+          <div class="summary-line">
+            <span>Método de Pago:</span>
+            <strong>{{ anticipoForm.metodo_pago }}</strong>
+          </div>
+          <div class="summary-line">
+            <span>Fecha de Entrega:</span>
+            <strong>{{ anticipoForm.fecha_entrega }}</strong>
+          </div>
+          <div class="summary-line">
+            <span>Período Salarial:</span>
+            <strong>{{ getPeriodoDescripcion(selectedPeriodoId()) }}</strong>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button class="btn btn-secondary" (click)="showConfirmAnticipoModal.set(false)">
+            Cancelar
+          </button>
+          <button class="btn btn-primary" (click)="confirmarRegistroAnticipo()">
+            Confirmar y Emitir Vale
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ================================================================= -->
+  <!-- MODAL 3: REGISTRAR PAGO PARCIAL A LIQUIDACIÓN -->
+  <!-- ================================================================= -->
+  @if (showPagoParcialModal()) {
+    <div class="modal-backdrop">
+      <div class="modal-card modal-card-lg animate-scale-up">
+        <div class="modal-icon-badge emerald">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect width="20" height="12" x="2" y="6" rx="2"/>
+            <circle cx="12" cy="12" r="2"/>
+          </svg>
+        </div>
+        <h3>Registrar Entrega de Dinero</h3>
+        <p class="modal-desc">
+          Liquidación: <strong>{{ selectedLiquidacionForPago()?.numero_comprobante }}</strong>
+          (Saldo Pendiente: <strong>Bs {{ (selectedLiquidacionForPago()?.saldo_pendiente || 0) | number:'1.2-2' }}</strong>)
+        </p>
+
+        <div class="form-grid text-left mt-4">
+          <div class="form-group">
+            <label>Monto a entregar (Bs) *</label>
+            <div class="input-currency-wrapper">
+              <span class="currency-prefix">Bs</span>
+              <input
+                type="number"
+                min="1"
+                [max]="selectedLiquidacionForPago()?.saldo_pendiente || 999999"
+                class="input-clean font-bold text-lg"
+                [(ngModel)]="pagoParcialForm.monto"
+              />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Método de Pago *</label>
+            <select class="select-clean" [(ngModel)]="pagoParcialForm.metodo_pago">
+              <option value="EFECTIVO">Efectivo</option>
+              <option value="TRANSFERENCIA">Transferencia Bancaria</option>
+              <option value="CHEQUE">Cheque</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Fecha de Pago *</label>
+            <input type="date" class="input-clean" [(ngModel)]="pagoParcialForm.fecha_pago" />
+          </div>
+
+          <div class="form-group">
+            <label>Observaciones</label>
+            <input type="text" placeholder="Ej. Pago primera quincena..." class="input-clean" [(ngModel)]="pagoParcialForm.observaciones" />
+          </div>
+        </div>
+
+        <div class="modal-actions mt-6">
+          <button class="btn btn-secondary" (click)="showPagoParcialModal.set(false)">
+            Cancelar
+          </button>
+          <button class="btn btn-primary" (click)="confirmarPagoParcial()">
+            Guardar Pago y Emitir Comprobante
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ================================================================= -->
+  <!-- MODAL: REGISTRAR PAGO DE QUINCENA (DÍA 18) / PAGO PARCIAL DIRECTO -->
+  <!-- ================================================================= -->
+  @if (showModalPagoQuincena()) {
+    <div class="modal-backdrop">
+      <div class="modal-card modal-card-lg animate-scale-up">
+        <div class="modal-icon-badge blue">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect width="20" height="14" x="2" y="5" rx="2"/>
+            <line x1="2" x2="22" y1="10" y2="10"/>
+          </svg>
+        </div>
+        <h3>Gestión de Pago de Quincena (Día 18)</h3>
+        <p class="modal-desc">
+          Trabajador: <strong>{{ selectedTrabajadorQuincena()?.nombre_completo }}</strong>
+          (Sueldo Base: <strong>Bs {{ (selectedTrabajadorQuincena()?.sueldo_base || 0) | number:'1.2-2' }}</strong>)
+        </p>
+
+        <!-- Resumen Financiero de Quincena -->
+        <div class="confirmation-summary-box mb-4">
+          <div class="summary-line">
+            <span>Quincena de Referencia:</span>
+            <strong>Bs {{ (selectedTrabajadorQuincena()?.quincena_referencia || 1000) | number:'1.2-2' }}</strong>
+          </div>
+          <div class="summary-line">
+            <span>Anticipos recibidos &le; Día 18:</span>
+            <strong class="text-amber">Bs {{ (selectedTrabajadorQuincena()?.anticipos_antes_dia_18 || 0) | number:'1.2-2' }}</strong>
+          </div>
+          <div class="summary-line">
+            <span>Diferencia de Quincena:</span>
+            @if (selectedTrabajadorQuincena()?.supera_quincena) {
+              <strong class="text-red">Superó en Bs {{ (selectedTrabajadorQuincena()?.excedente_quincena || 0) | number:'1.2-2' }}</strong>
+            } @else {
+              <strong class="text-emerald">Faltan Bs {{ (selectedTrabajadorQuincena()?.diferencia_quincena || 0) | number:'1.2-2' }}</strong>
+            }
+          </div>
+          <div class="summary-line">
+            <span>Monto sugerido para quincena:</span>
+            <strong class="text-blue font-bold">Bs {{ (selectedTrabajadorQuincena()?.monto_sugerido_quincena || 0) | number:'1.2-2' }}</strong>
+          </div>
+        </div>
+
+        @if (selectedTrabajadorQuincena()?.supera_quincena) {
+          <div class="quincena-alert-box warning mb-4">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="8" x2="12" y2="12"/>
+              <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            <span>
+              La quincena referencial ya fue cubierta o superada por anticipos previos. Puede registrar con importe <strong>Bs 0.00</strong> para dejar constancia de revisión, o ingresar otro monto si cuenta con autorización expresa.
+            </span>
+          </div>
+        }
+
+        <div class="form-grid text-left">
+          <div class="form-group">
+            <label>Importe a Pagar (Bs) *</label>
+            <div class="input-currency-wrapper">
+              <span class="currency-prefix">Bs</span>
+              <input
+                type="number"
+                min="0"
+                class="input-clean font-bold text-lg"
+                [(ngModel)]="pagoQuincenaForm.monto"
+              />
+            </div>
+            <span class="text-xs text-slate-500 mt-1">Sugerido automáticamente: Bs {{ (selectedTrabajadorQuincena()?.monto_sugerido_quincena || 0) | number:'1.2-2' }}</span>
+          </div>
+
+          <div class="form-group">
+            <label>Tipo de Registro *</label>
+            <select class="select-clean" [(ngModel)]="pagoQuincenaForm.tipo_pago">
+              <option value="PAGO_QUINCENA">Pago Efectivo de Quincena</option>
+              <option value="REVISION_QUINCENA">Revisión / Constancia de Quincena (Bs 0.00)</option>
+              <option value="PAGO_PARCIAL">Pago Parcial Extraordinario</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Método de Pago *</label>
+            <select class="select-clean" [(ngModel)]="pagoQuincenaForm.metodo_pago">
+              <option value="EFECTIVO">Efectivo</option>
+              <option value="TRANSFERENCIA">Transferencia Bancaria</option>
+              <option value="CHEQUE">Cheque</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Fecha de Pago *</label>
+            <input type="date" class="input-clean" [(ngModel)]="pagoQuincenaForm.fecha_pago" />
+          </div>
+
+          <div class="form-group col-span-2">
+            <label>Observaciones (Opcional)</label>
+            <input type="text" placeholder="Ej. Quincena mes en curso cancelada..." class="input-clean" [(ngModel)]="pagoQuincenaForm.observaciones" />
+          </div>
+        </div>
+
+        <div class="modal-actions mt-6">
+          <button class="btn btn-secondary" (click)="showModalPagoQuincena.set(false)">
+            Cancelar
+          </button>
+          <button class="btn btn-primary" (click)="confirmarPagoQuincenaDirecto()">
+            Confirmar Pago y Generar Comprobante
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ================================================================= -->
+  <!-- MODAL: REGISTRAR LIQUIDACIÓN FINAL DE SUELDO (DÍA 5) -->
+  <!-- ================================================================= -->
+  @if (showModalLiquidarTrabajador()) {
+    <div class="modal-backdrop">
+      <div class="modal-card modal-card-lg animate-scale-up">
+        <div class="modal-icon-badge emerald">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" x2="8" y1="13" y2="13"/>
+            <line x1="16" x2="8" y1="17" y2="17"/>
+            <polyline points="10 9 9 9 8 9"/>
+          </svg>
+        </div>
+        <h3>Liquidar Sueldo Restante (Día 5)</h3>
+        <p class="modal-desc">
+          Trabajador: <strong>{{ selectedTrabajadorForLiquidacion()?.nombre_completo }}</strong>
+          (CI: <strong>{{ selectedTrabajadorForLiquidacion()?.ci || 'S/N' }}</strong> — {{ selectedTrabajadorForLiquidacion()?.cargo }})
+        </p>
+
+        <!-- Desglose de Cálculo Salarial Transparente -->
+        <div class="confirmation-summary-box mb-4">
+          <div class="summary-line">
+            <span>(+) Sueldo Base Mensual:</span>
+            <strong>Bs {{ (selectedTrabajadorForLiquidacion()?.sueldo_base || 0) | number:'1.2-2' }}</strong>
+          </div>
+          <div class="summary-line">
+            <span>(-) Total Anticipos del Período:</span>
+            <strong class="text-amber">- Bs {{ (selectedTrabajadorForLiquidacion()?.total_anticipos_periodo || 0) | number:'1.2-2' }}</strong>
+          </div>
+          <div class="summary-line">
+            <span>(-) Pagos de Quincena & Parciales:</span>
+            <strong class="text-emerald">- Bs {{ (selectedTrabajadorForLiquidacion()?.total_pagos_parciales || 0) | number:'1.2-2' }}</strong>
+          </div>
+          <div class="summary-line highlight-line">
+            <span>(=) Saldo Restante a Liquidar:</span>
+            <strong class="text-blue font-bold text-lg">Bs {{ calcularSaldoLiquidacionDirecta() | number:'1.2-2' }}</strong>
+          </div>
+        </div>
+
+        <div class="form-grid text-left">
+          <div class="form-group">
+            <label>(+) Otros Ajustes / Bonos (Bs)</label>
+            <input
+              type="number"
+              step="50"
+              class="input-clean"
+              placeholder="0.00"
+              [(ngModel)]="liquidacionDirectaForm.ajustes"
+            />
+          </div>
+
+          <div class="form-group">
+            <label>Fecha de Liquidación *</label>
+            <input type="date" class="input-clean" [(ngModel)]="liquidacionDirectaForm.fecha_liquidacion" />
+          </div>
+
+          <div class="form-group col-span-2">
+            <label class="checkbox-clean">
+              <input type="checkbox" [(ngModel)]="liquidacionDirectaForm.pago_inmediato" />
+              <span class="font-semibold">Realizar entrega / pago del saldo inmediatamente al liquidar</span>
+            </label>
+          </div>
+
+          @if (liquidacionDirectaForm.pago_inmediato) {
+            <div class="form-group">
+              <label>Monto a entregar ahora (Bs) *</label>
+              <div class="input-currency-wrapper">
+                <span class="currency-prefix">Bs</span>
+                <input
+                  type="number"
+                  min="0"
+                  class="input-clean font-bold text-lg"
+                  [(ngModel)]="liquidacionDirectaForm.monto_pago_inmediato"
+                />
+              </div>
+              <span class="text-xs text-slate-500 mt-1">Saldo restante: Bs {{ calcularSaldoLiquidacionDirecta() | number:'1.2-2' }}</span>
+            </div>
+
+            <div class="form-group">
+              <label>Método de Pago *</label>
+              <select class="select-clean" [(ngModel)]="liquidacionDirectaForm.metodo_pago_inmediato">
+                <option value="EFECTIVO">Efectivo</option>
+                <option value="TRANSFERENCIA">Transferencia Bancaria</option>
+                <option value="CHEQUE">Cheque</option>
+              </select>
+            </div>
+          }
+
+          <div class="form-group col-span-2">
+            <label>Observaciones de Liquidación</label>
+            <input
+              type="text"
+              placeholder="Detalles sobre el cierre o liquidación salarial..."
+              class="input-clean"
+              [(ngModel)]="liquidacionDirectaForm.observaciones"
+            />
+          </div>
+        </div>
+
+        <div class="modal-actions mt-6">
+          <button class="btn btn-secondary" (click)="showModalLiquidarTrabajador.set(false)">
+            Cancelar
+          </button>
+          <button class="btn btn-success" (click)="confirmarLiquidacionDirecta()">
+            Confirmar Liquidación y Generar Comprobante
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ================================================================= -->
+  <!-- MODAL 4: VISTA DE COMPROBANTE OFICIAL (IMPRIMIR & WHATSAPP) -->
+  <!-- ================================================================= -->
+  @if (showReceiptModal()) {
+    <div class="modal-backdrop">
+      <div class="receipt-modal-card animate-scale-up">
+        <!-- Encabezado del Comprobante -->
+        <div class="receipt-paper" id="printable-receipt">
+          <div class="receipt-header">
+            <div class="receipt-brand">
+              <div class="brand-badge">SISTEMAS RAÍCES</div>
+              <span class="company-sub">Gestión Empresarial y Recursos</span>
+            </div>
+            <div class="receipt-id-box">
+              <span class="receipt-type">{{ currentReceipt()?.tipo }}</span>
+              <div class="receipt-number">{{ currentReceipt()?.numero_comprobante }}</div>
+              <span class="receipt-date">{{ currentReceipt()?.fecha }}</span>
+            </div>
+          </div>
+
+          <div class="receipt-divider"></div>
+
+          <!-- Datos del Beneficiario -->
+          <div class="receipt-grid">
+            <div class="receipt-col">
+              <span class="label">Trabajador:</span>
+              <span class="val font-bold">{{ currentReceipt()?.trabajador_nombre }}</span>
+            </div>
+            <div class="receipt-col">
+              <span class="label">Carné de Identidad:</span>
+              <span class="val">{{ currentReceipt()?.trabajador_ci || 'No especificado' }}</span>
+            </div>
+            <div class="receipt-col">
+              <span class="label">Área / Cargo:</span>
+              <span class="val">{{ currentReceipt()?.trabajador_area }} • {{ currentReceipt()?.trabajador_cargo }}</span>
+            </div>
+            <div class="receipt-col">
+              <span class="label">Período Salarial:</span>
+              <span class="val font-semibold">{{ currentReceipt()?.periodo_descripcion }}</span>
+            </div>
+          </div>
+
+          <div class="receipt-divider"></div>
+
+          <!-- Monto Principal -->
+          <div class="receipt-amount-box">
+            <span class="amount-label">IMPORTE ENTREGADO</span>
+            <div class="amount-val">
+              Bs {{ (currentReceipt()?.importe || 0) | number:'1.2-2' }}
+            </div>
+            <span class="amount-method">Método de entrega: {{ currentReceipt()?.metodo_pago }}</span>
+          </div>
+
+          <!-- Desglose Detallado Histórico si es Anticipo -->
+          @if (currentDetailedReceipt()) {
+            <div class="receipt-breakdown detailed-anticipo-box">
+              <div class="rb-title font-bold text-slate-800 mb-2">Estado y Desglose Salarial del Anticipo</div>
+              
+              <div class="rb-row">
+                <span>Sueldo Base Mensual:</span>
+                <span class="font-bold">Bs {{ (currentDetailedReceipt()?.sueldo_base || 0) | number:'1.2-2' }}</span>
+              </div>
+              <div class="rb-row">
+                <span>Quincena de Referencia:</span>
+                <span class="text-blue">Bs {{ (currentDetailedReceipt()?.quincena_referencia || 1000) | number:'1.2-2' }}</span>
+              </div>
+
+              @if (currentDetailedReceipt()?.anticipos_historicos?.length) {
+                <div class="prior-advances-wrapper mt-3 mb-2">
+                  <span class="text-xs font-bold text-slate-700 uppercase">Anticipos previos del período hasta esta entrega:</span>
+                  <table class="receipt-mini-table mt-1">
+                    <thead>
+                      <tr>
+                        <th>N° Vale</th>
+                        <th>Fecha</th>
+                        <th>Método</th>
+                        <th class="text-right">Importe</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (p of currentDetailedReceipt()?.anticipos_historicos; track p.id) {
+                        <tr>
+                          <td class="font-mono text-xs">{{ p.numero_comprobante }}</td>
+                          <td>{{ p.fecha_entrega }}</td>
+                          <td>{{ p.metodo_pago }}</td>
+                          <td class="text-right font-medium">Bs {{ p.importe | number:'1.2-2' }}</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              }
+
+              <div class="rb-row">
+                <span>Total Anticipos Anteriores:</span>
+                <span>Bs {{ (currentDetailedReceipt()?.total_anticipos_anteriores || 0) | number:'1.2-2' }}</span>
+              </div>
+              <div class="rb-row font-bold text-amber">
+                <span>Total Acumulado con este Vale:</span>
+                <span>Bs {{ (currentDetailedReceipt()?.total_acumulado || 0) | number:'1.2-2' }}</span>
+              </div>
+              <div class="rb-row">
+                <span>Diferencia Quincena:</span>
+                @if (currentDetailedReceipt()?.supera_quincena) {
+                  <span class="text-red font-bold">Superó en Bs {{ (currentDetailedReceipt()?.excedente_quincena || 0) | number:'1.2-2' }}</span>
+                } @else {
+                  <span class="text-emerald font-bold">Bs {{ (currentDetailedReceipt()?.diferencia_quincena || 0) | number:'1.2-2' }}</span>
+                }
+              </div>
+              <div class="rb-row font-bold text-slate-900 border-t pt-2">
+                <span>Saldo Salarial Estimado Tras Anticipo:</span>
+                <span class="text-emerald">Bs {{ (currentDetailedReceipt()?.saldo_salarial_estimado || 0) | number:'1.2-2' }}</span>
+              </div>
+            </div>
+          } @else if (currentReceipt()?.sueldo_base) {
+            <div class="receipt-breakdown">
+              <div class="rb-row">
+                <span>Sueldo Base Mensual:</span>
+                <span>Bs {{ (currentReceipt()?.sueldo_base || 0) | number:'1.2-2' }}</span>
+              </div>
+              @if (currentReceipt()?.anticipos_descontados) {
+                <div class="rb-row">
+                  <span>Anticipos Descontados:</span>
+                  <span class="text-amber">- Bs {{ (currentReceipt()?.anticipos_descontados || 0) | number:'1.2-2' }}</span>
+                </div>
+              }
+              @if (currentReceipt()?.saldo_restante !== undefined) {
+                <div class="rb-row font-bold">
+                  <span>Saldo Pendiente Posterior:</span>
+                  <span>Bs {{ (currentReceipt()?.saldo_restante || 0) | number:'1.2-2' }}</span>
+                </div>
+              }
+            </div>
+          }
+
+          <div class="receipt-footer-notes">
+            <p>Observaciones: {{ currentReceipt()?.observaciones || 'Sin observaciones registradas.' }}</p>
+            <div class="signatures-box">
+              <div class="sig-line">
+                <div class="line"></div>
+                <span>Entregado por ({{ getUsuarioDisplay(currentReceipt()?.usuario_nombre, currentReceipt()?.usuario_id) }})</span>
+              </div>
+              <div class="sig-line">
+                <div class="line"></div>
+                <span>Recibí Conforme (Trabajador)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Acciones del Comprobante -->
+        <div class="receipt-actions-bar">
+          <button class="btn btn-secondary" (click)="showReceiptModal.set(false)">
+            Cerrar
+          </button>
+          <button class="btn btn-secondary" (click)="imprimirComprobante()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 6 2 18 2 18 9"/>
+              <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+              <rect width="12" height="8" x="6" y="14"/>
+            </svg>
+            <span>Imprimir / PDF</span>
+          </button>
+          <button class="btn btn-whatsapp" (click)="compartirWhatsApp()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2m.01 1.67c2.2 0 4.26.86 5.82 2.41a8.17 8.17 0 0 1 2.41 5.83c0 4.54-3.7 8.24-8.24 8.24-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.17 8.17 0 0 1-1.25-4.36c0-4.54 3.7-8.24 8.24-8.24m4.52 11.66c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.13-1.06-.39-2.01-1.24-.74-.66-1.24-1.48-1.39-1.73-.14-.25-.02-.39.11-.51.11-.11.25-.29.37-.43.13-.15.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.13-.56-1.34-.76-1.84-.2-.49-.4-.42-.56-.43h-.48c-.17 0-.44.06-.67.31-.23.25-.88.86-.88 2.1 0 1.24.9 2.44 1.03 2.61.13.17 1.78 2.71 4.3 3.8.6.26 1.07.41 1.43.53.6.19 1.15.16 1.58.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.15-1.18-.06-.1-.23-.17-.48-.3"/>
+            </svg>
+            <span>Compartir por WhatsApp</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ================================================================= -->
+  <!-- MODAL 5: ANULACIÓN DE OPERACIÓN -->
+  <!-- ================================================================= -->
+  @if (showAnulacionModal()) {
+    <div class="modal-backdrop">
+      <div class="modal-card animate-scale-up">
+        <div class="modal-icon-badge red">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="15" x2="9" y1="9" y2="15"/>
+            <line x1="9" x2="15" y1="9" y2="15"/>
+          </svg>
+        </div>
+        <h3>Anulación de Operación</h3>
+        <p class="modal-desc">
+          Estás por anular la operación <strong>{{ anulacionTarget()?.comprobante }}</strong>.
+          Esta acción quedará registrada en la bitácora de auditoría.
+        </p>
+
+        <div class="form-group text-left mt-4">
+          <label>Motivo de la anulación (Requerido) *</label>
+          <textarea
+            class="input-clean"
+            rows="3"
+            placeholder="Indica la razón por la que se anula este movimiento..."
+            [(ngModel)]="anulacionTarget()!.motivo"
+          ></textarea>
+        </div>
+
+        <div class="modal-actions mt-6">
+          <button class="btn btn-secondary" (click)="showAnulacionModal.set(false)">
+            Cancelar
+          </button>
+          <button class="btn btn-danger" (click)="confirmarAnulacion()">
+            Confirmar Anulación
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>
