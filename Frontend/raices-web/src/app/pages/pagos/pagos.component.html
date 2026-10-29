@@ -484,7 +484,8 @@
                       min="1"
                       placeholder="0.00"
                       class="input-clean font-bold text-lg"
-                      [(ngModel)]="anticipoForm.importe"
+                      [ngModel]="anticipoImporte()"
+                      (ngModelChange)="onAnticipoImporteChange($event)"
                     />
                   </div>
                 </div>
@@ -504,7 +505,8 @@
                   <input
                     type="date"
                     class="input-clean"
-                    [(ngModel)]="anticipoForm.fecha_entrega"
+                    [ngModel]="anticipoFechaEntrega()"
+                    (ngModelChange)="onAnticipoFechaEntregaChange($event)"
                   />
                 </div>
 
@@ -520,7 +522,7 @@
               </div>
 
               <!-- Vista Previa de Cálculos en Pantalla -->
-              @if (anticipoForm.importe && anticipoForm.importe > 0) {
+              @if ((anticipoImporte() || 0) > 0) {
                 <div class="live-simulation-card mt-4">
                   <div class="sim-header">
                     <span class="sim-title">Vista Previa de la Operación</span>
@@ -564,7 +566,7 @@
               <div class="form-actions mt-4">
                 <button
                   class="btn btn-primary btn-lg w-full"
-                  [disabled]="!anticipoForm.importe || anticipoForm.importe <= 0 || loading() || simulacionAnticipo()?.superaSueldoBase"
+                  [disabled]="!(anticipoImporte() && anticipoImporte()! > 0) || loading() || simulacionAnticipo()?.superaSueldoBase"
                   (click)="prepararAnticipo()"
                 >
                   Confirmar y Generar Comprobante de Anticipo

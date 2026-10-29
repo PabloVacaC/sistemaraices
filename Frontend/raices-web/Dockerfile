@@ -23,3 +23,4 @@ COPY --from=build /app/dist/raices-web/browser /usr/share/nginx/html
 EXPOSE 80
 
 CMD ["nginx", "-g", "daemon off;"]
+

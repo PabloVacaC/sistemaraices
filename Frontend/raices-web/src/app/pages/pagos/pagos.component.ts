@@ -54,6 +54,8 @@ export class PagosComponent implements OnInit {
   resumenSalarial = signal<ResumenSalarialTrabajador | null>(null);
 
   // Formulario de Anticipo
+  anticipoImporte = signal<number | null>(null);
+  anticipoFechaEntrega = signal<string>(new Date().toISOString().substring(0, 10));
   anticipoForm = {
     importe: null as number | null,
     metodo_pago: 'EFECTIVO',
@@ -160,7 +162,7 @@ export class PagosComponent implements OnInit {
   simulacionAnticipo = computed(() => {
     const resumen = this.resumenSalarial();
     const trab = this.selectedTrabajador();
-    const monto = Number(this.anticipoForm.importe || 0);
+    const monto = Number(this.anticipoImporte() || 0);
     if (!resumen || !trab) return null;
 
     const totalPrevio = Number(resumen.total_anticipos || 0);
@@ -168,7 +170,7 @@ export class PagosComponent implements OnInit {
     const quincenaRef = Number(resumen.quincena_referencia || 1000);
     const sueldoBase = Number(trab.sueldoBase || 0);
 
-    const fechaEntrega = new Date(this.anticipoForm.fecha_entrega);
+    const fechaEntrega = new Date(this.anticipoFechaEntrega());
     const diaEntrega = isNaN(fechaEntrega.getDate()) ? 1 : (fechaEntrega.getUTCDate() || 1);
     const esAntes18 = diaEntrega <= 18;
 
@@ -505,7 +507,20 @@ export class PagosComponent implements OnInit {
 
   selectTrabajador(t: Trabajador) {
     this.selectedTrabajador.set(t);
+    this.anticipoImporte.set(null);
+    this.anticipoForm.importe = null;
     this.cargarResumenSalarial(t.id);
+  }
+
+  onAnticipoImporteChange(val: any) {
+    const num = (val !== null && val !== '' && !isNaN(Number(val))) ? Number(val) : null;
+    this.anticipoImporte.set(num);
+    this.anticipoForm.importe = num;
+  }
+
+  onAnticipoFechaEntregaChange(val: string) {
+    this.anticipoFechaEntrega.set(val);
+    this.anticipoForm.fecha_entrega = val;
   }
 
   cargarResumenSalarial(trabajadorId: number) {
@@ -535,13 +550,14 @@ export class PagosComponent implements OnInit {
       this.toast.warning('Por favor selecciona un trabajador y un período.');
       return;
     }
-    if (!this.anticipoForm.importe || this.anticipoForm.importe <= 0) {
+    const monto = this.anticipoImporte();
+    if (!monto || monto <= 0) {
       this.toast.warning('El importe del anticipo debe ser mayor a Bs 0.');
       return;
     }
     const resumen = this.resumenSalarial();
     if (resumen && trab.sueldoBase > 0) {
-      const nuevoTotal = Number(resumen.total_anticipos) + Number(this.anticipoForm.importe);
+      const nuevoTotal = Number(resumen.total_anticipos) + Number(monto);
       if (nuevoTotal > trab.sueldoBase) {
         this.toast.warning(`El importe solicitado superaría el sueldo base del trabajador (Bs ${trab.sueldoBase}).`);
         return;
@@ -553,7 +569,8 @@ export class PagosComponent implements OnInit {
   confirmarRegistroAnticipo() {
     const trab = this.selectedTrabajador();
     const pid = this.selectedPeriodoId();
-    if (!trab || !pid || !this.anticipoForm.importe) return;
+    const monto = this.anticipoImporte();
+    if (!trab || !pid || !monto) return;
 
     this.loading.set(true);
     this.showConfirmAnticipoModal.set(false);
@@ -561,9 +578,9 @@ export class PagosComponent implements OnInit {
     const payload = {
       trabajador_id: trab.id,
       periodo_id: pid,
-      importe: this.anticipoForm.importe,
+      importe: monto,
       metodo_pago: this.anticipoForm.metodo_pago,
-      fecha_entrega: this.anticipoForm.fecha_entrega,
+      fecha_entrega: this.anticipoFechaEntrega(),
       observaciones: this.anticipoForm.observaciones
     };
 
@@ -571,6 +588,7 @@ export class PagosComponent implements OnInit {
       next: (nuevoAnt) => {
         this.toast.success(`Anticipo registrado exitosamente: ${nuevoAnt.numero_comprobante}`);
         this.loading.set(false);
+        this.anticipoImporte.set(null);
         this.anticipoForm.importe = null;
         this.anticipoForm.observaciones = '';
 
