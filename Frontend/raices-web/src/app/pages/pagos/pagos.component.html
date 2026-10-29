@@ -900,6 +900,10 @@
                             fecha: m.fecha,
                             importe: m.monto,
                             metodo_pago: m.metodo_pago,
+                            sueldo_base: m.sueldo_base || historialData()?.trabajador?.sueldo_base,
+                            anticipos_descontados: m.total_anticipos,
+                            quincena_descontada: m.quincena_descontada,
+                            saldo_restante: m.saldo_pendiente,
                             observaciones: m.observaciones,
                             usuario_nombre: m.usuario_nombre,
                             usuario_id: m.usuario_id
@@ -1399,22 +1403,41 @@
             </div>
           } @else if (currentReceipt()?.sueldo_base) {
             <div class="receipt-breakdown">
+              <div class="rb-title font-bold text-slate-800 mb-2">Estado y Desglose Salarial del Pago</div>
               <div class="rb-row">
                 <span>Sueldo Base Mensual:</span>
-                <span>Bs {{ (currentReceipt()?.sueldo_base || 0) | number:'1.2-2' }}</span>
+                <span class="font-bold text-slate-900">Bs {{ (currentReceipt()?.sueldo_base || 0) | number:'1.2-2' }}</span>
               </div>
-              @if (currentReceipt()?.anticipos_descontados) {
-                <div class="rb-row">
-                  <span>Anticipos Descontados:</span>
-                  <span class="text-amber">- Bs {{ (currentReceipt()?.anticipos_descontados || 0) | number:'1.2-2' }}</span>
+              @if ((currentReceipt()?.anticipos_descontados || 0) > 0) {
+                <div class="rb-row text-slate-700">
+                  <span>(-) Total Anticipos Descontados:</span>
+                  <span class="text-amber-700 font-medium">- Bs {{ (currentReceipt()?.anticipos_descontados || 0) | number:'1.2-2' }}</span>
                 </div>
               }
-              @if (currentReceipt()?.saldo_restante !== undefined) {
-                <div class="rb-row font-bold">
-                  <span>Saldo Pendiente Posterior:</span>
-                  <span>Bs {{ (currentReceipt()?.saldo_restante || 0) | number:'1.2-2' }}</span>
+              @if ((currentReceipt()?.quincena_descontada || 0) > 0) {
+                <div class="rb-row text-slate-700">
+                  <span>(-) Quincena Pagada:</span>
+                  <span class="text-blue-700 font-medium">- Bs {{ (currentReceipt()?.quincena_descontada || 0) | number:'1.2-2' }}</span>
                 </div>
               }
+              @if ((currentReceipt()?.ajustes || 0) !== 0) {
+                <div class="rb-row text-slate-700">
+                  <span>(+/-) Otros Ajustes / Bonos:</span>
+                  <span class="font-medium">Bs {{ (currentReceipt()?.ajustes || 0) | number:'1.2-2' }}</span>
+                </div>
+              }
+              <div class="rb-row font-bold text-slate-900 border-t pt-1.5 mt-1">
+                <span>(=) Monto Liquidado / Entregado:</span>
+                <span class="text-emerald-700 font-bold">Bs {{ (currentReceipt()?.importe || 0) | number:'1.2-2' }}</span>
+              </div>
+              <div class="rb-row items-center py-1 border-t mt-1">
+                <span>Saldo Salarial Restante:</span>
+                @if ((currentReceipt()?.saldo_restante || 0) <= 0) {
+                  <span class="badge-quincena-liquidada">LIQUIDADA (Bs 0.00)</span>
+                } @else {
+                  <span class="font-bold text-amber-700">Bs {{ (currentReceipt()?.saldo_restante || 0) | number:'1.2-2' }}</span>
+                }
+              </div>
             </div>
           }
 

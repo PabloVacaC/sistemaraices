@@ -128,6 +128,10 @@ class LiquidacionOut(BaseModel):
     motivo_anulacion: Optional[str] = None
     usuario_id: Optional[str] = None
     usuario_nombre: Optional[str] = None
+    pago_inmediato_monto: Optional[Decimal] = None
+    pago_inmediato_comprobante: Optional[str] = None
+    total_pagos_previos: Optional[Decimal] = Decimal("0.00")
+    pago_quincena_previo: Optional[Decimal] = Decimal("0.00")
     pagos: List[PagoLiquidacionOut] = []
 
     class Config:

@@ -809,6 +809,7 @@ def registrar_liquidacion(
         db.flush()
 
     # Procesar pago inmediato si se solicitó (Liquidación final)
+    pago_creado = None
     if datos.pago_inmediato:
         monto_a_pagar = datos.monto_pago_inmediato if datos.monto_pago_inmediato is not None else saldo_final_restante
         if monto_a_pagar < 0:
@@ -837,6 +838,7 @@ def registrar_liquidacion(
             )
             db.add(pago_obj)
             liq.monto_pagado += monto_a_pagar
+            pago_creado = pago_obj
 
     liq.saldo_pendiente = liq.monto_neto - liq.monto_pagado
     if liq.saldo_pendiente <= 0:
@@ -848,6 +850,11 @@ def registrar_liquidacion(
 
     db.commit()
     db.refresh(liq)
+
+    setattr(liq, "pago_inmediato_monto", pago_creado.monto if pago_creado else (Decimal("0.00") if not datos.pago_inmediato else monto_a_pagar))
+    setattr(liq, "pago_inmediato_comprobante", pago_creado.numero_comprobante if pago_creado else None)
+    setattr(liq, "total_pagos_previos", total_pagos_previos)
+    setattr(liq, "pago_quincena_previo", m.get("pago_quincena_realizado", Decimal("0.00")))
 
     registrar_bitacora(
         db=db,
@@ -1003,6 +1010,11 @@ def obtener_historial_trabajador(db: Session, trabajador_id: int):
         })
 
     for l in liquidaciones:
+        pagos_confirmados = [x for x in l.pagos if x.estado == "CONFIRMADO"]
+        quincena_monto = sum(
+            (x.monto for x in pagos_confirmados if getattr(x, "tipo_pago", "") in ("PAGO_QUINCENA", "REVISION_QUINCENA")),
+            Decimal("0.00"),
+        )
         for p in l.pagos:
             movimientos.append({
                 "id": p.id,
@@ -1018,6 +1030,10 @@ def obtener_historial_trabajador(db: Session, trabajador_id: int):
                 "observaciones": p.observaciones,
                 "usuario_id": p.usuario_id,
                 "usuario_nombre": p.usuario_nombre,
+                "sueldo_base": l.sueldo_base,
+                "total_anticipos": l.total_anticipos,
+                "quincena_descontada": quincena_monto,
+                "saldo_pendiente": l.saldo_pendiente,
             })
 
     movimientos.sort(key=lambda x: str(x["fecha"]), reverse=True)

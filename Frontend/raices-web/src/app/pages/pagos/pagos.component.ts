@@ -113,6 +113,7 @@ export class PagosComponent implements OnInit {
   currentReceipt = signal<{
     tipo: 'ANTICIPO' | 'LIQUIDACION' | 'PAGO_LIQUIDACION';
     numero_comprobante: string;
+    numero_liquidacion?: string;
     trabajador_nombre: string;
     trabajador_ci?: string;
     trabajador_cargo?: string;
@@ -123,6 +124,7 @@ export class PagosComponent implements OnInit {
     metodo_pago: string;
     sueldo_base?: number;
     anticipos_descontados?: number;
+    quincena_descontada?: number;
     ajustes?: number;
     saldo_restante?: number;
     observaciones?: string;
@@ -373,6 +375,7 @@ export class PagosComponent implements OnInit {
           importe: pago.monto,
           metodo_pago: pago.metodo_pago,
           sueldo_base: trab.sueldo_base,
+          anticipos_descontados: trab.anticipos_antes_dia_18,
           saldo_restante: trab.saldo_salarial_pendiente - pago.monto,
           observaciones: `${pago.tipo_pago}: ${pago.observaciones || ''}`,
           usuario_nombre: pago.usuario_nombre,
@@ -456,6 +459,13 @@ export class PagosComponent implements OnInit {
 
         const periodoDesc = this.periodos().find(p => p.id === pid)?.descripcion || '';
         this.currentDetailedReceipt.set(null);
+
+        // El importe a entregar en el comprobante es ÚNICAMENTE lo que se paga para liquidar
+        // (es decir, el pago inmediato del saldo restante, después de descontar anticipos y quincenas)
+        const montoEntregado = (liq.pago_inmediato_monto !== undefined && liq.pago_inmediato_monto !== null)
+          ? Number(liq.pago_inmediato_monto)
+          : (this.liquidacionDirectaForm.pago_inmediato ? Number(this.liquidacionDirectaForm.monto_pago_inmediato || 0) : 0);
+
         this.abrirComprobante({
           tipo: 'LIQUIDACION',
           numero_comprobante: liq.numero_comprobante,
@@ -465,9 +475,12 @@ export class PagosComponent implements OnInit {
           trabajador_area: trab.area,
           periodo_descripcion: periodoDesc,
           fecha: liq.fecha_liquidacion,
-          importe: liq.monto_pagado,
+          importe: montoEntregado,
           metodo_pago: this.liquidacionDirectaForm.pago_inmediato ? this.liquidacionDirectaForm.metodo_pago_inmediato : 'POR PAGAR',
           sueldo_base: liq.sueldo_base,
+          anticipos_descontados: liq.total_anticipos,
+          quincena_descontada: liq.pago_quincena_previo ?? (liq.total_pagos_previos || Number(trab.total_pagos_parciales || 0)),
+          ajustes: liq.ajustes,
           saldo_restante: liq.saldo_pendiente,
           observaciones: liq.observaciones || 'Liquidación Salarial Final (Día 5)',
           usuario_nombre: liq.usuario_nombre,
@@ -674,6 +687,8 @@ export class PagosComponent implements OnInit {
           fecha: pago.fecha_pago,
           importe: pago.monto,
           metodo_pago: pago.metodo_pago,
+          sueldo_base: liq.sueldo_base,
+          anticipos_descontados: liq.total_anticipos,
           saldo_restante: nuevoSaldo,
           observaciones: pago.observaciones,
           telefono_contacto: trab?.celular,
@@ -736,9 +751,12 @@ export class PagosComponent implements OnInit {
       `• *Nro. Comprobante:* ${rc.numero_comprobante}\n` +
       `• *Concepto:* ${concepto}\n` +
       `• *Período:* ${rc.periodo_descripcion}\n` +
-      `• *Importe:* Bs ${Number(rc.importe).toLocaleString('es-BO', { minimumFractionDigits: 2 })}\n` +
+      `• *Importe Entregado:* Bs ${Number(rc.importe).toLocaleString('es-BO', { minimumFractionDigits: 2 })}\n` +
       `• *Fecha:* ${rc.fecha}\n` +
       `• *Método de Pago:* ${rc.metodo_pago}\n` +
+      (rc.sueldo_base ? `• *Sueldo Base:* Bs ${Number(rc.sueldo_base).toLocaleString('es-BO', { minimumFractionDigits: 2 })}\n` : '') +
+      ((rc.anticipos_descontados || 0) > 0 ? `• *Anticipos Descontados:* - Bs ${Number(rc.anticipos_descontados).toLocaleString('es-BO', { minimumFractionDigits: 2 })}\n` : '') +
+      ((rc.quincena_descontada || 0) > 0 ? `• *Quincena Descontada:* - Bs ${Number(rc.quincena_descontada).toLocaleString('es-BO', { minimumFractionDigits: 2 })}\n` : '') +
       (rc.saldo_restante !== undefined ? `• *Saldo Pendiente:* Bs ${Number(rc.saldo_restante).toLocaleString('es-BO', { minimumFractionDigits: 2 })}\n` : '') +
       `\nConserve este mensaje como comprobante oficial de Sistemas Raíces.`;
 

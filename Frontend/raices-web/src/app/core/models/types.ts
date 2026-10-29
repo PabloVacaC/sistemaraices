@@ -141,6 +141,10 @@ export interface Liquidacion {
   motivo_anulacion?: string;
   usuario_id?: string;
   usuario_nombre?: string;
+  pago_inmediato_monto?: number;
+  pago_inmediato_comprobante?: string;
+  total_pagos_previos?: number;
+  pago_quincena_previo?: number;
   pagos: PagoLiquidacion[];
 }
 
@@ -266,6 +270,10 @@ export interface MovimientoHistorial {
   observaciones?: string;
   usuario_id?: string;
   usuario_nombre?: string;
+  sueldo_base?: number;
+  total_anticipos?: number;
+  quincena_descontada?: number;
+  saldo_pendiente?: number;
 }
 
 export interface HistorialTrabajadorResponse {
