@@ -182,7 +182,7 @@ def calcular_metricas_trabajador_periodo(
             (p.monto for p in pagos if getattr(p, "tipo_pago", "") in ("PAGO_QUINCENA", "REVISION_QUINCENA")),
             Decimal("0.00"),
         )
-        quincena_pagada = any(getattr(p, "tipo_pago", "") in ("PAGO_QUINCENA", "REVISION_QUINCENA") for p in pagos)
+        quincena_pagada = any(getattr(p, "tipo_pago", "") in ("PAGO_QUINCENA", "REVISION_QUINCENA") for p in pagos) or (liquidacion.estado == "LIQUIDADO")
         total_pagos_parciales = sum((p.monto for p in pagos), Decimal("0.00"))
         # SALDO = SUELDO_BASE + AJUSTES - TOTAL_ANTICIPOS - TOTAL_PAGOS_PARCIALES
         saldo_salarial_pendiente = trabajador.sueldoBase + liquidacion.ajustes - total_anticipos - total_pagos_parciales
@@ -263,6 +263,7 @@ def obtener_resumen_salarial(
         diferencia_quincena=m["diferencia_quincena"],
         monto_sugerido_quincena=m["monto_sugerido_quincena"],
         pago_quincena_realizado=m["pago_quincena_realizado"],
+        quincena_pagada=m["quincena_pagada"],
         anticipos_posteriores_dia_18=m["anticipos_post_18"],
         total_pagos_parciales=m["total_pagos_parciales"],
         saldo_salarial_pendiente=m["saldo_salarial_pendiente"],

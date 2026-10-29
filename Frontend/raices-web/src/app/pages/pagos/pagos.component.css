@@ -1187,15 +1187,66 @@
 
 .breakdown-metrics-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 0.75rem;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.85rem;
   margin-top: 0.75rem;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 960px) {
   .breakdown-metrics-grid {
     grid-template-columns: 1fr 1fr;
   }
+}
+
+@media (max-width: 520px) {
+  .breakdown-metrics-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Sueldo Base Enmarcado */
+.metric-item.metric-framed {
+  border: 1.5px solid #0f172a;
+  border-radius: 8px;
+  padding: 0.6rem 0.8rem;
+  background: #f8fafc;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.metric-item.metric-framed .m-label {
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.metric-item.metric-framed .m-val {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+/* Saldo Salarial Box y Desglose Matemático */
+.metric-saldo-box {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  padding: 0.6rem 0.8rem;
+}
+
+.math-breakdown-formula {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #475569;
+  margin-top: 0.3rem;
+  line-height: 1.35;
+}
+
+.m-subtext {
+  font-size: 0.72rem;
+  color: #64748b;
+  margin-top: 0.2rem;
 }
 
 .quincena-alert-box {

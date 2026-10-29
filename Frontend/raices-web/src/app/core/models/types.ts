@@ -160,6 +160,7 @@ export interface ResumenSalarialTrabajador {
   diferencia_quincena?: number;
   monto_sugerido_quincena?: number;
   pago_quincena_realizado?: number;
+  quincena_pagada?: boolean;
   anticipos_posteriores_dia_18?: number;
   total_pagos_parciales?: number;
   saldo_salarial_pendiente?: number;

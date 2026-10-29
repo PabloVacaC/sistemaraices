@@ -151,6 +151,7 @@ class ResumenSalarialTrabajador(BaseModel):
     diferencia_quincena: Decimal = Decimal("0.00")
     monto_sugerido_quincena: Decimal = Decimal("0.00")
     pago_quincena_realizado: Decimal = Decimal("0.00")
+    quincena_pagada: bool = False
     anticipos_posteriores_dia_18: Decimal = Decimal("0.00")
     total_pagos_parciales: Decimal = Decimal("0.00")
     saldo_salarial_pendiente: Decimal = Decimal("0.00")

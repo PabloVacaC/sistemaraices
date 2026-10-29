@@ -169,15 +169,22 @@ export class PagosComponent implements OnInit {
     const antes18Previo = Number(resumen.anticipos_antes_dia_18 || 0);
     const quincenaRef = Number(resumen.quincena_referencia || 1000);
     const sueldoBase = Number(trab.sueldoBase || 0);
+    const totalPagos = Number(resumen.total_pagos_parciales || 0);
 
-    const fechaEntrega = new Date(this.anticipoFechaEntrega());
-    const diaEntrega = isNaN(fechaEntrega.getDate()) ? 1 : (fechaEntrega.getUTCDate() || 1);
+    const f = this.anticipoFechaEntrega();
+    let diaEntrega = 1;
+    if (f) {
+      const parts = f.split('-');
+      if (parts.length === 3) {
+        diaEntrega = parseInt(parts[2], 10) || 1;
+      }
+    }
     const esAntes18 = diaEntrega <= 18;
 
     const nuevoTotalAntes18 = esAntes18 ? (antes18Previo + monto) : antes18Previo;
     const nuevoTotalAnticipos = totalPrevio + monto;
-    const nuevaDiferenciaQuincena = quincenaRef - nuevoTotalAntes18;
-    const nuevoSaldoRestante = sueldoBase - nuevoTotalAnticipos;
+    const nuevaDiferenciaQuincena = Math.max(0, quincenaRef - nuevoTotalAntes18);
+    const nuevoSaldoRestante = sueldoBase - nuevoTotalAnticipos - totalPagos;
     const superaQuincena = nuevoTotalAntes18 > quincenaRef;
     const excedenteQuincena = superaQuincena ? (nuevoTotalAntes18 - quincenaRef) : 0;
     const superaSueldoBase = nuevoTotalAnticipos > sueldoBase;
@@ -830,6 +837,18 @@ export class PagosComponent implements OnInit {
     if (nombre && nombre.trim()) return nombre.trim();
     if (ci && ci.trim()) return `CI: ${ci.trim()}`;
     return 'Sistema';
+  }
+
+  isFechaPostDia18(): boolean {
+    const f = this.anticipoFechaEntrega();
+    if (f) {
+      const parts = f.split('-');
+      if (parts.length === 3) {
+        const day = parseInt(parts[2], 10);
+        if (!isNaN(day)) return day >= 19;
+      }
+    }
+    return new Date().getDate() >= 19;
   }
 
   getOrdinalAnticipo(index: number): string {
