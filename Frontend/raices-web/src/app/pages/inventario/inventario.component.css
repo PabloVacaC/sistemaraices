@@ -15,7 +15,7 @@
 .module-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   flex-wrap: wrap;
   gap: 1.25rem;
 }
@@ -265,7 +265,48 @@
   color: #a1a1aa;
 }
 
-/* --- Barra de Pestañas (Tabs) --- */
+/* --- Barra de Pestañas (Tabs) en Header --- */
+.tabs-nav.header-tabs {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: #f4f4f5;
+  padding: 0.35rem;
+  border-radius: 12px;
+  border: 1px solid #e4e4e7;
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.tabs-nav.header-tabs .tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.55rem 1.05rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #71717a;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+  white-space: nowrap;
+}
+
+.tabs-nav.header-tabs .tab-btn:hover {
+  color: #09090b;
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.tabs-nav.header-tabs .tab-btn.active {
+  color: #09090b;
+  background: #ffffff;
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  border-color: #e4e4e7;
+}
+
 .tabs-nav {
   display: flex;
   gap: 0.5rem;
@@ -315,6 +356,13 @@
 .tab-btn.active .counter-chip {
   background: #09090b;
   color: #ffffff;
+}
+
+.actions-group {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
 }
 
 /* --- Tarjeta Contenedora de Sección --- */
@@ -1241,11 +1289,18 @@
   .module-header {
     flex-direction: column;
     align-items: stretch;
+    gap: 1rem;
   }
 
-  .header-actions {
-    flex-direction: column;
-    align-items: stretch;
+  .tabs-nav.header-tabs {
+    width: 100%;
+    overflow-x: auto;
+    padding: 0.3rem;
+  }
+
+  .actions-group {
+    width: 100%;
+    justify-content: flex-start;
   }
 
   .form-grid-2,
