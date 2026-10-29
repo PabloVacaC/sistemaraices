@@ -632,8 +632,9 @@
           <table class="clean-table table-pagos-parciales">
             <thead>
               <tr>
-                <th>Trabajador</th>
-                <th>Sueldo Base</th>
+                <th class="col-trabajador">Trabajador</th>
+                <th class="col-accion">Acción</th>
+                <th class="col-sueldo">Sueldo Base</th>
                 <th>Quincena Ref.</th>
                 <th>Anticipos &le; Día 18</th>
                 <th>Dif. Quincena</th>
@@ -643,47 +644,18 @@
                 <th>Pagos Parciales</th>
                 <th>Saldo Pendiente</th>
                 <th>Estado</th>
-                <th>Acción</th>
               </tr>
             </thead>
             <tbody>
               @for (t of filteredPagosParciales(); track t.trabajador_id) {
                 <tr>
-                  <td>
+                  <td class="col-trabajador">
                     <div class="worker-name-block">
                       <span class="font-bold text-slate-900">{{ t.nombre_completo }}</span>
                       <span class="text-xs text-slate-500">CI: {{ t.ci || 'S/N' }} • {{ t.cargo }}</span>
                     </div>
                   </td>
-                  <td class="font-semibold">Bs {{ t.sueldo_base | number:'1.2-2' }}</td>
-                  <td class="text-slate-600">Bs {{ t.quincena_referencia | number:'1.2-2' }}</td>
-                  <td class="text-amber">Bs {{ t.anticipos_antes_dia_18 | number:'1.2-2' }}</td>
-                  <td>
-                    @if (t.supera_quincena) {
-                      <span class="badge-quincena-excedida" [title]="'Superó quincena en Bs ' + (t.excedente_quincena | number:'1.2-2')">
-                        - Bs {{ t.excedente_quincena | number:'1.2-2' }} (Superó)
-                      </span>
-                    } @else {
-                      <span class="badge-quincena-pendiente font-medium">
-                        Bs {{ t.diferencia_quincena | number:'1.2-2' }}
-                      </span>
-                    }
-                  </td>
-                  <td class="text-emerald font-semibold">
-                    Bs {{ t.pago_quincena_realizado | number:'1.2-2' }}
-                  </td>
-                  <td class="text-slate-600">Bs {{ t.anticipos_posteriores_dia_18 | number:'1.2-2' }}</td>
-                  <td class="font-bold text-amber">Bs {{ t.total_anticipos_periodo | number:'1.2-2' }}</td>
-                  <td class="font-bold text-emerald">Bs {{ t.total_pagos_parciales | number:'1.2-2' }}</td>
-                  <td class="font-bold" [class.text-red]="t.saldo_salarial_pendiente < 0" [class.text-blue]="t.saldo_salarial_pendiente >= 0">
-                    Bs {{ t.saldo_salarial_pendiente | number:'1.2-2' }}
-                  </td>
-                  <td>
-                    <span class="badge-status" [ngClass]="t.estado_periodo.toLowerCase()">
-                      {{ t.estado_periodo }}
-                    </span>
-                  </td>
-                  <td>
+                  <td class="col-accion">
                     <div class="row-actions-group">
                       @if (t.quincena_pagada) {
                         <span class="badge-quincena-pagada" title="La quincena de este período ya fue registrada y pagada">
@@ -719,6 +691,34 @@
                         Historial
                       </button>
                     </div>
+                  </td>
+                  <td class="col-sueldo font-semibold">Bs {{ t.sueldo_base | number:'1.2-2' }}</td>
+                  <td class="text-slate-600">Bs {{ t.quincena_referencia | number:'1.2-2' }}</td>
+                  <td class="text-amber">Bs {{ t.anticipos_antes_dia_18 | number:'1.2-2' }}</td>
+                  <td>
+                    @if (t.supera_quincena) {
+                      <span class="badge-quincena-excedida" [title]="'Superó quincena en Bs ' + (t.excedente_quincena | number:'1.2-2')">
+                        - Bs {{ t.excedente_quincena | number:'1.2-2' }} (Superó)
+                      </span>
+                    } @else {
+                      <span class="badge-quincena-pendiente font-medium">
+                        Bs {{ t.diferencia_quincena | number:'1.2-2' }}
+                      </span>
+                    }
+                  </td>
+                  <td class="text-emerald font-semibold">
+                    Bs {{ t.pago_quincena_realizado | number:'1.2-2' }}
+                  </td>
+                  <td class="text-slate-600">Bs {{ t.anticipos_posteriores_dia_18 | number:'1.2-2' }}</td>
+                  <td class="font-bold text-amber">Bs {{ t.total_anticipos_periodo | number:'1.2-2' }}</td>
+                  <td class="font-bold text-emerald">Bs {{ t.total_pagos_parciales | number:'1.2-2' }}</td>
+                  <td class="font-bold" [class.text-red]="t.saldo_salarial_pendiente < 0" [class.text-blue]="t.saldo_salarial_pendiente >= 0">
+                    Bs {{ t.saldo_salarial_pendiente | number:'1.2-2' }}
+                  </td>
+                  <td>
+                    <span class="badge-status" [ngClass]="t.estado_periodo.toLowerCase()">
+                      {{ t.estado_periodo }}
+                    </span>
                   </td>
                 </tr>
               } @empty {
