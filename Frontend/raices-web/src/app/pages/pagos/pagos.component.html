@@ -1304,8 +1304,15 @@
   <!-- MODAL 4: VISTA DE COMPROBANTE OFICIAL (IMPRIMIR & WHATSAPP) -->
   <!-- ================================================================= -->
   @if (showReceiptModal()) {
-    <div class="modal-backdrop">
-      <div class="receipt-modal-card animate-scale-up">
+    <div class="modal-backdrop" (click)="showReceiptModal.set(false)">
+      <div class="receipt-modal-card animate-scale-up" (click)="$event.stopPropagation()">
+        <!-- Botón de Cerrar Superior Rápido -->
+        <button class="btn-close-receipt" (click)="showReceiptModal.set(false)" type="button" aria-label="Cerrar comprobante" title="Cerrar">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M18 6L6 18M6 6l12 12"/>
+          </svg>
+        </button>
+
         <!-- Encabezado del Comprobante -->
         <div class="receipt-paper" id="printable-receipt">
           <div class="receipt-header">
