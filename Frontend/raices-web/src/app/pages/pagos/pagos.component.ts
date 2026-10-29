@@ -831,4 +831,53 @@ export class PagosComponent implements OnInit {
     if (ci && ci.trim()) return `CI: ${ci.trim()}`;
     return 'Sistema';
   }
+
+  getOrdinalAnticipo(index: number): string {
+    const ordinals = [
+      'Primer',
+      'Segundo',
+      'Tercer',
+      'Cuarto',
+      'Quinto',
+      'Sexto',
+      'Séptimo',
+      'Octavo',
+      'Noveno',
+      'Décimo',
+      'Undécimo',
+      'Duodécimo'
+    ];
+    if (index >= 0 && index < ordinals.length) {
+      return `${ordinals[index]} Anticipo`;
+    }
+    return `${index + 1}° Anticipo`;
+  }
+
+  getAnticiposDelComprobante(): Anticipo[] {
+    const comp = this.currentDetailedReceipt();
+    if (!comp) return [];
+    if (comp.anticipos_periodo && comp.anticipos_periodo.length > 0) {
+      return comp.anticipos_periodo;
+    }
+    // Fallback si por alguna razón viniera solo con anticipos_historicos
+    const lista: Anticipo[] = [...(comp.anticipos_historicos || [])];
+    const yaEsta = lista.some(
+      a => a.numero_comprobante === comp.numero_comprobante
+    );
+    if (!yaEsta) {
+      lista.push({
+        id: 0,
+        numero_comprobante: comp.numero_comprobante,
+        trabajador_id: comp.trabajador_id,
+        periodo_id: comp.periodo_id,
+        fecha_solicitud: comp.fecha_anticipo,
+        fecha_entrega: comp.fecha_anticipo,
+        importe: comp.importe_actual,
+        metodo_pago: comp.metodo_entrega,
+        estado: 'PAGADO',
+        observaciones: comp.motivo
+      });
+    }
+    return lista;
+  }
 }

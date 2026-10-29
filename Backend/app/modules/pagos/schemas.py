@@ -208,6 +208,7 @@ class ComprobanteAnticipoDetalladoOut(BaseModel):
     motivo: Optional[str] = None
     total_anticipos_anteriores: Decimal
     anticipos_historicos: List[AnticipoOut] = []
+    anticipos_periodo: List[AnticipoOut] = []
     total_acumulado: Decimal
     sueldo_base: Decimal
     quincena_referencia: Decimal = IMPORTE_REFERENCIA_QUINCENA
@@ -215,6 +216,8 @@ class ComprobanteAnticipoDetalladoOut(BaseModel):
     saldo_salarial_estimado: Decimal
     supera_quincena: bool = False
     excedente_quincena: Decimal = Decimal("0.00")
+    quincena_pagada: bool = False
+    estado_quincena: str = "PENDIENTE"
 
 
 # --- INDICADORES DEL PANEL GENERAL ---

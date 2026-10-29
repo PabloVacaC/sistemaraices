@@ -458,6 +458,28 @@ def obtener_comprobante_anticipo_detallado(
     excedente_quincena = (anticipos_quincena - IMPORTE_REFERENCIA_QUINCENA) if supera_quincena else Decimal("0.00")
     saldo_estimado = trabajador.sueldoBase - total_acumulado
 
+    # Estado de la quincena
+    stmt_liq = (
+        select(Liquidacion)
+        .options(joinedload(Liquidacion.pagos))
+        .where(
+            Liquidacion.trabajador_id == trabajador.id,
+            Liquidacion.periodo_id == periodo.id,
+            Liquidacion.estado != "ANULADO",
+        )
+    )
+    liq = db.execute(stmt_liq).scalars().first()
+    quincena_pagada = False
+    if liq:
+        pagos = [p for p in liq.pagos if p.estado == "CONFIRMADO"]
+        quincena_pagada = any(
+            getattr(p, "tipo_pago", "") in ("PAGO_QUINCENA", "REVISION_QUINCENA")
+            for p in pagos
+        ) or (liq.estado == "LIQUIDADO")
+    estado_quincena = "LIQUIDADA" if quincena_pagada else "PENDIENTE"
+
+    anticipos_periodo = [AnticipoOut.model_validate(a) for a in historicos_hasta_este]
+
     return ComprobanteAnticipoDetalladoOut(
         empresa_nombre="SISTEMAS RAÍCES",
         numero_comprobante=anticipo.numero_comprobante,
@@ -476,6 +498,7 @@ def obtener_comprobante_anticipo_detallado(
         motivo=anticipo.observaciones,
         total_anticipos_anteriores=total_anteriores,
         anticipos_historicos=[AnticipoOut.model_validate(a) for a in anteriores],
+        anticipos_periodo=anticipos_periodo,
         total_acumulado=total_acumulado,
         sueldo_base=trabajador.sueldoBase,
         quincena_referencia=IMPORTE_REFERENCIA_QUINCENA,
@@ -483,6 +506,8 @@ def obtener_comprobante_anticipo_detallado(
         saldo_salarial_estimado=saldo_estimado,
         supera_quincena=supera_quincena,
         excedente_quincena=excedente_quincena,
+        quincena_pagada=quincena_pagada,
+        estado_quincena=estado_quincena,
     )
 
 

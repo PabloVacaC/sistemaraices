@@ -1340,58 +1340,34 @@
               
               <div class="rb-row">
                 <span>Sueldo Base Mensual:</span>
-                <span class="font-bold">Bs {{ (currentDetailedReceipt()?.sueldo_base || 0) | number:'1.2-2' }}</span>
-              </div>
-              <div class="rb-row">
-                <span>Quincena de Referencia:</span>
-                <span class="text-blue">Bs {{ (currentDetailedReceipt()?.quincena_referencia || 1000) | number:'1.2-2' }}</span>
+                <span class="font-bold text-slate-900">Bs {{ (currentDetailedReceipt()?.sueldo_base || 0) | number:'1.2-2' }}</span>
               </div>
 
-              @if (currentDetailedReceipt()?.anticipos_historicos?.length) {
-                <div class="prior-advances-wrapper mt-3 mb-2">
-                  <span class="text-xs font-bold text-slate-700 uppercase">Anticipos previos del período hasta esta entrega:</span>
-                  <table class="receipt-mini-table mt-1">
-                    <thead>
-                      <tr>
-                        <th>N° Vale</th>
-                        <th>Fecha</th>
-                        <th>Método</th>
-                        <th class="text-right">Importe</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      @for (p of currentDetailedReceipt()?.anticipos_historicos; track p.id) {
-                        <tr>
-                          <td class="font-mono text-xs">{{ p.numero_comprobante }}</td>
-                          <td>{{ p.fecha_entrega }}</td>
-                          <td>{{ p.metodo_pago }}</td>
-                          <td class="text-right font-medium">Bs {{ p.importe | number:'1.2-2' }}</td>
-                        </tr>
-                      }
-                    </tbody>
-                  </table>
+              <!-- Lista de anticipos del período en orden cronológico -->
+              @for (ant of getAnticiposDelComprobante(); track ant.id || $index; let i = $index) {
+                <div class="rb-row text-slate-700">
+                  <span>{{ getOrdinalAnticipo(i) }} {{ ant.fecha_entrega ? '(' + ant.fecha_entrega + ')' : '' }}:</span>
+                  <span class="font-medium text-slate-800">Bs {{ (ant.importe || 0) | number:'1.2-2' }}</span>
                 </div>
               }
 
-              <div class="rb-row">
-                <span>Total Anticipos Anteriores:</span>
-                <span>Bs {{ (currentDetailedReceipt()?.total_anticipos_anteriores || 0) | number:'1.2-2' }}</span>
+              <div class="rb-row font-bold text-slate-800 border-t pt-1.5 mt-1">
+                <span>Total Anticipos:</span>
+                <span class="text-amber-700">Bs {{ (currentDetailedReceipt()?.total_acumulado || 0) | number:'1.2-2' }}</span>
               </div>
-              <div class="rb-row font-bold text-amber">
-                <span>Total Acumulado con este Vale:</span>
-                <span>Bs {{ (currentDetailedReceipt()?.total_acumulado || 0) | number:'1.2-2' }}</span>
-              </div>
-              <div class="rb-row">
-                <span>Diferencia Quincena:</span>
-                @if (currentDetailedReceipt()?.supera_quincena) {
-                  <span class="text-red font-bold">Superó en Bs {{ (currentDetailedReceipt()?.excedente_quincena || 0) | number:'1.2-2' }}</span>
+
+              <div class="rb-row items-center py-1">
+                <span>Quincena:</span>
+                @if (currentDetailedReceipt()?.quincena_pagada || currentDetailedReceipt()?.estado_quincena === 'LIQUIDADA') {
+                  <span class="badge-quincena-liquidada">LIQUIDADA</span>
                 } @else {
-                  <span class="text-emerald font-bold">Bs {{ (currentDetailedReceipt()?.diferencia_quincena || 0) | number:'1.2-2' }}</span>
+                  <span class="badge-quincena-pendiente">PENDIENTE</span>
                 }
               </div>
-              <div class="rb-row font-bold text-slate-900 border-t pt-2">
+
+              <div class="rb-row font-bold text-slate-900 border-t pt-2 mt-1">
                 <span>Saldo Salarial Estimado Tras Anticipo:</span>
-                <span class="text-emerald">Bs {{ (currentDetailedReceipt()?.saldo_salarial_estimado || 0) | number:'1.2-2' }}</span>
+                <span class="text-emerald-700">Bs {{ (currentDetailedReceipt()?.saldo_salarial_estimado || 0) | number:'1.2-2' }}</span>
               </div>
             </div>
           } @else if (currentReceipt()?.sueldo_base) {

@@ -215,6 +215,7 @@ export interface ComprobanteAnticipoDetallado {
   motivo?: string;
   total_anticipos_anteriores: number;
   anticipos_historicos: Anticipo[];
+  anticipos_periodo?: Anticipo[];
   total_acumulado: number;
   sueldo_base: number;
   quincena_referencia: number;
@@ -222,6 +223,8 @@ export interface ComprobanteAnticipoDetallado {
   saldo_salarial_estimado: number;
   supera_quincena: boolean;
   excedente_quincena: number;
+  quincena_pagada?: boolean;
+  estado_quincena?: string;
 }
 
 export interface PagoParcialDirectoPayload {
