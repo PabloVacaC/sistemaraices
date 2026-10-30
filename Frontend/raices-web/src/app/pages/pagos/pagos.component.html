@@ -1389,11 +1389,16 @@
 
               <div class="rb-row items-center py-1">
                 <span>Quincena:</span>
-                @if (currentDetailedReceipt()?.quincena_pagada || currentDetailedReceipt()?.estado_quincena === 'LIQUIDADA') {
-                  <span class="badge-quincena-liquidada">LIQUIDADA</span>
-                } @else {
-                  <span class="badge-quincena-pendiente">PENDIENTE</span>
-                }
+                <div class="flex items-center gap-2">
+                  @if (currentDetailedReceipt()?.quincena_pagada || currentDetailedReceipt()?.estado_quincena === 'LIQUIDADA') {
+                    <span class="badge-quincena-liquidada">LIQUIDADA</span>
+                    @if ((currentDetailedReceipt()?.pago_quincena_realizado || currentDetailedReceipt()?.total_pagos_realizados || 0) > 0) {
+                      <span class="text-xs font-semibold text-blue-700">(- Bs {{ (currentDetailedReceipt()?.pago_quincena_realizado || currentDetailedReceipt()?.total_pagos_realizados || 0) | number:'1.2-2' }})</span>
+                    }
+                  } @else {
+                    <span class="badge-quincena-pendiente">PENDIENTE</span>
+                  }
+                </div>
               </div>
 
               <div class="rb-row font-bold text-slate-900 border-t pt-2 mt-1">

@@ -321,7 +321,19 @@ def registrar_anticipo(
             detail="El período ya ha sido completamente LIQUIDADO para este trabajador. No se pueden registrar más anticipos.",
         )
 
-    # Validar que el anticipo no supere el sueldo base total acumulado
+    # Validar que el anticipo no supere el saldo salarial disponible tras considerar anticipos y pagos de quincena previos
+    m_prev = calcular_metricas_trabajador_periodo(db, trabajador, periodo)
+    saldo_disponible = m_prev["saldo_salarial_pendiente"]
+
+    if datos.importe > saldo_disponible and trabajador.sueldoBase > 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"El anticipo solicitado (Bs {datos.importe}) superaría el saldo salarial disponible "
+                f"(Bs {saldo_disponible}) del trabajador tras considerar anticipos y quincenas previas."
+            ),
+        )
+
     anticipos_previos = db.scalar(
         select(func.sum(Anticipo.importe)).where(
             Anticipo.trabajador_id == datos.trabajador_id,
@@ -331,14 +343,6 @@ def registrar_anticipo(
     ) or Decimal("0.00")
 
     total_con_nuevo = anticipos_previos + datos.importe
-    if total_con_nuevo > trabajador.sueldoBase and trabajador.sueldoBase > 0:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=(
-                f"El total de anticipos (Bs {total_con_nuevo}) superaría el sueldo base "
-                f"(Bs {trabajador.sueldoBase}) del trabajador."
-            ),
-        )
 
     nro_comprobante = generar_numero_comprobante(db, "ANT")
 
@@ -457,9 +461,8 @@ def obtener_comprobante_anticipo_detallado(
     diferencia_quincena = IMPORTE_REFERENCIA_QUINCENA - anticipos_quincena
     supera_quincena = anticipos_quincena > IMPORTE_REFERENCIA_QUINCENA
     excedente_quincena = (anticipos_quincena - IMPORTE_REFERENCIA_QUINCENA) if supera_quincena else Decimal("0.00")
-    saldo_estimado = trabajador.sueldoBase - total_acumulado
 
-    # Estado de la quincena
+    # Estado de la quincena y pagos salariales del período
     stmt_liq = (
         select(Liquidacion)
         .options(joinedload(Liquidacion.pagos))
@@ -471,13 +474,36 @@ def obtener_comprobante_anticipo_detallado(
     )
     liq = db.execute(stmt_liq).scalars().first()
     quincena_pagada = False
+    pago_quincena_realizado = Decimal("0.00")
+    total_pagos_realizados = Decimal("0.00")
+    ajustes_liq = Decimal("0.00")
+
     if liq:
-        pagos = [p for p in liq.pagos if p.estado == "CONFIRMADO"]
-        quincena_pagada = any(
-            getattr(p, "tipo_pago", "") in ("PAGO_QUINCENA", "REVISION_QUINCENA")
-            for p in pagos
-        ) or (liq.estado == "LIQUIDADO")
+        pagos_confirmados = [p for p in liq.pagos if p.estado == "CONFIRMADO"]
+        ajustes_liq = liq.ajustes or Decimal("0.00")
+
+        pagos_quincena = [
+            p for p in pagos_confirmados
+            if getattr(p, "tipo_pago", "") in ("PAGO_QUINCENA", "REVISION_QUINCENA")
+        ]
+        if pagos_quincena:
+            quincena_pagada = True
+            pago_quincena_realizado = sum((p.monto for p in pagos_quincena), Decimal("0.00"))
+        elif liq.estado == "LIQUIDADO":
+            quincena_pagada = True
+
+        total_pagos_realizados = sum((p.monto for p in pagos_confirmados), Decimal("0.00"))
+        if pago_quincena_realizado == Decimal("0.00") and quincena_pagada and total_pagos_realizados > Decimal("0.00"):
+            pago_quincena_realizado = total_pagos_realizados
+
     estado_quincena = "LIQUIDADA" if quincena_pagada else "PENDIENTE"
+
+    # El saldo salarial estimado tras este anticipo debe descontar los anticipos acumulados
+    # Y los pagos salariales ya ejecutados (quincena / parciales)
+    saldo_estimado = max(
+        Decimal("0.00"),
+        trabajador.sueldoBase + ajustes_liq - total_acumulado - total_pagos_realizados,
+    )
 
     anticipos_periodo = [AnticipoOut.model_validate(a) for a in historicos_hasta_este]
 
@@ -509,6 +535,8 @@ def obtener_comprobante_anticipo_detallado(
         excedente_quincena=excedente_quincena,
         quincena_pagada=quincena_pagada,
         estado_quincena=estado_quincena,
+        pago_quincena_realizado=pago_quincena_realizado,
+        total_pagos_realizados=total_pagos_realizados,
     )
 
 

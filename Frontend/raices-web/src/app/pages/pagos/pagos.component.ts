@@ -189,7 +189,7 @@ export class PagosComponent implements OnInit {
     const nuevoSaldoRestante = sueldoBase - nuevoTotalAnticipos - totalPagos;
     const superaQuincena = nuevoTotalAntes18 > quincenaRef;
     const excedenteQuincena = superaQuincena ? (nuevoTotalAntes18 - quincenaRef) : 0;
-    const superaSueldoBase = nuevoTotalAnticipos > sueldoBase;
+    const superaSueldoBase = nuevoTotalAnticipos > sueldoBase || nuevoSaldoRestante < 0;
 
     return {
       monto,
@@ -511,6 +511,9 @@ export class PagosComponent implements OnInit {
           importe: comp.importe_actual,
           metodo_pago: comp.metodo_entrega,
           sueldo_base: comp.sueldo_base,
+          anticipos_descontados: comp.total_acumulado,
+          quincena_descontada: comp.pago_quincena_realizado || comp.total_pagos_realizados || 0,
+          saldo_restante: comp.saldo_salarial_estimado,
           observaciones: comp.motivo,
           usuario_nombre: comp.usuario_nombre,
           usuario_id: comp.usuario_ci,
@@ -577,9 +580,14 @@ export class PagosComponent implements OnInit {
     }
     const resumen = this.resumenSalarial();
     if (resumen && trab.sueldoBase > 0) {
-      const nuevoTotal = Number(resumen.total_anticipos) + Number(monto);
-      if (nuevoTotal > trab.sueldoBase) {
-        this.toast.warning(`El importe solicitado superaría el sueldo base del trabajador (Bs ${trab.sueldoBase}).`);
+      const saldoDisponible = Number(
+        resumen.saldo_salarial_pendiente ??
+        (trab.sueldoBase - Number(resumen.total_anticipos || 0) - Number(resumen.total_pagos_parciales || 0))
+      );
+      if (Number(monto) > saldoDisponible) {
+        this.toast.warning(
+          `El importe solicitado (Bs ${monto}) superaría el saldo salarial disponible (Bs ${saldoDisponible.toFixed(2)}) tras considerar anticipos y quincenas previas.`
+        );
         return;
       }
     }

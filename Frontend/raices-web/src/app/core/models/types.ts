@@ -230,6 +230,8 @@ export interface ComprobanteAnticipoDetallado {
   excedente_quincena: number;
   quincena_pagada?: boolean;
   estado_quincena?: string;
+  pago_quincena_realizado?: number;
+  total_pagos_realizados?: number;
 }
 
 export interface PagoParcialDirectoPayload {

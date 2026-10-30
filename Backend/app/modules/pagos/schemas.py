@@ -223,6 +223,8 @@ class ComprobanteAnticipoDetalladoOut(BaseModel):
     excedente_quincena: Decimal = Decimal("0.00")
     quincena_pagada: bool = False
     estado_quincena: str = "PENDIENTE"
+    pago_quincena_realizado: Optional[Decimal] = Decimal("0.00")
+    total_pagos_realizados: Optional[Decimal] = Decimal("0.00")
 
 
 # --- INDICADORES DEL PANEL GENERAL ---
