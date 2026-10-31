@@ -258,39 +258,38 @@ def init_db():
             db.commit()
             db.refresh(super_admin)
 
-            # Crear trabajador asociado al Super Admin
-            trabajador_admin = db.execute(select(Trabajador).where(Trabajador.ci == super_ci)).scalars().first()
-            if not trabajador_admin:
-                area_sistemas = areas_db.get("Sistemas e Informática") or list(areas_db.values())[0]
-                trabajador_admin = Trabajador(
-                    ci=super_ci,
-                    nombres="Juan Pablo",
-                    apellidos="Vaca Carvalho",
-                    celular="70000000",
-                    fecha_ingreso=date.today(),
-                    cargo="Super Administrador de Sistemas",
-                    sueldoBase=15000.00,
-                    estado=True,
-                    area_id=area_sistemas.id,
-                )
-                db.add(trabajador_admin)
-                db.commit()
-                db.refresh(trabajador_admin)
-
-                # Contacto de emergencia de ejemplo
-                contacto = ContactoEmergencia(
-                    nombrecompleto="Contacto Familiar",
-                    parentesco="Familiar",
-                    celular="71111111",
-                    trabajador_id=trabajador_admin.id,
-                )
-                db.add(contacto)
-                db.commit()
-
             print("Super Administrador creado exitosamente con credenciales:")
             print(f"Email: {super_email} | Password: 123456")
         else:
             print("El Super Administrador ya se encuentra registrado.")
+
+        # Asegurar trabajador asociado al Super Admin si no existe
+        trabajador_admin = db.execute(select(Trabajador).where(Trabajador.ci == super_ci)).scalars().first()
+        if not trabajador_admin:
+            area_sistemas = areas_db.get("Sistemas e Informática") or list(areas_db.values())[0]
+            trabajador_admin = Trabajador(
+                ci=super_ci,
+                nombres="Juan Pablo",
+                apellidos="Vaca Carvalho",
+                celular="70000000",
+                fecha_ingreso=date.today(),
+                cargo="Super Administrador de Sistemas",
+                sueldoBase=15000.00,
+                estado=True,
+                area_id=area_sistemas.id,
+            )
+            db.add(trabajador_admin)
+            db.commit()
+            db.refresh(trabajador_admin)
+
+            contacto = ContactoEmergencia(
+                nombrecompleto="Contacto Familiar",
+                parentesco="Familiar",
+                celular="71111111",
+                trabajador_id=trabajador_admin.id,
+            )
+            db.add(contacto)
+            db.commit()
 
     except Exception as e:
         db.rollback()

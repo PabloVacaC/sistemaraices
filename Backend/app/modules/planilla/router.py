@@ -88,3 +88,4 @@ def anular_descuento(
     return service.anular_descuento(
         db, descuento_id=descuento_id, motivo=datos.motivo, usuario_ci=current_user.ci
     )
+

@@ -118,3 +118,4 @@ class PlanillaMensualOut(BaseModel):
 class CerrarPlanillaRequest(BaseModel):
     observaciones: Optional[str] = None
     confirmar_pendientes: bool = False
+
