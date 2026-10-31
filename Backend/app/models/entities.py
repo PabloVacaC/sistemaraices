@@ -13,6 +13,7 @@ from sqlalchemy import (
     Text,
     ForeignKey,
     Table,
+    UniqueConstraint,
 )
 from sqlalchemy.orm import relationship, Mapped, mapped_column, foreign
 from app.database.connection import Base
@@ -108,6 +109,7 @@ class Trabajador(Base):
     cargo: Mapped[str] = mapped_column(String(100), nullable=False)
     sueldoBase: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=0.00, nullable=False)
     estado: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)  # True: Activo, False: Inactivo
+    fecha_inactividad: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
     area_id: Mapped[Optional[int]] = mapped_column(
         Integer, ForeignKey("area.id", ondelete="SET NULL"), nullable=True
     )
@@ -133,6 +135,11 @@ class Trabajador(Base):
     )
     liquidaciones = relationship(
         "Liquidacion",
+        back_populates="trabajador",
+        cascade="all, delete-orphan",
+    )
+    descuentos = relationship(
+        "Descuento",
         back_populates="trabajador",
         cascade="all, delete-orphan",
     )
@@ -187,22 +194,12 @@ class PeriodoSalarial(Base):
     fecha_pago_estimada: Mapped[date] = mapped_column(Date, nullable=False)
     estado: Mapped[str] = mapped_column(String(20), default="ABIERTO", nullable=False)  # ABIERTO, CERRADO
     descripcion: Mapped[str] = mapped_column(String(100), nullable=False)  # e.g. "Septiembre 2026"
-    fecha_cierre: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
-    cerrado_por: Mapped[Optional[str]] = mapped_column(
-        String(30), ForeignKey("usuario.ci", ondelete="SET NULL"), nullable=True, index=True
-    )
-    observaciones_cierre: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     # Relaciones
     anticipos = relationship("Anticipo", back_populates="periodo")
     liquidaciones = relationship("Liquidacion", back_populates="periodo")
-    usuario_cierre = relationship("Usuario", foreign_keys=[cerrado_por], lazy="joined")
-
-    @property
-    def cerrado_por_nombre(self) -> Optional[str]:
-        if self.usuario_cierre:
-            return f"{self.usuario_cierre.nombre} {self.usuario_cierre.apellido}".strip()
-        return None
+    descuentos = relationship("Descuento", back_populates="periodo")
+    detalles_planilla = relationship("PlanillaDetalle", back_populates="periodo", cascade="all, delete-orphan")
 
 
 class Anticipo(Base):
@@ -222,6 +219,7 @@ class Anticipo(Base):
     fecha_entrega: Mapped[date] = mapped_column(Date, default=date.today, nullable=False, index=True)
     importe: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     metodo_pago: Mapped[str] = mapped_column(String(50), default="EFECTIVO", nullable=False)
+    es_periodo_siguiente: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     estado: Mapped[str] = mapped_column(
         String(30), default="PAGADO", nullable=False, index=True
     )  # SOLICITADO, AUTORIZADO, PAGADO, RECHAZADO, ANULADO
@@ -241,6 +239,72 @@ class Anticipo(Base):
         if self.usuario:
             return f"{self.usuario.nombre} {self.usuario.apellido}".strip()
         return None
+
+
+class Descuento(Base):
+    __tablename__ = "descuento"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    numero_comprobante: Mapped[str] = mapped_column(
+        String(50), unique=True, nullable=False, index=True
+    )
+    trabajador_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("trabajador.id", ondelete="RESTRICT"), nullable=False, index=True
+    )
+    periodo_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("periodo_salarial.id", ondelete="RESTRICT"), nullable=False, index=True
+    )
+    fecha: Mapped[date] = mapped_column(Date, default=date.today, nullable=False, index=True)
+    importe: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    concepto: Mapped[str] = mapped_column(String(150), nullable=False)
+    observaciones: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    estado: Mapped[str] = mapped_column(
+        String(30), default="CONFIRMADO", nullable=False, index=True
+    )  # CONFIRMADO, ANULADO
+    motivo_anulacion: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    usuario_id: Mapped[Optional[str]] = mapped_column(
+        String(30), ForeignKey("usuario.ci", ondelete="SET NULL"), nullable=True, index=True
+    )
+    fecha_creacion: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+
+    # Relaciones
+    trabajador = relationship("Trabajador", back_populates="descuentos", lazy="joined")
+    periodo = relationship("PeriodoSalarial", back_populates="descuentos", lazy="joined")
+    usuario = relationship("Usuario", lazy="joined")
+
+    @property
+    def usuario_nombre(self) -> Optional[str]:
+        if self.usuario:
+            return f"{self.usuario.nombre} {self.usuario.apellido}".strip()
+        return None
+
+
+class PlanillaDetalle(Base):
+    __tablename__ = "planilla_detalle"
+    __table_args__ = (
+        UniqueConstraint("periodo_id", "trabajador_id", name="uq_planilla_periodo_trabajador"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    periodo_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("periodo_salarial.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    trabajador_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("trabajador.id", ondelete="RESTRICT"), nullable=False, index=True
+    )
+    haber_basico: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    dias_trabajados: Mapped[int] = mapped_column(Integer, default=30, nullable=False)
+    dias_manual: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    total_ganado: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    observaciones: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    fecha_creacion: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    fecha_actualizacion: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
+
+    # Relaciones
+    periodo = relationship("PeriodoSalarial", back_populates="detalles_planilla")
+    trabajador = relationship("Trabajador", lazy="joined")
 class Liquidacion(Base):
     __tablename__ = "liquidacion"
 
@@ -256,16 +320,13 @@ class Liquidacion(Base):
     )
     fecha_liquidacion: Mapped[date] = mapped_column(Date, default=date.today, nullable=False, index=True)
     sueldo_base: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
-    dias_trabajados: Mapped[int] = mapped_column(Integer, default=30, nullable=False)
-    remuneracion_mensual: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=0.00, nullable=False)  # Total ganado proporcional
     ajustes: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=0.00, nullable=False)
     total_anticipos: Mapped[Decimal] = mapped_column(
         Numeric(12, 2), default=0.00, nullable=False
     )  # Anticipos descontables aplicados
-    total_quincena: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=0.00, nullable=False)
     monto_neto: Mapped[Decimal] = mapped_column(
         Numeric(12, 2), nullable=False
-    )  # total_ganado + ajustes - total_anticipos
+    )  # sueldo_base + ajustes - total_anticipos
     monto_pagado: Mapped[Decimal] = mapped_column(
         Numeric(12, 2), default=0.00, nullable=False
     )  # Suma de pagos realizados

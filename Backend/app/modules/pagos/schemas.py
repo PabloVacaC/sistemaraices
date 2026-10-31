@@ -39,6 +39,8 @@ class AnticipoCreate(BaseModel):
     metodo_pago: str = "EFECTIVO"
     fecha_entrega: date = Field(default_factory=date.today)
     observaciones: Optional[str] = None
+    es_periodo_siguiente: Optional[bool] = False
+    confirmar_excedente: Optional[bool] = False
 
 
 class AnticipoOut(BaseModel):
@@ -55,6 +57,7 @@ class AnticipoOut(BaseModel):
     motivo_anulacion: Optional[str] = None
     usuario_id: Optional[str] = None
     usuario_nombre: Optional[str] = None
+    es_periodo_siguiente: Optional[bool] = False
 
     class Config:
         from_attributes = True

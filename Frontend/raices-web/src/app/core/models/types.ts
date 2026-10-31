@@ -107,6 +107,7 @@ export interface Anticipo {
   motivo_anulacion?: string;
   usuario_id?: string;
   usuario_nombre?: string;
+  es_periodo_siguiente?: boolean;
 }
 
 export interface PagoLiquidacion {
@@ -122,6 +123,7 @@ export interface PagoLiquidacion {
   motivo_anulacion?: string;
   usuario_id?: string;
   usuario_nombre?: string;
+  es_periodo_siguiente?: boolean;
 }
 
 export interface Liquidacion {
@@ -475,101 +477,94 @@ export interface ContabilidadReporteAnual {
 }
 
 // ==========================================
-// MÓDULO DE PLANILLAS SALARIALES
+// MÓDULO DE PLANILLA Y SALARIOS
 // ==========================================
-export interface PlanillaItem {
+export interface PlanillaFila {
+  nro: number;
   trabajador_id: number;
-  ci?: string;
   nombre_completo: string;
+  ci?: string;
   cargo: string;
   area: string;
-  fecha_ingreso?: string;
-  estado_trabajador: boolean;
-
-  sueldo_base: number;
+  fecha_ingreso: string;
+  haber_basico: number;
   dias_trabajados: number;
+  dias_manual: boolean;
   total_ganado: number;
-  anticipos_antes_18: number;
   pago_quincena: number;
-  anticipos_post_18: number;
-  total_anticipos: number;
-  anticipos_siguiente_periodo: number;
-  ajustes: number;
-  total_ganado_bruto: number;
+  estado_quincena: string;
+  quincena_sugerida: number;
+  supera_quincena: boolean;
+  excedente_quincena: number;
+  pago_anticipos: number;
+  anticipos_count: number;
+  total_descuentos: number;
+  descuentos_count: number;
+  total_anticipos_descuentos: number;
+  anticipos_periodo_siguiente: number;
   liquido_pagable: number;
-  total_pagado: number;
-  saldo_pendiente: number;
-  es_saldo_negativo: boolean;
-
-  estado_pago: string;
-  quincena_liquidada: boolean;
+  monto_pagado_total: number;
+  saldo_pendiente_real: number;
+  estado_liquidacion: string;
   liquidacion_id?: number | null;
-  numero_comprobante_liq?: string | null;
-  observaciones?: string | null;
+  liquidacion_comprobante?: string | null;
 }
 
-export interface PlanillaPeriodoHeader {
-  id: number;
+export interface PlanillaResumenTotales {
+  total_haber_basico: number;
+  total_ganado: number;
+  total_quincena: number;
+  total_anticipos: number;
+  total_descuentos: number;
+  total_anticipos_descuentos: number;
+  total_anticipos_periodo_siguiente: number;
+  total_liquido_pagable: number;
+  total_trabajadores: number;
+  trabajadores_liquidados: number;
+  trabajadores_pendientes: number;
+}
+
+export interface PlanillaMensual {
+  periodo_id: number;
+  periodo_descripcion: string;
   mes: number;
   anio: number;
-  descripcion: string;
   fecha_inicio: string;
   fecha_fin: string;
-  fecha_pago_estimada: string;
-  estado: string; // ABIERTO, CERRADO
-  fecha_cierre?: string | null;
-  cerrado_por?: string | null;
-  cerrado_por_nombre?: string | null;
-  observaciones_cierre?: string | null;
+  estado_periodo: string;
+  filas: PlanillaFila[];
+  totales: PlanillaResumenTotales;
 }
 
-export interface PlanillaResumen {
-  periodo: PlanillaPeriodoHeader;
-
-  total_trabajadores: number;
-  total_sueldo_base: number;
-  total_ganado: number;
-  total_anticipos_antes_18: number;
-  total_anticipos_post_18: number;
-  total_anticipos: number;
-  total_anticipos_siguiente_periodo: number;
-  total_pagos_quincena: number;
-  total_ajustes: number;
-  total_ganado_bruto: number;
-  total_liquido_pagable: number;
-  total_pagado: number;
-  total_saldo_pendiente: number;
-
-  trabajadores_liquidados: number;
-  trabajadores_parciales: number;
-  trabajadores_pendientes: number;
-
-  es_cerrable: boolean;
-  advertencias_cierre: string[];
-  items: PlanillaItem[];
-}
-
-export interface CierrePlanillaRequest {
-  confirmar_con_pendientes: boolean;
+export interface ActualizarDiasTrabajadosPayload {
+  trabajador_id: number;
+  periodo_id: number;
+  dias_trabajados: number;
   observaciones?: string;
 }
 
-export interface ReaperturaPlanillaRequest {
-  motivo: string;
+export interface Descuento {
+  id: number;
+  numero_comprobante: string;
+  trabajador_id: number;
+  trabajador_nombre?: string;
+  periodo_id: number;
+  fecha: string;
+  importe: number;
+  concepto: string;
+  observaciones?: string;
+  estado: string;
+  usuario_id?: string;
+  usuario_nombre?: string;
+  fecha_creacion: string;
 }
 
-export interface PeriodoPlanillaListItem {
-  id: number;
-  mes: number;
-  anio: number;
-  descripcion: string;
-  estado: string;
-  fecha_inicio: string;
-  fecha_fin: string;
-  fecha_cierre?: string | null;
-  total_trabajadores: number;
-  total_sueldo_base: number;
-  total_pagado: number;
-  total_saldo_pendiente: number;
-  porcentaje_avance: number;
+export interface DescuentoCreatePayload {
+  trabajador_id: number;
+  periodo_id: number;
+  fecha: string;
+  importe: number;
+  concepto: string;
+  observaciones?: string;
 }
+

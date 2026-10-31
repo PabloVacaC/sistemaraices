@@ -1,15 +1,18 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
 import { DataService } from '../../core/services/data.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
 import {
-  PlanillaResumen,
-  PlanillaItem,
-  PeriodoPlanillaListItem,
+  PeriodoSalarial,
   Area,
+  PlanillaMensual,
+  PlanillaFila,
+  ActualizarDiasTrabajadosPayload,
+  Descuento,
+  DescuentoCreatePayload,
+  Anticipo,
 } from '../../core/models/types';
 
 @Component({
@@ -17,84 +20,83 @@ import {
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './planilla.component.html',
-  styleUrls: ['./planilla.component.css'],
+  styleUrls: ['./planilla.component.css']
 })
 export class PlanillaComponent implements OnInit {
   private dataService = inject(DataService);
   public auth = inject(AuthService);
   private toast = inject(ToastService);
-  private router = inject(Router);
 
-  // Estados reactivos (Signals)
+  // Estados principales
   loading = signal<boolean>(false);
-  resumenPlanilla = signal<PlanillaResumen | null>(null);
-  periodos = signal<PeriodoPlanillaListItem[]>([]);
+  periodos = signal<PeriodoSalarial[]>([]);
   selectedPeriodoId = signal<number | null>(null);
+  planilla = signal<PlanillaMensual | null>(null);
   areas = signal<Area[]>([]);
 
-  // Filtros de tabla
+  // Filtros
   searchTerm = signal<string>('');
   selectedAreaFilter = signal<number | null>(null);
-  statusFilter = signal<string>('TODOS'); // TODOS, LIQUIDADO, PARCIAL, PENDIENTE
 
-  // Modales
-  showModalCierre = signal<boolean>(false);
-  showModalReapertura = signal<boolean>(false);
-  showModalDetalleTrabajador = signal<boolean>(false);
-  selectedItemDetalle = signal<PlanillaItem | null>(null);
+  // Modales interactivos
+  showModalDias = signal<boolean>(false);
+  selectedFilaDias = signal<PlanillaFila | null>(null);
+  diasForm = {
+    dias_trabajados: 30,
+    observaciones: ''
+  };
 
-  // Formularios de modales
-  confirmarPendientes = signal<boolean>(false);
-  observacionesCierre = signal<string>('');
-  motivoReapertura = signal<string>('');
+  showModalDescuentos = signal<boolean>(false);
+  selectedFilaDescuentos = signal<PlanillaFila | null>(null);
+  descuentosList = signal<Descuento[]>([]);
+  showFormNuevoDescuento = signal<boolean>(false);
+  descuentoForm = {
+    fecha: new Date().toISOString().substring(0, 10),
+    importe: null as number | null,
+    concepto: '',
+    observaciones: ''
+  };
 
-  // Ítems filtrados
-  filteredItems = computed(() => {
-    const resumen = this.resumenPlanilla();
-    if (!resumen) return [];
-    let items = resumen.items;
+  showModalAnticiposFila = signal<boolean>(false);
+  selectedFilaAnticipos = signal<PlanillaFila | null>(null);
+  anticiposFilaList = signal<Anticipo[]>([]);
+  showFormNuevoAnticipoFila = signal<boolean>(false);
+  anticipoFilaForm = {
+    importe: null as number | null,
+    metodo_pago: 'EFECTIVO',
+    fecha_entrega: new Date().toISOString().substring(0, 10),
+    observaciones: '',
+    es_periodo_siguiente: false,
+    confirmar_excedente: false
+  };
 
-    // Filtro por término de búsqueda (CI, Nombre, Cargo)
+  showModalCerrarPlanilla = signal<boolean>(false);
+  cerrarPlanillaForm = {
+    observaciones: '',
+    confirmar_pendientes: false
+  };
+  advertenciaCierre = signal<string | null>(null);
+
+  // Filas filtradas de la tabla
+  filasFiltradas = computed(() => {
+    const pl = this.planilla();
+    if (!pl) return [];
     const term = this.searchTerm().toLowerCase().trim();
-    if (term) {
-      items = items.filter(
-        (it) =>
-          it.nombre_completo.toLowerCase().includes(term) ||
-          (it.ci && it.ci.toLowerCase().includes(term)) ||
-          it.cargo.toLowerCase().includes(term) ||
-          it.area.toLowerCase().includes(term)
-      );
-    }
-
-    // Filtro por Área
     const areaId = this.selectedAreaFilter();
-    if (areaId) {
-      const areaObj = this.areas().find((a) => a.id === areaId);
-      if (areaObj) {
-        items = items.filter((it) => it.area.toLowerCase() === areaObj.nombre.toLowerCase());
-      }
-    }
 
-    // Filtro por Estado
-    const st = this.statusFilter();
-    if (st !== 'TODOS') {
-      if (st === 'LIQUIDADO') {
-        items = items.filter((it) => it.estado_pago === 'LIQUIDADO' || it.saldo_pendiente <= 0);
-      } else if (st === 'PARCIAL') {
-        items = items.filter((it) => it.estado_pago === 'PARCIAL' || (it.total_pagado > 0 && it.saldo_pendiente > 0));
-      } else if (st === 'PENDIENTE') {
-        items = items.filter((it) => it.estado_pago === 'PENDIENTE' || it.estado_pago === 'ANTICIPOS_PENDIENTES' || it.estado_pago === 'SIN_MOVIMIENTOS');
-      }
-    }
+    return pl.filas.filter(f => {
+      const matchSearch =
+        term === '' ||
+        f.nombre_completo.toLowerCase().includes(term) ||
+        (f.ci && f.ci.toLowerCase().includes(term)) ||
+        f.cargo.toLowerCase().includes(term);
 
-    return items;
-  });
+      const matchArea =
+        areaId === null ||
+        (f.area && f.area.toLowerCase() === this.areas().find(a => a.id === areaId)?.nombre.toLowerCase());
 
-  // Trabajadores con saldo pendiente para advertencia de cierre
-  trabajadoresPendientes = computed(() => {
-    const resumen = this.resumenPlanilla();
-    if (!resumen) return [];
-    return resumen.items.filter((it) => it.saldo_pendiente > 0);
+      return matchSearch && matchArea;
+    });
   });
 
   ngOnInit() {
@@ -103,295 +105,318 @@ export class PlanillaComponent implements OnInit {
 
   cargarDatosIniciales() {
     this.loading.set(true);
-
-    // 1. Cargar áreas
-    this.dataService.getAreas().subscribe({
-      next: (a) => this.areas.set(a),
-      error: () => {},
-    });
-
-    // 2. Cargar períodos y planilla actual
-    this.dataService.getPeriodosPlanilla().subscribe({
+    // 1. Cargar períodos
+    this.dataService.getPeriodos().subscribe({
       next: (pers) => {
         this.periodos.set(pers);
-        // Cargar planilla del período actual
-        this.dataService.getPlanillaPeriodoActual().subscribe({
-          next: (res) => {
-            this.resumenPlanilla.set(res);
-            this.selectedPeriodoId.set(res.periodo.id);
-            this.loading.set(false);
-          },
-          error: (err) => {
-            this.loading.set(false);
-            this.toast.error(err?.error?.detail || 'Error al cargar planilla actual');
-          },
-        });
+        if (pers.length > 0 && !this.selectedPeriodoId()) {
+          // Seleccionar período actual o el más reciente
+          const hoy = new Date();
+          const mesActual = hoy.getMonth() + 1;
+          const anioActual = hoy.getFullYear();
+          const actual = pers.find(p => p.mes === mesActual && p.anio === anioActual) || pers[0];
+          this.selectedPeriodoId.set(actual.id);
+        }
+        this.cargarPlanilla();
       },
       error: () => {
+        this.toast.error('Error al cargar períodos salariales');
         this.loading.set(false);
-        this.toast.error('Error al cargar lista de períodos');
-      },
+      }
+    });
+
+    // 2. Cargar áreas para filtros
+    this.dataService.getAreas().subscribe({
+      next: (a) => this.areas.set(a),
+      error: () => {}
     });
   }
 
-  onPeriodoChange(event: any) {
-    const pid = Number(event);
+  cargarPlanilla() {
+    const pid = this.selectedPeriodoId();
     if (!pid) return;
-    this.selectedPeriodoId.set(pid);
-    this.cargarPlanilla(pid);
-  }
 
-  cargarPlanilla(periodoId: number) {
     this.loading.set(true);
-    this.dataService.getPlanillaPorPeriodo(periodoId).subscribe({
-      next: (res) => {
-        this.resumenPlanilla.set(res);
+    this.dataService.getPlanillaPeriodo(pid).subscribe({
+      next: (pl) => {
+        this.planilla.set(pl);
         this.loading.set(false);
       },
       error: (err) => {
+        this.toast.error(err?.error?.detail || 'Error al cargar la planilla salarial');
         this.loading.set(false);
-        this.toast.error(err?.error?.detail || 'Error al cargar la planilla seleccionada');
-      },
+      }
     });
   }
 
-  // --- CIERRE FORMAL DE PLANILLA ---
-  abrirModalCierre() {
-    this.confirmarPendientes.set(false);
-    this.observacionesCierre.set('');
-    this.showModalCierre.set(true);
+  onPeriodoChange(pid: any) {
+    this.selectedPeriodoId.set(Number(pid));
+    this.cargarPlanilla();
   }
 
-  confirmarCierre() {
-    const pid = this.selectedPeriodoId();
-    if (!pid) return;
+  // ==========================================
+  // MODIFICAR DÍAS TRABAJADOS (RF-16)
+  // ==========================================
+  abrirModalDias(fila: PlanillaFila) {
+    if (this.planilla()?.estado_periodo === 'CERRADO') {
+      this.toast.warning('Esta planilla está CERRADA. No se admiten modificaciones de días.');
+      return;
+    }
+    this.selectedFilaDias.set(fila);
+    this.diasForm.dias_trabajados = fila.dias_trabajados;
+    this.diasForm.observaciones = '';
+    this.showModalDias.set(true);
+  }
 
-    const resumen = this.resumenPlanilla();
-    if (resumen && resumen.total_saldo_pendiente > 0 && !this.confirmarPendientes()) {
-      this.toast.warning('Debe marcar la casilla de confirmación para cerrar con pagos pendientes.');
+  calcularSimulacionGanado(): number {
+    const fila = this.selectedFilaDias();
+    if (!fila) return 0;
+    const dias = Number(this.diasForm.dias_trabajados || 0);
+    if (dias >= 30) return fila.haber_basico;
+    if (dias <= 0) return 0;
+    return Math.round(((fila.haber_basico / 30) * dias) * 100) / 100;
+  }
+
+  guardarDiasTrabajados() {
+    const fila = this.selectedFilaDias();
+    const pid = this.selectedPeriodoId();
+    if (!fila || !pid) return;
+
+    const dias = Number(this.diasForm.dias_trabajados);
+    if (dias < 0 || dias > 30) {
+      this.toast.warning('Los días trabajados deben estar entre 0 y 30.');
       return;
     }
 
     this.loading.set(true);
-    this.showModalCierre.set(false);
-
-    this.dataService
-      .cerrarPlanilla(pid, {
-        confirmar_con_pendientes: this.confirmarPendientes(),
-        observaciones: this.observacionesCierre() || 'Cierre formal de planilla mensual',
-      })
-      .subscribe({
-        next: (resActualizada) => {
-          this.resumenPlanilla.set(resActualizada);
-          this.toast.success(`Planilla ${resActualizada.periodo.descripcion} cerrada exitosamente.`);
-          this.loading.set(false);
-          // Recargar lista de períodos para reflejar el estado cerrado
-          this.dataService.getPeriodosPlanilla().subscribe({
-            next: (pers) => this.periodos.set(pers),
-          });
-        },
-        error: (err) => {
-          this.loading.set(false);
-          this.toast.error(err?.error?.detail || 'Error al cerrar la planilla');
-        },
-      });
-  }
-
-  // --- REAPERTURA ADMINISTRATIVA DE PLANILLA ---
-  abrirModalReapertura() {
-    this.motivoReapertura.set('');
-    this.showModalReapertura.set(true);
-  }
-
-  confirmarReapertura() {
-    const pid = this.selectedPeriodoId();
-    const motivo = this.motivoReapertura().trim();
-    if (!pid) return;
-    if (motivo.length < 5) {
-      this.toast.warning('Debe ingresar un motivo justificado (mínimo 5 caracteres).');
-      return;
-    }
-
-    this.loading.set(true);
-    this.showModalReapertura.set(false);
-
-    this.dataService
-      .reabrirPlanilla(pid, {
-        motivo: motivo,
-      })
-      .subscribe({
-        next: (resActualizada) => {
-          this.resumenPlanilla.set(resActualizada);
-          this.toast.success(`Planilla ${resActualizada.periodo.descripcion} reabierta exitosamente.`);
-          this.loading.set(false);
-          // Recargar lista de períodos
-          this.dataService.getPeriodosPlanilla().subscribe({
-            next: (pers) => this.periodos.set(pers),
-          });
-        },
-        error: (err) => {
-          this.loading.set(false);
-          this.toast.error(err?.error?.detail || 'Error al reabrir la planilla');
-        },
-      });
-  }
-
-  // --- DETALLE / FICHA DE TRABAJADOR ---
-  verDetalleTrabajador(item: PlanillaItem) {
-    this.selectedItemDetalle.set(item);
-    this.showModalDetalleTrabajador.set(true);
-  }
-
-  irAPagosTrabajador(item: PlanillaItem) {
-    // Redirigir al módulo de pagos con el período
-    this.router.navigate(['/dashboard/pagos']);
-  }
-
-  // --- ACTUALIZACIÓN INTERACTIVA DE DÍAS TRABAJADOS (RF-Problema 1) ---
-  actualizarDias(item: PlanillaItem, event: any) {
-    const nuevosDias = parseInt(event?.target?.value ?? event, 10);
-    if (isNaN(nuevosDias) || nuevosDias < 1 || nuevosDias > 30) {
-      this.toast.warning('Los días trabajados deben estar entre 1 y 30 días.');
-      return;
-    }
-    const pid = this.selectedPeriodoId();
-    if (!pid) return;
-
-    this.dataService.actualizarDiasTrabajados(pid, item.trabajador_id, nuevosDias).subscribe({
-      next: (itemActualizado) => {
-        const current = this.resumenPlanilla();
-        if (current) {
-          const idx = current.items.findIndex((i) => i.trabajador_id === item.trabajador_id);
-          if (idx !== -1) {
-            current.items[idx] = itemActualizado;
-            this.recalcularTotalesPlanilla(current);
-            this.resumenPlanilla.set({ ...current });
-          }
-        }
-        this.toast.success(
-          `Días de ${item.nombre_completo} actualizados a ${nuevosDias} (Total Ganado: Bs ${itemActualizado.total_ganado.toFixed(2)})`
-        );
+    this.dataService.actualizarDiasTrabajados({
+      trabajador_id: fila.trabajador_id,
+      periodo_id: pid,
+      dias_trabajados: dias,
+      observaciones: this.diasForm.observaciones
+    }).subscribe({
+      next: (filaActualizada) => {
+        this.toast.success(`Días trabajados actualizados para ${fila.nombre_completo}`);
+        this.showModalDias.set(false);
+        this.cargarPlanilla();
       },
       error: (err) => {
         this.toast.error(err?.error?.detail || 'Error al actualizar días trabajados');
-      },
+        this.loading.set(false);
+      }
     });
   }
 
-  private recalcularTotalesPlanilla(resumen: PlanillaResumen) {
-    let totBase = 0;
-    let totGanado = 0;
-    let totAnt18 = 0;
-    let totAntPost18 = 0;
-    let totAnt = 0;
-    let totAntSig = 0;
-    let totQ = 0;
-    let totAj = 0;
-    let totBruto = 0;
-    let totLiq = 0;
-    let totPag = 0;
-    let totSaldo = 0;
+  // ==========================================
+  // GESTIÓN DE DESCUENTOS (RF-29 A RF-32)
+  // ==========================================
+  abrirModalDescuentos(fila: PlanillaFila) {
+    this.selectedFilaDescuentos.set(fila);
+    this.showFormNuevoDescuento.set(false);
+    this.descuentoForm = {
+      fecha: new Date().toISOString().substring(0, 10),
+      importe: null,
+      concepto: '',
+      observaciones: ''
+    };
+    this.cargarDescuentosDeFila(fila.trabajador_id);
+    this.showModalDescuentos.set(true);
+  }
 
-    for (const it of resumen.items) {
-      totBase += it.sueldo_base;
-      totGanado += it.total_ganado;
-      totAnt18 += it.anticipos_antes_18;
-      totAntPost18 += it.anticipos_post_18;
-      totAnt += it.total_anticipos;
-      totAntSig += (it.anticipos_siguiente_periodo || 0);
-      totQ += it.pago_quincena;
-      totAj += it.ajustes;
-      totBruto += it.total_ganado_bruto;
-      totLiq += it.liquido_pagable;
-      totPag += it.total_pagado;
-      totSaldo += it.saldo_pendiente;
+  cargarDescuentosDeFila(trabajadorId: number) {
+    const pid = this.selectedPeriodoId();
+    if (!pid) return;
+
+    this.dataService.getDescuentos(pid, trabajadorId).subscribe({
+      next: (list) => this.descuentosList.set(list),
+      error: () => this.toast.error('Error al cargar descuentos')
+    });
+  }
+
+  guardarNuevoDescuento() {
+    const fila = this.selectedFilaDescuentos();
+    const pid = this.selectedPeriodoId();
+    if (!fila || !pid) return;
+
+    const monto = Number(this.descuentoForm.importe || 0);
+    if (monto <= 0) {
+      this.toast.warning('El importe del descuento debe ser mayor a Bs 0.');
+      return;
     }
-
-    resumen.total_sueldo_base = totBase;
-    resumen.total_ganado = totGanado;
-    resumen.total_anticipos_antes_18 = totAnt18;
-    resumen.total_anticipos_post_18 = totAntPost18;
-    resumen.total_anticipos = totAnt;
-    resumen.total_anticipos_siguiente_periodo = totAntSig;
-    resumen.total_pagos_quincena = totQ;
-    resumen.total_ajustes = totAj;
-    resumen.total_ganado_bruto = totBruto;
-    resumen.total_liquido_pagable = totLiq;
-    resumen.total_pagado = totPag;
-    resumen.total_saldo_pendiente = totSaldo;
-  }
-
-  // --- EXPORTACIÓN E IMPRESIÓN ---
-  imprimirPlanilla() {
-    window.print();
-  }
-
-  exportarCSV() {
-    const resumen = this.resumenPlanilla();
-    if (!resumen || !resumen.items.length) {
-      this.toast.warning('No hay datos para exportar.');
+    if (!this.descuentoForm.concepto.trim()) {
+      this.toast.warning('Debes ingresar el concepto o motivo del descuento.');
       return;
     }
 
-    const headers = [
-      'N°',
-      'Trabajador',
-      'Carné Identidad',
-      'Área',
-      'Cargo',
-      'Haber Básico (Bs)',
-      'Días Trabajados',
-      'Total Ganado Proporcional (Bs)',
-      'Anticipos <= Día 18 (Bs)',
-      'Pago Quincena (Bs)',
-      'Anticipos > Día 18 (Bs)',
-      'Total Anticipos Mes (Bs)',
-      'Anticipos Sig. Período Día 1-5 (Bs)',
-      'Ajustes/Bonos (Bs)',
-      'Líquido Pagable (Bs)',
-      'Total Pagado (Bs)',
-      'Saldo Pendiente (Bs)',
-      'Estado',
-    ];
+    this.loading.set(true);
+    const payload: DescuentoCreatePayload = {
+      trabajador_id: fila.trabajador_id,
+      periodo_id: pid,
+      fecha: this.descuentoForm.fecha,
+      importe: monto,
+      concepto: this.descuentoForm.concepto.trim(),
+      observaciones: this.descuentoForm.observaciones
+    };
 
-    const rows = resumen.items.map((it, idx) => [
-      idx + 1,
-      `"${it.nombre_completo}"`,
-      `"${it.ci || ''}"`,
-      `"${it.area}"`,
-      `"${it.cargo}"`,
-      it.sueldo_base.toFixed(2),
-      it.dias_trabajados,
-      it.total_ganado.toFixed(2),
-      it.anticipos_antes_18.toFixed(2),
-      it.pago_quincena.toFixed(2),
-      it.anticipos_post_18.toFixed(2),
-      it.total_anticipos.toFixed(2),
-      (it.anticipos_siguiente_periodo || 0).toFixed(2),
-      it.ajustes.toFixed(2),
-      it.liquido_pagable.toFixed(2),
-      it.total_pagado.toFixed(2),
-      it.saldo_pendiente.toFixed(2),
-      `"${it.estado_pago}"`,
-    ]);
+    this.dataService.crearDescuento(payload).subscribe({
+      next: (desc) => {
+        this.toast.success(`Descuento registrado: ${desc.numero_comprobante}`);
+        this.showFormNuevoDescuento.set(false);
+        this.cargarDescuentosDeFila(fila.trabajador_id);
+        this.cargarPlanilla();
+      },
+      error: (err) => {
+        this.toast.error(err?.error?.detail || 'Error al registrar descuento');
+        this.loading.set(false);
+      }
+    });
+  }
 
-    const csvContent =
-      'data:text/csv;charset=utf-8,\uFEFF' +
-      headers.join(',') +
-      '\n' +
-      rows.map((r) => r.join(',')).join('\n');
+  anularDescuento(desc: Descuento) {
+    const motivo = prompt(`¿Motivo de anulación para el descuento ${desc.numero_comprobante}?`);
+    if (!motivo || !motivo.trim()) return;
 
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute(
-      'download',
-      `Planilla_Salarial_${resumen.periodo.descripcion.replace(/\s+/g, '_')}.csv`
-    );
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    this.toast.success('Archivo CSV descargado correctamente.');
+    this.loading.set(true);
+    this.dataService.anularDescuento(desc.id, motivo.trim()).subscribe({
+      next: () => {
+        this.toast.success(`Descuento ${desc.numero_comprobante} anulado.`);
+        const fila = this.selectedFilaDescuentos();
+        if (fila) this.cargarDescuentosDeFila(fila.trabajador_id);
+        this.cargarPlanilla();
+      },
+      error: (err) => {
+        this.toast.error(err?.error?.detail || 'Error al anular descuento');
+        this.loading.set(false);
+      }
+    });
+  }
+
+  // ==========================================
+  // GESTIÓN DE ANTICIPOS DE LA FILA (RF-22 A RF-28)
+  // ==========================================
+  abrirModalAnticiposFila(fila: PlanillaFila) {
+    this.selectedFilaAnticipos.set(fila);
+    this.showFormNuevoAnticipoFila.set(false);
+    this.anticipoFilaForm = {
+      importe: null,
+      metodo_pago: 'EFECTIVO',
+      fecha_entrega: new Date().toISOString().substring(0, 10),
+      observaciones: '',
+      es_periodo_siguiente: false,
+      confirmar_excedente: false
+    };
+    this.cargarAnticiposDeFila(fila.trabajador_id);
+    this.showModalAnticiposFila.set(true);
+  }
+
+  cargarAnticiposDeFila(trabajadorId: number) {
+    const pid = this.selectedPeriodoId();
+    if (!pid) return;
+
+    this.dataService.getAnticipos(pid).subscribe({
+      next: (list) => {
+        const filtrados = list.filter(a => a.trabajador_id === trabajadorId);
+        this.anticiposFilaList.set(filtrados);
+      },
+      error: () => this.toast.error('Error al cargar lista de anticipos')
+    });
+  }
+
+  guardarNuevoAnticipoFila() {
+    const fila = this.selectedFilaAnticipos();
+    const pid = this.selectedPeriodoId();
+    if (!fila || !pid) return;
+
+    const monto = Number(this.anticipoFilaForm.importe || 0);
+    if (monto <= 0) {
+      this.toast.warning('El importe del anticipo debe ser mayor a Bs 0.');
+      return;
+    }
+
+    this.loading.set(true);
+    const payload = {
+      trabajador_id: fila.trabajador_id,
+      periodo_id: pid,
+      importe: monto,
+      metodo_pago: this.anticipoFilaForm.metodo_pago,
+      fecha_entrega: this.anticipoFilaForm.fecha_entrega,
+      observaciones: this.anticipoFilaForm.observaciones,
+      es_periodo_siguiente: this.anticipoFilaForm.es_periodo_siguiente,
+      confirmar_excedente: this.anticipoFilaForm.confirmar_excedente
+    };
+
+    this.dataService.createAnticipo(payload).subscribe({
+      next: (ant: Anticipo) => {
+        this.toast.success(`Vale de anticipo registrado: ${ant.numero_comprobante}`);
+        this.showFormNuevoAnticipoFila.set(false);
+        this.cargarAnticiposDeFila(fila.trabajador_id);
+        this.cargarPlanilla();
+      },
+      error: (err: any) => {
+        const msg = err?.error?.detail || '';
+        if (msg.includes('ADVERTENCIA_EXCEDENTE')) {
+          const resp = confirm(`${msg}\n\n¿Deseas confirmar la entrega del anticipo a pesar de superar el saldo disponible?`);
+          if (resp) {
+            this.anticipoFilaForm.confirmar_excedente = true;
+            this.guardarNuevoAnticipoFila();
+            return;
+          }
+        } else {
+          this.toast.error(msg || 'Error al registrar anticipo');
+        }
+        this.loading.set(false);
+      }
+    });
+  }
+
+  // ==========================================
+  // CIERRE FORMAL DE PLANILLA (RF-7, RF-8, RF-76)
+  // ==========================================
+  abrirModalCierre() {
+    const pl = this.planilla();
+    if (!pl) return;
+    if (pl.estado_periodo === 'CERRADO') {
+      this.toast.info('Esta planilla ya se encuentra CERRADA formalmente.');
+      return;
+    }
+
+    this.advertenciaCierre.set(null);
+    this.cerrarPlanillaForm = {
+      observaciones: 'Cierre mensual consolidado de haberes y liquidaciones',
+      confirmar_pendientes: false
+    };
+    this.showModalCerrarPlanilla.set(true);
+  }
+
+  confirmarCierrePlanilla() {
+    const pid = this.selectedPeriodoId();
+    if (!pid) return;
+
+    this.loading.set(true);
+    this.dataService.cerrarPlanilla(pid, this.cerrarPlanillaForm).subscribe({
+      next: (res) => {
+        if (res.requiere_confirmacion) {
+          this.advertenciaCierre.set(res.mensaje);
+          this.cerrarPlanillaForm.confirmar_pendientes = true;
+          this.loading.set(false);
+          return;
+        }
+
+        this.toast.success(res.mensaje || 'Planilla cerrada exitosamente.');
+        this.showModalCerrarPlanilla.set(false);
+        this.cargarPlanilla();
+      },
+      error: (err) => {
+        this.toast.error(err?.error?.detail || 'Error al cerrar planilla');
+        this.loading.set(false);
+      }
+    });
+  }
+
+  // ==========================================
+  // IMPRESIÓN Y PDF INSTITUCIONAL (RF-71)
+  // ==========================================
+  imprimirPlanilla() {
+    window.print();
   }
 }
-

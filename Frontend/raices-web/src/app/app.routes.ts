@@ -7,8 +7,8 @@ import { UsuariosComponent } from './pages/usuarios/usuarios.component';
 import { TrabajadoresComponent } from './pages/trabajadores/trabajadores.component';
 import { BitacoraComponent } from './pages/bitacora/bitacora.component';
 import { PagosComponent } from './pages/pagos/pagos.component';
-import { PlanillaComponent } from './pages/planilla/planilla.component';
 import { InventarioComponent } from './pages/inventario/inventario.component';
+import { PlanillaComponent } from './pages/planilla/planilla.component';
 import { ContabilidadComponent } from './pages/contabilidad/contabilidad.component';
 
 export const routes: Routes = [
@@ -34,16 +34,16 @@ export const routes: Routes = [
         component: TrabajadoresComponent
       },
       {
-        path: 'pagos',
-        component: PagosComponent
+        path: 'inventario',
+        component: InventarioComponent
       },
       {
         path: 'planilla',
         component: PlanillaComponent
       },
       {
-        path: 'inventario',
-        component: InventarioComponent
+        path: 'pagos',
+        component: PagosComponent
       },
       {
         path: 'contabilidad',

@@ -28,11 +28,11 @@ import {
   ReporteGastosResumen,
   ContabilidadReporteMensual,
   ContabilidadReporteAnual,
-  PlanillaResumen,
-  PlanillaItem,
-  CierrePlanillaRequest,
-  ReaperturaPlanillaRequest,
-  PeriodoPlanillaListItem,
+  PlanillaMensual,
+  PlanillaFila,
+  ActualizarDiasTrabajadosPayload,
+  Descuento,
+  DescuentoCreatePayload,
 } from '../models/types';
 
 @Injectable({
@@ -420,41 +420,46 @@ export class DataService {
     });
   }
 
-  // --- Módulo de Planillas Salariales ---
-  getPlanillaPeriodoActual(): Observable<PlanillaResumen> {
-    return this.http.get<PlanillaResumen>(`${this.API_URL}/planillas/periodo-actual`, {
+  // --- Módulo de Planilla y Salarios ---
+  getPlanillaPeriodo(periodoId: number): Observable<PlanillaMensual> {
+    return this.http.get<PlanillaMensual>(`${this.API_URL}/planilla/periodo/${periodoId}`, {
       headers: this.auth.getHeaders()
     });
   }
 
-  getPlanillaPorPeriodo(periodoId: number): Observable<PlanillaResumen> {
-    return this.http.get<PlanillaResumen>(`${this.API_URL}/planillas/${periodoId}`, {
+  actualizarDiasTrabajados(payload: ActualizarDiasTrabajadosPayload): Observable<PlanillaFila> {
+    return this.http.put<PlanillaFila>(`${this.API_URL}/planilla/dias-trabajados`, payload, {
       headers: this.auth.getHeaders()
     });
   }
 
-  getPeriodosPlanilla(): Observable<PeriodoPlanillaListItem[]> {
-    return this.http.get<PeriodoPlanillaListItem[]>(`${this.API_URL}/planillas/periodos`, {
+  cerrarPlanilla(periodoId: number, payload: { observaciones?: string; confirmar_pendientes?: boolean }): Observable<any> {
+    return this.http.post<any>(`${this.API_URL}/planilla/cerrar/${periodoId}`, payload, {
       headers: this.auth.getHeaders()
     });
   }
 
-  cerrarPlanilla(periodoId: number, data: CierrePlanillaRequest): Observable<PlanillaResumen> {
-    return this.http.post<PlanillaResumen>(`${this.API_URL}/planillas/${periodoId}/cerrar`, data, {
+  getDescuentos(periodoId: number, trabajadorId?: number): Observable<Descuento[]> {
+    let params: any = { periodo_id: periodoId };
+    if (trabajadorId) {
+      params.trabajador_id = trabajadorId;
+    }
+    return this.http.get<Descuento[]>(`${this.API_URL}/planilla/descuentos`, {
+      headers: this.auth.getHeaders(),
+      params
+    });
+  }
+
+  crearDescuento(payload: DescuentoCreatePayload): Observable<Descuento> {
+    return this.http.post<Descuento>(`${this.API_URL}/planilla/descuentos`, payload, {
       headers: this.auth.getHeaders()
     });
   }
 
-  reabrirPlanilla(periodoId: number, data: ReaperturaPlanillaRequest): Observable<PlanillaResumen> {
-    return this.http.post<PlanillaResumen>(`${this.API_URL}/planillas/${periodoId}/reabrir`, data, {
-      headers: this.auth.getHeaders()
-    });
-  }
-
-  actualizarDiasTrabajados(periodoId: number, trabajadorId: number, dias: number): Observable<PlanillaItem> {
-    return this.http.patch<PlanillaItem>(
-      `${this.API_URL}/planillas/${periodoId}/trabajadores/${trabajadorId}/dias-trabajados`,
-      { dias_trabajados: dias },
+  anularDescuento(descuentoId: number, motivo: string): Observable<Descuento> {
+    return this.http.post<Descuento>(
+      `${this.API_URL}/planilla/descuentos/${descuentoId}/anular`,
+      { motivo },
       { headers: this.auth.getHeaders() }
     );
   }

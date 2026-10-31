@@ -18,14 +18,17 @@ from app.core.security import get_password_hash
 def init_db():
     print("Creando tablas en PostgreSQL...")
     Base.metadata.create_all(bind=engine)
+    print("Tablas creadas exitosamente.")
 
-    # Migraciones seguras para columnas añadidas
-    with engine.begin() as conn:
-        conn.execute(text("ALTER TABLE periodo_salarial ADD COLUMN IF NOT EXISTS fecha_cierre TIMESTAMP NULL;"))
-        conn.execute(text("ALTER TABLE periodo_salarial ADD COLUMN IF NOT EXISTS cerrado_por VARCHAR(30) NULL;"))
-        conn.execute(text("ALTER TABLE periodo_salarial ADD COLUMN IF NOT EXISTS observaciones_cierre TEXT NULL;"))
-
-    print("Tablas y columnas sincronizadas exitosamente.")
+    # Migraciones seguras no destructivas para columnas nuevas
+    with engine.connect() as conn:
+        try:
+            conn.execute(text("ALTER TABLE trabajador ADD COLUMN IF NOT EXISTS fecha_inactividad DATE;"))
+            conn.execute(text("ALTER TABLE anticipo ADD COLUMN IF NOT EXISTS es_periodo_siguiente BOOLEAN NOT NULL DEFAULT FALSE;"))
+            conn.commit()
+            print("Migraciones incrementales aplicadas correctamente.")
+        except Exception as ex:
+            print(f"Nota de migración incremental: {ex}")
 
     db: Session = SessionLocal()
     try:
@@ -42,6 +45,11 @@ def init_db():
             "INACTIVAR_TRABAJADOR",
             "GESTION_AREAS",
             "VER_BITACORA",
+            "PLANILLA_VER",
+            "PLANILLA_EDITAR",
+            "PLANILLA_CERRAR",
+            "DESCUENTOS_REGISTRAR",
+            "DESCUENTOS_ANULAR",
             "PAGOS_ANTICIPOS_VER",
             "REGISTRAR_ANTICIPO",
             "REGISTRAR_LIQUIDACION",
@@ -56,9 +64,6 @@ def init_db():
             "INVENTARIO_GASTOS_REGISTRAR",
             "INVENTARIO_GASTOS_ANULAR",
             "INVENTARIO_REPORTES",
-            "PLANILLA_VER",
-            "PLANILLA_CERRAR",
-            "PLANILLA_REABRIR",
         ]
 
         permisos_db = {}
@@ -93,6 +98,11 @@ def init_db():
                     "INACTIVAR_TRABAJADOR",
                     "GESTION_AREAS",
                     "VER_BITACORA",
+                    "PLANILLA_VER",
+                    "PLANILLA_EDITAR",
+                    "PLANILLA_CERRAR",
+                    "DESCUENTOS_REGISTRAR",
+                    "DESCUENTOS_ANULAR",
                     "PAGOS_ANTICIPOS_VER",
                     "REGISTRAR_ANTICIPO",
                     "REGISTRAR_LIQUIDACION",
@@ -106,8 +116,6 @@ def init_db():
                     "INVENTARIO_GASTOS_REGISTRAR",
                     "INVENTARIO_GASTOS_ANULAR",
                     "INVENTARIO_REPORTES",
-                    "PLANILLA_VER",
-                    "PLANILLA_CERRAR",
                 ],
             },
             {
@@ -118,6 +126,7 @@ def init_db():
                     "GESTION_TRABAJADORES",
                     "REGISTRAR_TRABAJADOR",
                     "EDITAR_TRABAJADOR",
+                    "PLANILLA_VER",
                     "PAGOS_ANTICIPOS_VER",
                     "INVENTARIO_VER",
                     "INVENTARIO_REGISTRAR_SALIDA",

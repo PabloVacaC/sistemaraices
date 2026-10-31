@@ -1,2 +1,0 @@
-# Modulo de Planillas Salariales
-
