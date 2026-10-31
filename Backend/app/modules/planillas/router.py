@@ -7,6 +7,8 @@ from app.core.security import get_current_user
 from app.models.entities import Usuario
 from app.modules.planillas.schemas import (
     PlanillaResumenOut,
+    PlanillaItemOut,
+    ActualizarDiasTrabajadosRequest,
     CierrePlanillaRequest,
     ReaperturaPlanillaRequest,
     PeriodoPlanillaListItem,
@@ -84,3 +86,26 @@ def reabrir_planilla_periodo(
         request=datos,
         usuario_ci=current_user.ci,
     )
+
+
+@router.patch("/{periodo_id}/trabajadores/{trabajador_id}/dias-trabajados", response_model=PlanillaItemOut)
+def actualizar_dias_trabajados_trabajador(
+    periodo_id: int,
+    trabajador_id: int,
+    datos: ActualizarDiasTrabajadosRequest,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+):
+    """
+    Ajusta interactivamente los días efectivamente trabajados en el mes (base 30 días),
+    recalculando Total Ganado, Líquido Pagable y Saldo Salarial en tiempo real.
+    """
+    return service.actualizar_dias_trabajados(
+        db=db,
+        periodo_id=periodo_id,
+        trabajador_id=trabajador_id,
+        dias=datos.dias_trabajados,
+        usuario_ci=current_user.ci,
+    )
+
+

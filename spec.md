@@ -1,245 +1,274 @@
-# Especificación de Requisitos de Software (SRS) — Gestión de Planillas, Pagos, Anticipos y Liquidación Salarial
+# Especificación de Requisitos de Software (SRS) — Ciclo Salarial: Planilla, Pagos, Anticipos y Liquidación
 
 ---
 
-## 1. Contexto y objetivo
+## 1. Contexto, Objetivo y Arquitectura Modular
 
-El sistema **SISTEMAS RAÍCES** incorpora y consolida la gestión integral del ciclo salarial de los trabajadores a través de dos módulos interconectados: **Planilla** y **Pagos y Anticipos**.
+El sistema **SISTEMAS RAÍCES** gestiona el ciclo salarial integral de los trabajadores a través de dos módulos coordinados pero funcionalmente diferenciados:
+1. **Módulo de Planilla Salarial:** Centraliza la nómina mensual por período, calcula el devengamiento proporcional de días trabajados, computa totales ganados, consolida anticipos y quincenas, gestiona saldos y formaliza el cierre mensual inmutable.
+2. **Módulo de Pagos y Anticipos:** Controla las operaciones diarias de caja y flujo salarial: entrega de anticipos con corte al día 18, pagos de quincena referencial, liquidaciones de fin de mes (día 5), pagos parciales, registro de descuentos y emisión de comprobantes oficiales con numeración correlativa única.
 
-El objetivo central es proveer una plataforma automatizada, auditable y transparente para la administración de haberes, entregas de anticipos quincenales, liquidaciones finales de fin de mes y el cierre formal de planillas por período mensual. El sistema garantiza la trazabilidad histórica, el cálculo matemático exacto sin inconsistencias, la emisión inmutable de comprobantes correlativos oficiales (vales de anticipo y liquidaciones), el bloqueo de períodos cerrados y una experiencia fluida tanto en computadoras de escritorio como en dispositivos móviles.
+```mermaid
+flowchart LR
+    subgraph Pagos_y_Anticipos["Módulo Pagos y Anticipos (Operativo / Caja)"]
+        direction TB
+        A1["Anticipos <= Día 18"] --> Q["Quincena Referencial (Día 18)"]
+        A2["Anticipos > Día 18"] --> L["Liquidación Salarial (Día 5)"]
+        A3["Anticipos Día 1-5 (Próximo Mes)"]
+        D["Descuentos / Ajustes"]
+    end
 
----
+    subgraph Planilla["Módulo Planilla (Consolidación / Nómina)"]
+        direction TB
+        P1["Haber Básico Congelado"] --> Calc["Días Trabajados (Base 30)"]
+        Calc --> TG["Total Ganado Proporcional"]
+        TG --> LP["Líquido Pagable (+/- Saldos)"]
+        LP --> Cierre["Cierre Formal de Planilla"]
+    end
 
-## 2. Usuarios y actores
-
-- **Usuario Responsable de Pagos / Planilla:** Administra los períodos salariales, registra entregas de anticipos, liquida pagos de quincena (día 18) y sueldos restantes (día 5), emite comprobantes oficiales, anula movimientos erróneos con justificación y ejecuta el cierre de planillas.
-- **Trabajador:** Beneficiario del haber mensual, solicitante de anticipos salariales y receptor de los vales y comprobantes de pago digitales o impresos.
-- **Administrador / Auditor:** Revisa la bitácora de auditoría de movimientos salariales, verifica el libro de pagos y supervisa la consistencia financiera.
-- **Sistema:** Controla el ciclo de vida de los períodos (abierto/cerrado), ejecuta las reglas de corte por fecha (día 18 y día 5), calcula en tiempo real los saldos disponibles, genera numeración correlativa única e inmutable y bloquea modificaciones en períodos cerrados.
-
----
-
-## 3. Historias de usuario
-
-### Submódulo de Planillas y Períodos
-- **H1:** Como usuario responsable, quiero acceder al módulo Planilla desde el menú principal para consultar y administrar las planillas salariales mensuales.
-- **H2:** Como usuario responsable, quiero visualizar automáticamente el período del mes actual para operar directamente sobre la planilla vigente.
-- **H3:** Como usuario responsable, quiero consultar planillas de meses anteriores para revisar la información histórica y liquidaciones pasadas.
-- **H4:** Como usuario responsable, quiero que cada planilla conserve los datos salariales congelados de su período para que aumentos posteriores de sueldo no alteren cálculos históricos.
-- **H5:** Como usuario responsable, quiero cerrar una planilla cuando concluya el ciclo de pagos para impedir modificaciones o adiciones accidentales.
-- **H6:** Como usuario responsable, quiero recibir advertencias antes de cerrar una planilla con pagos o saldos pendientes para evitar omisiones involuntarias.
-- **H7:** Como usuario responsable, quiero que los trabajadores inactivos o retirados conserven su historial en los períodos en que trabajaron para mantener trazabilidad legal.
-
-### Submódulo de Pagos y Anticipos
-- **H8:** Como usuario responsable, quiero seleccionar un trabajador y visualizar en tarjetas claras su Sueldo Base Mensual, sus anticipos recibidos, la quincena de referencia y su Saldo Salarial Estimado con su fórmula matemática transparente.
-- **H9:** Como usuario responsable, quiero registrar anticipos salariales antes del día 18 para que se computen automáticamente como adelanto de la primera quincena.
-- **H10:** Como usuario responsable, quiero que los anticipos registrados a partir del día 19 se clasifiquen como "Anticipos posteriores al día 18" para que no alteren la quincena (ya vencida) y se descuenten directamente en la liquidación final.
-- **H11:** Como usuario responsable, quiero que el sistema me impida registrar un anticipo si el monto supera el saldo salarial disponible real del trabajador (restando anticipos previos y quincenas pagadas).
-- **H12:** Como usuario responsable, quiero generar un Vale Oficial de Anticipo correlativo e inmutable (`ANT-YYYYMM-XXXX`) que detalle el sueldo base, la lista ordenada de anticipos, el estado de la quincena (con el importe descontado si ya fue pagada) y el saldo salarial estimado resultante.
-- **H13:** Como usuario responsable, quiero gestionar en una sola tabla de control los pagos de quincena (día 18) y las liquidaciones de sueldo restante (día 5), con la columna de acción accesible entre el trabajador y su sueldo base.
-- **H14:** Como usuario responsable, quiero pagar la quincena con el monto sugerido automático, o registrar una constancia de revisión en Bs 0.00 si el trabajador ya cubrió la quincena con anticipos previos.
-- **H15:** Como usuario responsable, quiero liquidar el sueldo restante de fin de mes descontando exactamente el total de anticipos y los pagos parciales/quincena efectuados, pudiendo agregar bonos o ajustes auditables.
-- **H16:** Como usuario responsable o trabajador, quiero imprimir en formato ticket/PDF o compartir vía WhatsApp el comprobante oficial de anticipo o liquidación desde cualquier dispositivo (móvil o PC).
+    Pagos_y_Anticipos -.->|Consolidación en Tiempo Real| Planilla
+```
 
 ---
 
-## 4. Requisitos funcionales (Criterios de aceptación en EARS)
+## 2. Hoja de Ruta de Especificaciones (Specs 001 a 010)
 
-### Gestión de Períodos y Planillas
+Para asegurar una implementación rigurosa, auditable y con trazabilidad, el ciclo salarial se estructura en 10 especificaciones modulares interdependientes:
 
-#### RF-1. Acceso y ubicación del módulo
-CUANDO el usuario navegue en la barra de navegación lateral, EL SISTEMA DEBERÁ mostrar los accesos diferenciados para los módulos Planilla y Pagos y Anticipos.
-
-#### RF-2. Selección automática del período vigente
-CUANDO el usuario ingrese a cualquiera de los módulos salariales, EL SISTEMA DEBERÁ cargar de forma predeterminada el período correspondiente al mes y año en curso (o el período abierto más reciente si el actual no existe).
-
-#### RF-3. Navegación histórica de períodos
-CUANDO el usuario cambie el período seleccionado en el selector superior, EL SISTEMA DEBERÁ recargar todos los indicadores, tablas de anticipos, listas de pagos y liquidaciones asociadas exclusivamente a dicho período.
-
-#### RF-4. Inmutabilidad de haberes básicos históricos
-CUANDO se modifique el sueldo base mensual en la ficha de un trabajador, EL SISTEMA DEBERÁ aplicar el nuevo sueldo únicamente a períodos futuros o abiertos, sin alterar los sueldos base ni cálculos registrados en liquidaciones de períodos anteriores.
-
-#### RF-5. Advertencia por pendientes al cerrar período
-CUANDO el usuario solicite el cierre formal de una planilla o período salarial, EL SISTEMA DEBERÁ verificar si existen trabajadores con saldo pendiente de cobro o anticipos sin conciliar, y mostrar una ventana modal de advertencia detallando las obligaciones pendientes antes de exigir confirmación.
-
-#### RF-6. Bloqueo de operaciones en períodos cerrados
-MIENTRAS un período salarial se encuentre en estado `CERRADO`, EL SISTEMA NO DEBERÁ permitir:
-- Registrar nuevos anticipos.
-- Registrar pagos de quincena o liquidaciones.
-- Modificar montos, fechas o conceptos de pagos existentes.
-- Anular comprobantes de dicho período.
-
-#### RF-7. Exclusión y retención de trabajadores inactivos
-CUANDO un trabajador sea dado de baja en el módulo de personal, EL SISTEMA DEBERÁ excluirlo de las listas operativas de nuevos períodos, conservando intactos todos sus comprobantes, liquidaciones y registros históricos en los períodos donde estuvo activo.
-
----
-
-### Módulo de Pagos y Anticipos
-
-#### RF-8. Estructura modular y pestañas operativas
-EL SISTEMA DEBERÁ organizar el módulo de Pagos y Anticipos en 4 vistas claramente accesibles:
-1. **Panel General:** Cuadro de mando con KPIs financieros del mes (Total anticipos, Total sueldos pagados, Liquidaciones completadas vs pendientes, Dinero entregado vs pendiente).
-2. **Registrar Anticipo:** Búsqueda rápida de trabajadores, resumen salarial en tarjetas y emisión de vales de anticipo.
-3. **Pagos Parciales & Liquidación:** Matriz de control del personal con cálculo automático de quincenas (día 18) y liquidación de sueldo restante (día 5).
-4. **Historial & Movimientos:** Libro diario cronológico de operaciones salariales por trabajador con opción de reimpresión y anulación auditada.
-
-#### RF-9. Regla de corte de primera quincena (Día 18)
-CUANDO se registre un anticipo cuya fecha de entrega sea menor o igual al día 18 del mes del período:
-- EL SISTEMA DEBERÁ acumular dicho importe dentro de la métrica `Anticipos hasta Día 18`.
-- EL SISTEMA DEBERÁ computarlo contra la `Quincena de Referencia` (fijada por defecto en Bs 1,000.00).
-
-#### RF-10. Regla de anticipos posteriores al Día 18
-CUANDO se registre un anticipo con fecha de entrega posterior al día 18 (día 19 en adelante):
-- EL SISTEMA DEBERÁ clasificarlo bajo la métrica `Anticipos después del Día 18`.
-- EL SISTEMA NO DEBERÁ restar este importe de la diferencia de quincena, acumulándolo directamente para su descuento en la liquidación final de sueldo.
-
-#### RF-11. Cálculo y sugerencia de Quincena
-EL SISTEMA DEBERÁ calcular dinámicamente la diferencia de quincena según la fórmula:
-$$\text{Diferencia Quincena} = \text{Quincena Referencial (Bs 1,000.00)} - \text{Anticipos hasta Día 18}$$
-- SI $\text{Anticipos hasta Día 18} < \text{Bs 1,000.00}$, ENTONCES EL SISTEMA DEBERÁ mostrar la diferencia positiva como monto sugerido a pagar en quincena.
-- SI $\text{Anticipos hasta Día 18} \ge \text{Bs 1,000.00}$, ENTONCES EL SISTEMA DEBERÁ mostrar `Superó en Bs [Excedente]` y sugerir un importe de Bs 0.00 para la quincena.
-
-#### RF-12. Registro de pago de quincena y constancia de revisión
-CUANDO el usuario efectúe el pago de quincena desde la tabla de control:
-- EL SISTEMA DEBERÁ permitir registrar un pago efectivo (`PAGO_QUINCENA`) por el monto acordado.
-- SI la quincena ya fue cubierta por anticipos, EL SISTEMA DEBERÁ permitir registrar una constancia de revisión (`REVISION_QUINCENA`) por importe Bs 0.00.
-- En ambos casos, EL SISTEMA DEBERÁ actualizar el estado de la quincena del trabajador a `LIQUIDADA`.
-
-#### RF-13. Validación estricta de saldo disponible para anticipos
-CUANDO el usuario ingrese el monto a solicitar en la entrega de un anticipo:
-- EL SISTEMA DEBERÁ calcular el saldo salarial disponible real:
-  $$\text{Saldo Disponible} = \text{Sueldo Base Mensual} + \text{Ajustes} - \text{Total Anticipos Previos} - \text{Total Pagos Realizados (Quincena / Parciales)}$$
-- SI el monto solicitado supera el `Saldo Disponible`, ENTONCES EL SISTEMA DEBERÁ bloquear la confirmación del anticipo y mostrar una alerta impidiendo sobregirar el haber del trabajador.
-
-#### RF-14. Bloqueo de anticipos a trabajadores liquidados
-SI la liquidación de un trabajador para el período seleccionado ya se encuentra en estado `LIQUIDADO`, ENTONCES EL SISTEMA NO DEBERÁ permitir el registro de nuevos anticipos para dicho período.
-
-#### RF-15. Liquidación salarial final de sueldo restante (Día 5)
-CUANDO el usuario proceda a liquidar el sueldo de fin de mes de un trabajador:
-- EL SISTEMA DEBERÁ presentar el desglose matemático:
-  - (+) Sueldo Base Mensual
-  - (-) Total Anticipos acumulados del período
-  - (-) Pagos de Quincena y pagos parciales previos
-  - (+/-) Ajustes o bonos adicionales editables
-  - (=) Saldo Restante a Liquidar
-- EL SISTEMA DEBERÁ permitir registrar pago inmediato (Efectivo, Transferencia, Cheque) o generar la liquidación en estado `PENDIENTE` o `PARCIAL`.
-- CUANDO el saldo restante llegue a Bs 0.00, EL SISTEMA DEBERÁ cambiar el estado de la liquidación a `LIQUIDADO`.
-
----
-
-### Comprobantes Oficiales y Vales
-
-#### RF-16. Generación de numeración correlativa inmutable
-EL SISTEMA DEBERÁ generar números de comprobante únicos, correlativos y no reutilizables con la estructura:
-- Vales de Anticipo: `ANT-YYYYMM-XXXX` (ej. `ANT-202610-0019`)
-- Liquidaciones Salariales: `LIQ-YYYYMM-XXXX` (ej. `LIQ-202610-0004`)
-- Pagos Parciales / Quincena: `PAG-YYYYMM-XXXX` (ej. `PAG-202610-0013`)
-
-#### RF-17. Desglose detallado en el Vale de Anticipo
-CUANDO se genere o visualice un comprobante de anticipo (`ANT`), EL SISTEMA DEBERÁ mostrar una tarjeta limpia y legible con:
-1. Encabezado institucional: "SISTEMAS RAÍCES - Gestión Empresarial y Recursos", número correlativo y fecha.
-2. Datos de filiación: Trabajador, CI, Cargo, Área, Período Salarial.
-3. Importe entregado destacado con el método de pago (Efectivo, Transferencia, etc.).
-4. Cuadro "Estado y Desglose Salarial del Anticipo" conteniendo:
-   - Sueldo Base Mensual enmarcado.
-   - Lista cronológica ordenada de anticipos del período: Primer Anticipo (fecha, monto), Segundo Anticipo (fecha, monto), etc.
-   - Total Anticipos acumulados.
-   - Estado de la Quincena:
-     - Si está liquidada: badge `LIQUIDADA` junto con el importe descontado `(- Bs X,XXX.XX)`.
-     - Si no está liquidada: badge `PENDIENTE`.
-   - Saldo Salarial Estimado Tras Anticipo:
-     $$\text{Saldo Estimado} = \max(0, \text{Sueldo Base} + \text{Ajustes} - \text{Total Anticipos Acumulados} - \text{Quincena/Pagos Realizados})$$
-5. Notas de pie de página: Observaciones registradas.
-6. Bloque de firmas: "Entregado por (Nombre y CI de quien autorizó)" y "Recibí Conforme (Trabajador)".
-
-#### RF-18. Desglose en Comprobante de Liquidación / Pago
-CUANDO se emita o visualice un comprobante de liquidación o pago salarial (`LIQ` / `PAG`), EL SISTEMA DEBERÁ desglosar:
-- Sueldo Base Mensual.
-- (-) Total Anticipos descontados.
-- (-) Quincena pagada previamente.
-- (+/-) Otros Ajustes / Bonos.
-- (=) Monto Liquidado / Entregado en la operación.
-- Saldo Salarial Restante posterior a la operación.
-
-#### RF-19. Exportación, Impresión y Compartir por WhatsApp
-CUANDO el usuario visualice cualquier comprobante oficial en pantalla, EL SISTEMA DEBERÁ proveer:
-- Botón **Imprimir / PDF:** Genera una versión limpia optimizada para impresoras térmicas de 80mm o formato carta PDF.
-- Botón **Compartir por WhatsApp:** Genera el mensaje formateado con los datos clave del comprobante listo para enviar al trabajador vía WhatsApp Web o app móvil.
-- Botón **Cerrar:** Cierra la vista modal regresando a la pantalla anterior sin perder el estado de búsqueda.
-
----
-
-### Usabilidad, Auditoría y Diseño Responsivo
-
-#### RF-20. Diseño responsivo para dispositivos móviles
-CUANDO el usuario acceda desde un teléfono inteligente o pantalla con ancho menor a 768px:
-- EL SISTEMA DEBERÁ apilar las columnas y cards verticalmente.
-- Los botones de cierre y acciones de los modales de comprobante DEBERÁN permanecer siempre visibles y accesibles en pantalla.
-- La tabla de control de pagos parciales DEBERÁ contar con scroll horizontal fluido manteniendo visible la identidad del trabajador.
-
-#### RF-21. Ubicación ergonómica de acciones en tabla de pagos
-EL SISTEMA DEBERÁ situar la columna `Acción` (botones de "Pagar Quincena", "Liquidar Sueldo", "Historial") inmediatamente después del nombre del trabajador y antes del Sueldo Base, permitiendo que el operador ejecute pagos rápidos sin necesidad de desplazar la tabla hacia la derecha en pantallas pequeñas o medianas.
-
-#### RF-22. Bitácora de auditoría y anulación
-CUANDO se anule una operación de anticipo o liquidación:
-- EL SISTEMA DEBERÁ solicitar obligatoriamente un motivo de anulación justificado.
-- EL SISTEMA DEBERÁ registrar el evento en la bitácora de auditoría inmutable (`accion="ANULAR"`, usuario autenticado, fecha/hora y motivo).
-- EL SISTEMA DEBERÁ revertir los saldos salariales acumulados y marcar el comprobante con estado `ANULADO`.
-
----
-
-## 5. Requisitos no funcionales (RNF)
-
-- **RNF-1. Consistencia Financiera y Precisión Decimal:** Todas las operaciones de anticipos, quincenas, liquidaciones y saldos pendientes deben calcularse utilizando tipos numéricos de precisión fija (`Decimal` con 2 decimales en backend y redondeo bancario estándar), evitando inconsistencias de redondeo flotante.
-- **RNF-2. Integridad Transaccional (ACID):** El registro de un anticipo o pago junto con la actualización de la liquidación y la inserción en bitácora de auditoría deben ejecutarse dentro de una misma transacción atómica de base de datos; ante cualquier fallo, se debe revertir el 100% de la operación (`rollback`).
-- **RNF-3. Rendimiento en Lote ($O(1)$ consultas):** La pantalla de Gestión de Pagos Parciales y Liquidación no debe realizar consultas N+1 en la base de datos; la consolidación de todos los trabajadores, anticipos y pagos del período debe resolverse mediante consultas optimizadas con `joinedload` e índices compuestos.
-- **RNF-4. Idempotencia e Inmutabilidad de Comprobantes:** Los números correlativos (`ANT-...`, `LIQ-...`, `PAG-...`) generados no pueden ser reasignados ni reutilizados, garantizando validez jurídica y contable.
-- **RNF-5. Seguridad y Roles:** Las operaciones de registro de pagos, liquidación y anulación requieren autenticación obligatoria mediante token JWT activo con rol de administrador o responsable de planilla.
-
----
-
-## 6. Casos límite contemplados y resueltos
-
-1. **Trabajador con anticipos mayores a la quincena (Superó Quincena):**
-   - El sistema no prohíbe los anticipos previos, pero al momento del corte (día 18) marca el excedente en rojo y sugiere pago de quincena en Bs 0.00. Permite registrar una constancia formal de revisión (`REVISION_QUINCENA`) en Bs 0.00 para certificar que el período fue revisado.
-2. **Anticipo solicitado después de haber cobrado la quincena:**
-   - Si la quincena ya fue liquidada (ej. Bs 1,000.00 pagados) y el trabajador pide un anticipo de Bs 100.00 el día 30: el vale de anticipo muestra la quincena como `LIQUIDADA (- Bs 1,000.00)` y el saldo salarial estimado resta tanto los anticipos acumulados como los Bs 1,000.00 de la quincena ya cobrada.
-3. **Solicitud de anticipo que excede el saldo restante:**
-   - Si el sueldo base es Bs 3,500.00, ya recibió Bs 2,000.00 en anticipos y Bs 1,000.00 en quincena, su saldo disponible es Bs 500.00. Si intenta solicitar Bs 600.00, el sistema rechaza la operación informando que excede el saldo disponible restante.
-4. **Período completamente liquidado:**
-   - Si un trabajador ya tiene liquidación final en estado `LIQUIDADO` (saldo restante Bs 0.00), el sistema bloquea cualquier solicitud de anticipo adicional en ese mes.
-5. **Cierre de período con trabajadores pendientes:**
-   - Si el responsable intenta cerrar el período salarial mientras existen saldos pendientes, el sistema muestra una advertencia informativa explícita exigiendo confirmación consciente del usuario.
-
----
-
-## 7. Fuera de alcance
-
-- Declaración impositiva y generación automática de planillas tributarias oficiales para el Servicio de Impuestos Nacionales (formulario RC-IVA planilla tributaria V4), lo cual corresponde a un submódulo contable externo.
-- Conexión bancaria directa (APIs bancarias SWIFT/ACH) para dispersión automática de fondos en cuentas bancarias.
-- Procesamiento de retenciones judiciales externas no registradas previamente como descuentos salariales.
-
----
-
-## 8. Criterios de finalización y aceptación
-
-- [x] El módulo Planilla y el módulo Pagos y Anticipos están operativos e integrados con el selector de períodos salariales mensuales.
-- [x] La regla de corte del Día 18 categoriza correctamente los anticipos anteriores y posteriores al día 18.
-- [x] El flujo de pago de quincena sugiere montos automáticos y admite constancias de revisión en Bs 0.00.
-- [x] El cálculo de la liquidación final (día 5) descuenta con exactitud matemática el sueldo base, anticipos, quincena y ajustes.
-- [x] Los comprobantes oficiales de anticipo (`ANT`) y liquidación (`LIQ`/`PAG`) muestran el desglose salarial, estados y firmas.
-- [x] El comprobante de anticipo descuenta la quincena liquidada en el `Saldo Salarial Estimado Tras Anticipo`.
-- [x] El sistema bloquea nuevos anticipos que superen el saldo disponible o pertenezcan a períodos cerrados o liquidados.
-- [x] La columna Acción en la tabla de control de pagos está situada entre Trabajador y Sueldo Base y es responsiva en móviles.
-- [x] Todas las pruebas unitarias y de integración de backend y compilación de frontend (`npm run build`) se ejecutan con éxito.
-
----
-
-## 9. Registro de decisiones arquitectónicas
-
-| ID | Decisión | Justificación |
+| Especificación | Título | Alcance y Responsabilidad Principal |
 |---|---|---|
-| ADR-001 | Regla del Día 18 como corte de Quincena | Se alinea con el régimen laboral operativo de la empresa, donde los anticipos hasta el día 18 amortizan la quincena fija referencial de Bs 1,000.00 y los posteriores se difieren al fin de mes. |
-| ADR-002 | Comprobantes inmutables con código alfanumérico | Permite auditoría física y digital inalterable con formato estándar `ANT-YYYYMM-XXXX` y `LIQ-YYYYMM-XXXX`. |
-| ADR-003 | Descuento explícito de quincena en vales de anticipo posteriores | Evita que el trabajador o el cajero asuman que cuentan con el sueldo íntegro cuando la quincena ya fue desembolsada. |
-| ADR-004 | Disposición ergonómica de botones de acción en tabla | Al ubicar los botones junto al nombre del trabajador, los operadores en campo que usan smartphones o tablets no tienen que realizar desplazamiento horizontal continuo. |
+| **Spec 001** | Gestión de planillas por período y cierre | Ciclo de vida de períodos (ABIERTO / CERRADO), navegación histórica, bloqueo de operaciones y reapertura administrativa auditada. |
+| **Spec 002** | Días trabajados y total ganado | Cálculo automático y edición interactiva de días trabajados (base mes comercial 30 días) y cálculo de total ganado proporcional. |
+| **Spec 003** | Registro y cálculo de anticipos | Registro cronológico de anticipos, correlatividad de vales (`ANT-`), corte día 18 y tratamiento de anticipos superiores al saldo disponible (Duda Abierta). |
+| **Spec 004** | Registro y cálculo de descuentos | Gestión de deducciones, retenciones o sanciones salariales independientes sin confundirse con anticipos. |
+| **Spec 005** | Pago de quincena del día 18 | Cálculo de quincena referencial (Bs 1,000.00), monto sugerido flexible, constancia de revisión en Bs 0.00 y autorización de pagos superiores con advertencia. |
+| **Spec 006** | Anticipos del día 1 al 5 y período siguiente | Identificación de anticipos entregados entre los días 1 y 5 de inicio de mes, columna informativa en el mes saliente y cómputo único en el mes entrante. |
+| **Spec 007** | Líquido pagable y regularización de saldos | Preservación estricta de saldos negativos (eliminación de `max(0, ...)`), visualización de advertencias y tratamiento del saldo deudor sin traslado automático. |
+| **Spec 008** | Pagos y liquidaciones salariales | Matriz unificada de liquidación de fin de mes (día 5), pagos parciales y cambio de estado a LIQUIDADO. |
+| **Spec 009** | Comprobantes y auditoría | Emisión, impresión/PDF y compartición vía WhatsApp de comprobantes inmutables (`ANT`, `LIQ`, `PAG`) y bitácora de anulaciones. |
+| **Spec 010** | Integración y pruebas de todo el ciclo | Pruebas end-to-end de consistencia matemática, integridad transaccional ACID y verificación de interfaces responsivas. |
+
+---
+
+## 3. Especificación Detallada por Módulo y Regla de Negocio
+
+### Spec 001: Gestión de Planillas por Período y Cierre
+
+#### Requisitos y Reglas de Negocio:
+1. **Selección automática del período vigente:** Al ingresar al sistema, se selecciona por defecto el período salarial del mes en curso. Si no existe, se carga el período abierto más reciente.
+2. **Navegación histórica e inmutabilidad:** El usuario puede seleccionar meses anteriores para auditar planillas pasadas. Los haberes básicos de un período cerrado o liquidado permanecen congelados; los incrementos o cambios salariales posteriores solo surten efecto en períodos futuros o abiertos.
+3. **Cierre formal de planilla:**
+   - Para cerrar una planilla se requiere validación de saldos pendientes.
+   - Si existen trabajadores con saldo pendiente de pago ($> 0$), el sistema despliega una advertencia explícita y exige que el usuario confirme conscientemente mediante checkbox antes de ejecutar el cierre.
+   - Una vez cerrada la planilla, el período pasa a estado `CERRADO`, registrando `fecha_cierre`, `cerrado_por` y `observaciones_cierre`.
+4. **Bloqueo estricto en períodos cerrados:** En un período en estado `CERRADO`, el sistema bloquea:
+   - Registro de nuevos anticipos.
+   - Modificación o registro de pagos de quincena y liquidaciones.
+   - Modificación interactiva de días trabajados.
+   - Anulación de comprobantes salariales pertenecientes al período.
+5. **Reapertura administrativa auditada:** Únicamente usuarios con rol Super Administrador pueden reabrir una planilla cerrada, requiriendo ingresar un motivo de reapertura obligatorio que queda registrado en la bitácora de auditoría.
+
+---
+
+### Spec 002: Días Trabajados y Total Ganado Proporcional
+
+#### Requisitos y Reglas de Negocio:
+1. **Base de cálculo (Mes comercial de 30 días):**
+   Todos los cálculos laborales y salariales se realizan sobre una base estándar de 30 días mensuales, con independencia de que el mes calendario posea 28, 29, 30 o 31 días.
+2. **Fórmula matemática del Total Ganado:**
+   $$\text{Total Ganado} = \text{round}\left(\frac{\text{Haber Básico}}{30} \times \text{Días Trabajados}, 2\right)$$
+3. **Cálculo automático inicial:**
+   - Si el trabajador ingresó en el transcurso del mes del período (según su `fecha_ingreso`), el sistema calcula automáticamente los días trabajados desde el día de ingreso hasta el día 30:
+     $$\text{Días Iniciales} = \max(1, \min(30, 30 - \text{fecha\_ingreso.day} + 1))$$
+   - Si el trabajador estaba activo desde meses anteriores, el sistema asigna 30 días de forma predeterminada.
+4. **Edición interactiva en la Planilla:**
+   - La tabla de planilla incluye un campo de entrada numérico (`input`) para los días trabajados (rango permitido: 1 a 30).
+   - Al modificar los días trabajados de un trabajador en una planilla abierta, el sistema recalcula en tiempo real el Total Ganado, el Líquido Pagable y el Saldo Pendiente tanto a nivel de fila como en los totales consolidados de la planilla.
+5. **Persistencia del haber básico:** El haber básico mensual utilizado en el cálculo se almacena en el registro de liquidación del trabajador en el período para garantizar que aumentos posteriores de sueldo en la ficha del trabajador no afecten las planillas anteriores.
+
+---
+
+### Spec 003: Registro y Cálculo de Anticipos
+
+#### Requisitos y Reglas de Negocio:
+1. **Registro cronológico de anticipos:** Cada anticipo registra `fecha_entrega`, `importe`, `metodo_pago` y observaciones, generando un vale correlativo único `ANT-YYYYMM-XXXX`.
+2. **Regla de corte del Día 18:**
+   - Los anticipos con $\text{fecha\_entrega} \le \text{Día 18}$ se computan como amortización a la primera quincena.
+   - Los anticipos con $\text{fecha\_entrega} > \text{Día 18}$ se clasifican como anticipos de segunda quincena / fin de mes y se descuentan directamente en la liquidación final.
+3. **Duda Abierta / Tratamiento de anticipos superiores al saldo disponible:**
+   > [!NOTE] Duda Abierta de Negocio
+   > No se impone un bloqueo rígido obligatorio e inalterable si el monto solicitado supera el saldo salarial disponible estimado. El sistema muestra una advertencia informativa destacada indicando que el importe solicitado sobrepasa el saldo disponible a la fecha, permitiendo al usuario decidir conscientemente si autoriza la entrega excepcional.
+
+---
+
+### Spec 004: Registro y Cálculo de Descuentos
+
+#### Requisitos y Reglas de Negocio:
+1. **Diferenciación conceptual:**
+   - Un **anticipo** es un adelanto de haberes a cuenta de trabajo realizado.
+   - Un **descuento** es una deducción administrativa (faltas injustificadas, multas, reposición de material, préstamos institucionales).
+2. **Independencia de cálculo:** Los descuentos se computan en una categoría contable separada y no alteran la métrica de anticipos ni la quincena de referencia, descontándose en el cálculo del Total Ganado Bruto y Líquido Pagable.
+
+---
+
+### Spec 005: Pago de Quincena del Día 18
+
+#### Requisitos y Reglas de Negocio:
+1. **Quincena de Referencia:** Fijada de forma predeterminada en **Bs 1,000.00**.
+2. **Cálculo de la Diferencia / Sugerencia:**
+   $$\text{Diferencia Quincena} = \text{Bs 1,000.00} - \text{Total Anticipos} \le \text{Día 18}$$
+   - Si $\text{Anticipos} < \text{Bs 1,000.00}$: Muestra importe sugerido positivo.
+   - Si $\text{Anticipos} \ge \text{Bs 1,000.00}$: Muestra `Superó en Bs [Excedente]` y sugiere Bs 0.00.
+3. **Flexibilidad en el pago (Sugerencia no limitativa):**
+   - El importe sugerido es meramente orientativo. El usuario puede modificar libremente el monto a pagar.
+   - Si el usuario decide pagar un importe superior a la sugerencia (ej. sugerido Bs 200.00 y decide pagar Bs 500.00), el sistema permite la operación mostrando una advertencia informativa.
+   - El monto registrado como pago de quincena será el efectivamente pagado (Bs 500.00) y los anticipos previos (Bs 800.00) se conservan intactos en su categoría sin borrarse ni duplicarse.
+4. **Constancia de revisión en Bs 0.00:** Si el trabajador ya cubrió la quincena con anticipos, el usuario puede registrar una constancia (`REVISION_QUINCENA`) por Bs 0.00 para marcar formalmente la quincena como revisada y liquidada.
+
+---
+
+### Spec 006: Anticipos del Día 1 al 5 y Período Siguiente
+
+#### Requisitos y Reglas de Negocio:
+1. **Contexto operativo:** Los anticipos entregados entre los días 1 y 5 del mes de calendario ocurren físicamente cuando aún se está completando la liquidación del mes previo.
+2. **Pertenencia al período siguiente:**
+   - Los anticipos entregados del día 1 al 5 corresponden contablemente al **período salarial entrante**.
+   - Conservan su fecha real de entrega.
+3. **Visualización informativa en la planilla actual:**
+   - En la planilla del mes que se liquida, estos importes se presentan en una columna informativa: **"Anticipos Período Siguiente (Día 1-5)"**.
+   - **No modifican ni descuentan el cálculo del sueldo del mes actual.**
+4. **Cómputo en el período siguiente:**
+   - Al abrir y operar en el período siguiente, dichos anticipos aparecen en su detalle de anticipos como adelantos normales del nuevo período.
+   - Se descuentan **una sola vez** en el nuevo período y no se duplican bajo ningún filtro de navegación.
+
+---
+
+### Spec 007: Líquido Pagable y Regularización de Saldos Negativos
+
+#### Requisitos y Reglas de Negocio:
+1. **Fórmula del Líquido Pagable:**
+   $$\text{Líquido Pagable} = \text{Total Ganado Proporcional} + \text{Ajustes} - \text{Total Anticipos Descontados}$$
+2. **Fórmula del Saldo Pendiente:**
+   $$\text{Saldo Pendiente} = \text{Líquido Pagable} - \text{Total Pagos Entregados (Quincenas + Parciales)}$$
+3. **Preservación estricta de saldos negativos (Eliminación de `max(0, ...)`):**
+   - Si la suma de anticipos supera el total ganado, el Líquido Pagable o el Saldo Pendiente resultará negativo (ej. $-\text{Bs } 200.00$).
+   - **El sistema nunca ocultará el saldo negativo mostrando Bs 0.00.**
+   - Se muestra claramente en color rojo con un indicador o badge: `REGULARIZAR` / `EXCEDIDO`.
+4. **Distinción entre conceptos:**
+   - **Líquido Pagable Negativo:** Resultado aritmético puro de la nómina donde los adelantos superaron los haberes ganados.
+   - **Saldo Pendiente de Regularización:** Importe contable que exige una decisión y gestión administrativa (descuento posterior acordado, reintegro en efectivo o condonación autorizada).
+5. **No traslado automático ciego:** El saldo deudor no se arrastra silenciosamente al mes siguiente de forma automática; requiere revisión humana explícita.
+
+---
+
+### Spec 008: Pagos y Liquidaciones Salariales
+
+#### Requisitos y Reglas de Negocio:
+1. **Matriz unificada de control:** Los pagos de quincena y las liquidaciones de sueldo restante (día 5) se administran en una sola vista con scroll horizontal optimizado.
+2. **Ubicación ergonómica de la columna Acción:** La columna `Acción` se posiciona inmediatamente entre la identificación del trabajador y su haber básico para permitir pagos con un solo clic en pantallas táctiles o móviles.
+3. **Estados de la liquidación:**
+   - `PENDIENTE`: Sin pagos salariales confirmados o con saldo restante completo.
+   - `PARCIAL`: Con pagos parciales entregados y saldo salarial positivo restante.
+   - `LIQUIDADO`: Saldo restante en Bs 0.00 y finiquito de nómina completado.
+   - `EXCEDIDO / SALDO NEGATIVO`: Anticipos superaron los haberes del mes.
+
+---
+
+### Spec 009: Comprobantes y Auditoría
+
+#### Requisitos y Reglas de Negocio:
+1. **Correlatividad inmutable:**
+   - Vales de Anticipo: `ANT-YYYYMM-XXXX`
+   - Liquidaciones de Sueldo: `LIQ-YYYYMM-XXXX`
+   - Pagos Parciales: `PAG-YYYYMM-XXXX`
+2. **Desglose salarial en el Vale de Anticipo:**
+   - Haber básico mensual y período.
+   - Lista cronológica numerada de anticipos previos del mes.
+   - Estado de la Quincena (marcando `LIQUIDADA (- Bs X.XX)` o `PENDIENTE`).
+   - Saldo salarial estimado resultante (mostrando valor exacto, inclusive si es negativo).
+   - Bloque de firmas institucional y notas.
+3. **Exportación e Impresión:** Botones accesibles para "Imprimir / PDF" (optimizado para formato carta o tirilla térmica de 80mm) y "Compartir por WhatsApp" con texto formateado.
+4. **Responsividad en modales:** Botón de cierre `✕` flotante en la esquina superior derecha siempre accesible en smartphones sin desbordamiento.
+5. **Bitácora de auditoría inmutable:** Toda anulación requiere motivo obligatorio y deja constancia permanente con CI de usuario, marca de tiempo y motivo.
+
+---
+
+### Spec 010: Integración y Pruebas del Ciclo Salarial
+
+#### Requisitos y Reglas de Negocio:
+1. **Integridad transaccional (ACID):** Toda operación de anticipo, liquidación, actualización de días o cierre se ejecuta dentro de una transacción atómica con rollback automático ante cualquier excepción.
+2. **Pruebas de regresión automatizadas:** Cobertura de pruebas unitarias y de integración en backend con pytest para:
+   - Cálculo proporcional de días trabajados.
+   - Preservación de saldos negativos.
+   - Anticipos del día 1 al 5.
+   - Bloqueo en períodos cerrados.
+3. **Verificación de compilación de frontend:** Compilación limpia con `npm run build` sin advertencias de tipos en Angular.
+
+---
+
+## 4. Requisitos No Funcionales (RNF)
+
+- **RNF-1. Precisión Decimal y Rendondeo Financiero:** Utilizar `Decimal` con 2 decimales fijos (`ROUND_HALF_UP`) en todos los cálculos en backend y presentación numérica estricta en frontend.
+- **RNF-2. Rendimiento de Carga ($O(1)$ consultas):** La planilla salarial y la matriz de pagos se resuelven en una única consulta agregada con uniones indexadas (`joinedload`), eliminando el problema $N+1$.
+- **RNF-3. Diseño Responsivo Móvil:** Adaptabilidad completa a anchos de pantalla menores a 768px, botones de cierre visibles y tablas con desplazamiento horizontal suave.
+- **RNF-4. Trazabilidad Legal:** Inmutabilidad de los comprobantes generados; una anulación no elimina el registro de la base de datos, sino que cambia su estado a `ANULADO` preservando el correlativo.
+
+---
+
+## 5. Criterios de Aceptación y Estado de Verificación
+
+Los criterios de aceptación se gestionan como casillas de verificación que se marcarán exclusivamente cuando las pruebas correspondientes certifiquen su cumplimiento:
+
+### Spec 001: Gestión de planillas y cierre
+- [ ] Visualización predeterminada del período salarial vigente al iniciar el módulo.
+- [ ] Consulta fluida de períodos y planillas históricas anteriores sin alterar sus datos.
+- [ ] Inmutabilidad de sueldos base de períodos cerrados ante aumentos salariales futuros.
+- [ ] Advertencia explícita ante intentos de cierre con trabajadores en saldo pendiente.
+- [ ] Bloqueo total de nuevos anticipos, pagos, edición de días o anulaciones en períodos cerrados.
+- [ ] Reapertura administrativa restringida a Super Admin con motivo obligatorio auditado.
+
+### Spec 002: Días trabajados y total ganado
+- [ ] Cálculo automático inicial de días trabajados para ingresos a mitad de mes (base 30).
+- [ ] Edición interactiva en tiempo real del campo días trabajados en la planilla abierta.
+- [ ] Recálculo dinámico inmediato de Total Ganado proporcional: $\text{round}\left(\frac{\text{Haber}}{30} \times \text{Días}, 2\right)$.
+- [ ] Recálculo de totales consolidados en cabecera y pie de tabla tras modificar días.
+
+### Spec 003: Registro y cálculo de anticipos
+- [ ] Clasificación automática de anticipos según corte del día 18.
+- [ ] Generación correlativa única `ANT-YYYYMM-XXXX` sin saltos ni duplicaciones.
+- [ ] Alerta informativa (sin bloqueo forzado) si el anticipo supera el saldo disponible estimado.
+
+### Spec 004: Registro y cálculo de descuentos
+- [ ] Registro independiente de descuentos o deducciones sin alterar métricas de anticipos.
+- [ ] Cómputo correcto de descuentos en el total devengado y líquido pagable.
+
+### Spec 005: Pago de quincena del día 18
+- [ ] Cálculo exacto de sugerencia: $\text{Bs 1,000.00} - \text{Anticipos} \le 18$.
+- [ ] Permisión de pago superior al sugerido con advertencia informativa y registro real.
+- [ ] Conservación de los anticipos previos en su categoría sin eliminación ni doble deducción.
+- [ ] Registro formal de constancia de revisión en Bs 0.00 cuando corresponda.
+
+### Spec 006: Anticipos del día 1 al 5 y período siguiente
+- [ ] Identificación de anticipos entregados entre los días 1 y 5 del mes calendario siguiente.
+- [ ] Muestra informativa en la columna "Anticipos Período Siguiente" sin restar del mes actual.
+- [ ] Traslado e inclusión única en el detalle de anticipos del nuevo período.
+
+### Spec 007: Líquido pagable y regularización de saldos negativos
+- [ ] Eliminación completa de `max(0, ...)` en las fórmulas de saldo y comprobantes.
+- [ ] Visualización destacada en rojo de saldos negativos (ej. $-\text{Bs } 200.00$) con badge `REGULARIZAR`.
+- [ ] No traslado automático ni silencioso del saldo negativo a la planilla siguiente.
+
+### Spec 008: Pagos y liquidaciones salariales
+- [ ] Columna Acción situada ergonómicamente entre Trabajador y Haber Básico.
+- [ ] Registro de liquidación final de sueldo restante (día 5) con opciones de pago inmediato.
+- [ ] Cambio de estado a LIQUIDADO cuando el saldo restante es Bs 0.00.
+
+### Spec 009: Comprobantes y auditoría
+- [ ] Comprobante de anticipo detalla quincena liquidada y saldo salarial exacto tras anticipo.
+- [ ] Modales con botón de cierre `✕` superior visible y funcional en teléfonos móviles.
+- [ ] Botones para imprimir / exportar a PDF y compartir por WhatsApp en formato legible.
+- [ ] Bitácora de auditoría registra usuario, fecha y justificación en cada anulación.
+
+### Spec 010: Integración y pruebas del ciclo completo
+- [ ] Ejecución exitosa de la suite completa de pruebas unitarias y de integración de backend.
+- [ ] Compilación limpia del proyecto Angular con `npm run build` sin errores.

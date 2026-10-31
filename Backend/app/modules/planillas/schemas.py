@@ -15,15 +15,19 @@ class PlanillaItemOut(BaseModel):
 
     # Valores económicos del período
     sueldo_base: Decimal = Decimal("0.00")
+    dias_trabajados: int = 30
+    total_ganado: Decimal = Decimal("0.00")  # (sueldo_base / 30) * dias_trabajados
     anticipos_antes_18: Decimal = Decimal("0.00")
     pago_quincena: Decimal = Decimal("0.00")
     anticipos_post_18: Decimal = Decimal("0.00")
     total_anticipos: Decimal = Decimal("0.00")
+    anticipos_siguiente_periodo: Decimal = Decimal("0.00")  # Entregados entre día 1 y 5 del mes siguiente
     ajustes: Decimal = Decimal("0.00")
-    total_ganado_bruto: Decimal = Decimal("0.00")  # sueldo_base + ajustes
-    liquido_pagable: Decimal = Decimal("0.00")     # sueldo_base + ajustes - total_anticipos
+    total_ganado_bruto: Decimal = Decimal("0.00")  # total_ganado + ajustes
+    liquido_pagable: Decimal = Decimal("0.00")     # total_ganado + ajustes - total_anticipos (puede ser negativo)
     total_pagado: Decimal = Decimal("0.00")        # suma de pagos recibidos
-    saldo_pendiente: Decimal = Decimal("0.00")     # liquido_pagable - total_pagado
+    saldo_pendiente: Decimal = Decimal("0.00")     # liquido_pagable - total_pagado (puede ser negativo)
+    es_saldo_negativo: bool = False                # Indicador de saldo por regularizar
 
     # Estado y trazabilidad
     estado_pago: str = "PENDIENTE"  # LIQUIDADO, PARCIAL, PENDIENTE, SIN_MOVIMIENTOS
@@ -54,9 +58,11 @@ class PlanillaResumenOut(BaseModel):
     # Totales consolidados de la planilla
     total_trabajadores: int = 0
     total_sueldo_base: Decimal = Decimal("0.00")
+    total_ganado: Decimal = Decimal("0.00")
     total_anticipos_antes_18: Decimal = Decimal("0.00")
     total_anticipos_post_18: Decimal = Decimal("0.00")
     total_anticipos: Decimal = Decimal("0.00")
+    total_anticipos_siguiente_periodo: Decimal = Decimal("0.00")
     total_pagos_quincena: Decimal = Decimal("0.00")
     total_ajustes: Decimal = Decimal("0.00")
     total_ganado_bruto: Decimal = Decimal("0.00")
@@ -75,6 +81,10 @@ class PlanillaResumenOut(BaseModel):
 
     # Lista detallada de trabajadores en la planilla
     items: List[PlanillaItemOut] = []
+
+
+class ActualizarDiasTrabajadosRequest(BaseModel):
+    dias_trabajados: int = Field(..., ge=1, le=30, description="Días efectivamente trabajados en base mes comercial 30")
 
 
 class CierrePlanillaRequest(BaseModel):
@@ -100,3 +110,4 @@ class PeriodoPlanillaListItem(BaseModel):
     total_pagado: Decimal = Decimal("0.00")
     total_saldo_pendiente: Decimal = Decimal("0.00")
     porcentaje_avance: float = 0.0
+

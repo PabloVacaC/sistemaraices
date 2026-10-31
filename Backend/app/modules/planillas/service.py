@@ -169,15 +169,45 @@ def obtener_planilla_consolidada(db: Session, periodo_id: int) -> PlanillaResume
     )
     trabajadores = list(db.execute(stmt_trabajadores).scalars().unique().all())
 
+    # 4. Anticipos del día 1 al 5 del período siguiente (informativos para esta planilla, RF-Problema 2)
+    if periodo.mes == 12:
+        sig_mes, sig_anio = 1, periodo.anio + 1
+    else:
+        sig_mes, sig_anio = periodo.mes + 1, periodo.anio
+
+    periodo_siguiente = db.execute(
+        select(PeriodoSalarial).where(
+            PeriodoSalarial.mes == sig_mes,
+            PeriodoSalarial.anio == sig_anio,
+        )
+    ).scalars().first()
+
+    anticipos_sig_map: Dict[int, Decimal] = {}
+    if periodo_siguiente:
+        dia_5_sig = date(sig_anio, sig_mes, 5)
+        ants_sig = db.execute(
+            select(Anticipo).where(
+                Anticipo.periodo_id == periodo_siguiente.id,
+                Anticipo.fecha_entrega <= dia_5_sig,
+                Anticipo.estado == "PAGADO",
+            )
+        ).scalars().unique().all()
+        for a in ants_sig:
+            anticipos_sig_map[a.trabajador_id] = (
+                anticipos_sig_map.get(a.trabajador_id, Decimal("0.00")) + a.importe
+            )
+
     dia_18 = date(periodo.anio, periodo.mes, 18)
 
     items: List[PlanillaItemOut] = []
 
     # Totales acumuladores
     total_sueldo_base = Decimal("0.00")
+    total_ganado_sum = Decimal("0.00")
     total_anticipos_antes_18 = Decimal("0.00")
     total_anticipos_post_18 = Decimal("0.00")
     total_anticipos = Decimal("0.00")
+    total_anticipos_sig = Decimal("0.00")
     total_pagos_quincena = Decimal("0.00")
     total_ajustes = Decimal("0.00")
     total_ganado_bruto = Decimal("0.00")
@@ -198,21 +228,35 @@ def obtener_planilla_consolidada(db: Session, periodo_id: int) -> PlanillaResume
         ant_post_18 = sum((a.importe for a in ants_t if a.fecha_entrega > dia_18), Decimal("0.00"))
         tot_ant = ant_antes_18 + ant_post_18
 
-        if liq:
-            # Si ya tiene liquidación, se preserva el sueldo base histórico congelado (RF-4 y RF-5)
-            s_base = liq.sueldo_base
-            ajustes = liq.ajustes or Decimal("0.00")
-            tot_ant_aplicado = liq.total_anticipos or tot_ant
-            monto_bruto = s_base + ajustes
-            liq_pagable = liq.monto_neto
+        # Días trabajados calculados automáticamente (base mes comercial 30 días)
+        if liq and liq.dias_trabajados:
+            dias_t = liq.dias_trabajados
+        elif t.fecha_ingreso and t.fecha_ingreso.year == periodo.anio and t.fecha_ingreso.month == periodo.mes:
+            # Ingresó en el curso de este mes: computa desde día de ingreso hasta el día 30
+            dias_t = max(1, min(30, 30 - t.fecha_ingreso.day + 1))
+        else:
+            dias_t = 30
 
+        s_base = liq.sueldo_base if liq else t.sueldoBase
+        # Total Ganado = (Haber Básico / 30) * Días Trabajados
+        total_ganado = round((s_base / Decimal("30.00")) * Decimal(dias_t), 2)
+
+        ajustes = (liq.ajustes or Decimal("0.00")) if liq else Decimal("0.00")
+        tot_ant_aplicado = (liq.total_anticipos or tot_ant) if liq else tot_ant
+        monto_bruto = total_ganado + ajustes
+
+        # Líquido pagable = Total Ganado + Ajustes - Total Anticipos (SIN max(0), puede ser negativo)
+        liq_pagable = monto_bruto - tot_ant_aplicado
+
+        if liq:
             pagos_confirmados = [p for p in liq.pagos if p.estado == "CONFIRMADO"]
             pago_q = sum(
                 (p.monto for p in pagos_confirmados if getattr(p, "tipo_pago", "") in ("PAGO_QUINCENA", "REVISION_QUINCENA")),
                 Decimal("0.00"),
             )
             monto_pagado_total = sum((p.monto for p in pagos_confirmados), Decimal("0.00"))
-            saldo_pend = liq.saldo_pendiente
+            # Saldo pendiente real (sin ocultar negativos)
+            saldo_pend = liq_pagable - monto_pagado_total
             estado_p = liq.estado
 
             quincena_liq = any(
@@ -224,11 +268,6 @@ def obtener_planilla_consolidada(db: Session, periodo_id: int) -> PlanillaResume
             liq_comp = liq.numero_comprobante
             obs = liq.observaciones
         else:
-            s_base = t.sueldoBase
-            ajustes = Decimal("0.00")
-            tot_ant_aplicado = tot_ant
-            monto_bruto = s_base
-            liq_pagable = s_base - tot_ant
             pago_q = Decimal("0.00")
             monto_pagado_total = Decimal("0.00")
             saldo_pend = liq_pagable
@@ -238,6 +277,9 @@ def obtener_planilla_consolidada(db: Session, periodo_id: int) -> PlanillaResume
             liq_comp = None
             obs = None
 
+        ant_sig = anticipos_sig_map.get(t.id, Decimal("0.00"))
+        es_negativo = saldo_pend < Decimal("0.00")
+
         if estado_p == "LIQUIDADO" or (saldo_pend <= Decimal("0.00") and monto_pagado_total > Decimal("0.00")):
             count_liquidados += 1
         elif estado_p == "PARCIAL" or monto_pagado_total > Decimal("0.00"):
@@ -246,9 +288,11 @@ def obtener_planilla_consolidada(db: Session, periodo_id: int) -> PlanillaResume
             count_pendientes += 1
 
         total_sueldo_base += s_base
+        total_ganado_sum += total_ganado
         total_anticipos_antes_18 += ant_antes_18
         total_anticipos_post_18 += ant_post_18
         total_anticipos += tot_ant_aplicado
+        total_anticipos_sig += ant_sig
         total_pagos_quincena += pago_q
         total_ajustes += ajustes
         total_ganado_bruto += monto_bruto
@@ -269,15 +313,19 @@ def obtener_planilla_consolidada(db: Session, periodo_id: int) -> PlanillaResume
                 fecha_ingreso=t.fecha_ingreso,
                 estado_trabajador=t.estado,
                 sueldo_base=s_base,
+                dias_trabajados=dias_t,
+                total_ganado=total_ganado,
                 anticipos_antes_18=ant_antes_18,
                 pago_quincena=pago_q,
                 anticipos_post_18=ant_post_18,
                 total_anticipos=tot_ant_aplicado,
+                anticipos_siguiente_periodo=ant_sig,
                 ajustes=ajustes,
                 total_ganado_bruto=monto_bruto,
                 liquido_pagable=liq_pagable,
                 total_pagado=monto_pagado_total,
                 saldo_pendiente=saldo_pend,
+                es_saldo_negativo=es_negativo,
                 estado_pago=estado_p,
                 quincena_liquidada=quincena_liq,
                 liquidacion_id=liq_id,
@@ -318,9 +366,11 @@ def obtener_planilla_consolidada(db: Session, periodo_id: int) -> PlanillaResume
         periodo=header,
         total_trabajadores=len(trabajadores),
         total_sueldo_base=total_sueldo_base,
+        total_ganado=total_ganado_sum,
         total_anticipos_antes_18=total_anticipos_antes_18,
         total_anticipos_post_18=total_anticipos_post_18,
         total_anticipos=total_anticipos,
+        total_anticipos_siguiente_periodo=total_anticipos_sig,
         total_pagos_quincena=total_pagos_quincena,
         total_ajustes=total_ajustes,
         total_ganado_bruto=total_ganado_bruto,
@@ -334,6 +384,106 @@ def obtener_planilla_consolidada(db: Session, periodo_id: int) -> PlanillaResume
         advertencias_cierre=advertencias,
         items=items,
     )
+
+
+def actualizar_dias_trabajados(
+    db: Session,
+    periodo_id: int,
+    trabajador_id: int,
+    dias: int,
+    usuario_ci: Optional[str] = None,
+) -> PlanillaItemOut:
+    """
+    Ajusta interactivamente los días trabajados de un trabajador en la planilla (base mes comercial 30 días),
+    recalculando Total Ganado, Líquido Pagable y Saldo Salarial en tiempo real.
+    """
+    periodo = db.execute(
+        select(PeriodoSalarial).where(PeriodoSalarial.id == periodo_id)
+    ).scalars().first()
+    if not periodo:
+        raise HTTPException(status_code=404, detail="Período salarial no encontrado.")
+
+    if periodo.estado == "CERRADO":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No se pueden modificar los días trabajados de una planilla CERRADA.",
+        )
+
+    trabajador = db.execute(
+        select(Trabajador).where(Trabajador.id == trabajador_id)
+    ).scalars().first()
+    if not trabajador:
+        raise HTTPException(status_code=404, detail="Trabajador no encontrado.")
+
+    liq = db.execute(
+        select(Liquidacion).where(
+            Liquidacion.trabajador_id == trabajador.id,
+            Liquidacion.periodo_id == periodo.id,
+            Liquidacion.estado != "ANULADO",
+        )
+    ).scalars().first()
+
+    anticipos_tot = db.scalar(
+        select(func.sum(Anticipo.importe)).where(
+            Anticipo.trabajador_id == trabajador.id,
+            Anticipo.periodo_id == periodo.id,
+            Anticipo.estado == "PAGADO",
+        )
+    ) or Decimal("0.00")
+
+    sueldo_base = liq.sueldo_base if liq else trabajador.sueldoBase
+    total_ganado = round((sueldo_base / Decimal("30.00")) * Decimal(dias), 2)
+    ajustes = liq.ajustes if liq else Decimal("0.00")
+    monto_neto = total_ganado + ajustes - anticipos_tot
+    monto_pagado = liq.monto_pagado if liq else Decimal("0.00")
+    saldo_pendiente = monto_neto - monto_pagado
+
+    if not liq:
+        nro_comp = generar_numero_comprobante(db, "LIQ")
+        liq = Liquidacion(
+            numero_comprobante=nro_comp,
+            trabajador_id=trabajador.id,
+            periodo_id=periodo.id,
+            fecha_liquidacion=date.today(),
+            sueldo_base=sueldo_base,
+            dias_trabajados=dias,
+            remuneracion_mensual=total_ganado,
+            ajustes=ajustes,
+            total_anticipos=anticipos_tot,
+            monto_neto=monto_neto,
+            monto_pagado=monto_pagado,
+            saldo_pendiente=saldo_pendiente,
+            estado="PENDIENTE",
+            observaciones=f"Ajuste de días trabajados a {dias} días",
+            usuario_id=usuario_ci,
+        )
+        db.add(liq)
+    else:
+        liq.dias_trabajados = dias
+        liq.remuneracion_mensual = total_ganado
+        liq.monto_neto = monto_neto
+        liq.saldo_pendiente = saldo_pendiente
+        if liq.saldo_pendiente <= Decimal("0.00") and liq.monto_pagado > Decimal("0.00"):
+            liq.estado = "LIQUIDADO"
+        elif liq.monto_pagado > Decimal("0.00"):
+            liq.estado = "PARCIAL"
+
+    db.commit()
+    db.refresh(liq)
+
+    registrar_bitacora(
+        db=db,
+        modulo="PLANILLA",
+        accion="AJUSTAR_DIAS",
+        descripcion=f"Se ajustaron los días trabajados de {trabajador.nombres} {trabajador.apellidos} a {dias} días (Total Ganado: Bs {total_ganado}).",
+        usuario_ci=usuario_ci,
+    )
+
+    resumen = obtener_planilla_consolidada(db, periodo.id)
+    item_actualizado = next((it for it in resumen.items if it.trabajador_id == trabajador.id), None)
+    if not item_actualizado:
+        raise HTTPException(status_code=500, detail="Error al recuperar ítem actualizado.")
+    return item_actualizado
 
 
 def cerrar_planilla(
@@ -384,6 +534,8 @@ def cerrar_planilla(
                 periodo_id=periodo.id,
                 fecha_liquidacion=date.today(),
                 sueldo_base=item.sueldo_base,
+                dias_trabajados=item.dias_trabajados,
+                remuneracion_mensual=item.total_ganado,
                 ajustes=item.ajustes,
                 total_anticipos=item.total_anticipos,
                 monto_neto=item.liquido_pagable,

@@ -29,6 +29,7 @@ import {
   ContabilidadReporteMensual,
   ContabilidadReporteAnual,
   PlanillaResumen,
+  PlanillaItem,
   CierrePlanillaRequest,
   ReaperturaPlanillaRequest,
   PeriodoPlanillaListItem,
@@ -448,5 +449,13 @@ export class DataService {
     return this.http.post<PlanillaResumen>(`${this.API_URL}/planillas/${periodoId}/reabrir`, data, {
       headers: this.auth.getHeaders()
     });
+  }
+
+  actualizarDiasTrabajados(periodoId: number, trabajadorId: number, dias: number): Observable<PlanillaItem> {
+    return this.http.patch<PlanillaItem>(
+      `${this.API_URL}/planillas/${periodoId}/trabajadores/${trabajadorId}/dias-trabajados`,
+      { dias_trabajados: dias },
+      { headers: this.auth.getHeaders() }
+    );
   }
 }

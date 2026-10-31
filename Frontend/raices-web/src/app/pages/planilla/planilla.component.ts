@@ -247,6 +247,80 @@ export class PlanillaComponent implements OnInit {
     this.router.navigate(['/dashboard/pagos']);
   }
 
+  // --- ACTUALIZACIÓN INTERACTIVA DE DÍAS TRABAJADOS (RF-Problema 1) ---
+  actualizarDias(item: PlanillaItem, event: any) {
+    const nuevosDias = parseInt(event?.target?.value ?? event, 10);
+    if (isNaN(nuevosDias) || nuevosDias < 1 || nuevosDias > 30) {
+      this.toast.warning('Los días trabajados deben estar entre 1 y 30 días.');
+      return;
+    }
+    const pid = this.selectedPeriodoId();
+    if (!pid) return;
+
+    this.dataService.actualizarDiasTrabajados(pid, item.trabajador_id, nuevosDias).subscribe({
+      next: (itemActualizado) => {
+        const current = this.resumenPlanilla();
+        if (current) {
+          const idx = current.items.findIndex((i) => i.trabajador_id === item.trabajador_id);
+          if (idx !== -1) {
+            current.items[idx] = itemActualizado;
+            this.recalcularTotalesPlanilla(current);
+            this.resumenPlanilla.set({ ...current });
+          }
+        }
+        this.toast.success(
+          `Días de ${item.nombre_completo} actualizados a ${nuevosDias} (Total Ganado: Bs ${itemActualizado.total_ganado.toFixed(2)})`
+        );
+      },
+      error: (err) => {
+        this.toast.error(err?.error?.detail || 'Error al actualizar días trabajados');
+      },
+    });
+  }
+
+  private recalcularTotalesPlanilla(resumen: PlanillaResumen) {
+    let totBase = 0;
+    let totGanado = 0;
+    let totAnt18 = 0;
+    let totAntPost18 = 0;
+    let totAnt = 0;
+    let totAntSig = 0;
+    let totQ = 0;
+    let totAj = 0;
+    let totBruto = 0;
+    let totLiq = 0;
+    let totPag = 0;
+    let totSaldo = 0;
+
+    for (const it of resumen.items) {
+      totBase += it.sueldo_base;
+      totGanado += it.total_ganado;
+      totAnt18 += it.anticipos_antes_18;
+      totAntPost18 += it.anticipos_post_18;
+      totAnt += it.total_anticipos;
+      totAntSig += (it.anticipos_siguiente_periodo || 0);
+      totQ += it.pago_quincena;
+      totAj += it.ajustes;
+      totBruto += it.total_ganado_bruto;
+      totLiq += it.liquido_pagable;
+      totPag += it.total_pagado;
+      totSaldo += it.saldo_pendiente;
+    }
+
+    resumen.total_sueldo_base = totBase;
+    resumen.total_ganado = totGanado;
+    resumen.total_anticipos_antes_18 = totAnt18;
+    resumen.total_anticipos_post_18 = totAntPost18;
+    resumen.total_anticipos = totAnt;
+    resumen.total_anticipos_siguiente_periodo = totAntSig;
+    resumen.total_pagos_quincena = totQ;
+    resumen.total_ajustes = totAj;
+    resumen.total_ganado_bruto = totBruto;
+    resumen.total_liquido_pagable = totLiq;
+    resumen.total_pagado = totPag;
+    resumen.total_saldo_pendiente = totSaldo;
+  }
+
   // --- EXPORTACIÓN E IMPRESIÓN ---
   imprimirPlanilla() {
     window.print();
@@ -265,11 +339,14 @@ export class PlanillaComponent implements OnInit {
       'Carné Identidad',
       'Área',
       'Cargo',
-      'Sueldo Base (Bs)',
+      'Haber Básico (Bs)',
+      'Días Trabajados',
+      'Total Ganado Proporcional (Bs)',
       'Anticipos <= Día 18 (Bs)',
       'Pago Quincena (Bs)',
       'Anticipos > Día 18 (Bs)',
-      'Total Anticipos (Bs)',
+      'Total Anticipos Mes (Bs)',
+      'Anticipos Sig. Período Día 1-5 (Bs)',
       'Ajustes/Bonos (Bs)',
       'Líquido Pagable (Bs)',
       'Total Pagado (Bs)',
@@ -284,10 +361,13 @@ export class PlanillaComponent implements OnInit {
       `"${it.area}"`,
       `"${it.cargo}"`,
       it.sueldo_base.toFixed(2),
+      it.dias_trabajados,
+      it.total_ganado.toFixed(2),
       it.anticipos_antes_18.toFixed(2),
       it.pago_quincena.toFixed(2),
       it.anticipos_post_18.toFixed(2),
       it.total_anticipos.toFixed(2),
+      (it.anticipos_siguiente_periodo || 0).toFixed(2),
       it.ajustes.toFixed(2),
       it.liquido_pagable.toFixed(2),
       it.total_pagado.toFixed(2),
@@ -314,3 +394,4 @@ export class PlanillaComponent implements OnInit {
     this.toast.success('Archivo CSV descargado correctamente.');
   }
 }
+

@@ -327,18 +327,9 @@ def registrar_anticipo(
             detail="El período ya ha sido completamente LIQUIDADO para este trabajador. No se pueden registrar más anticipos.",
         )
 
-    # Validar que el anticipo no supere el saldo salarial disponible tras considerar anticipos y pagos de quincena previos
+    # Métricas salariales previas
     m_prev = calcular_metricas_trabajador_periodo(db, trabajador, periodo)
     saldo_disponible = m_prev["saldo_salarial_pendiente"]
-
-    if datos.importe > saldo_disponible and trabajador.sueldoBase > 0:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=(
-                f"El anticipo solicitado (Bs {datos.importe}) superaría el saldo salarial disponible "
-                f"(Bs {saldo_disponible}) del trabajador tras considerar anticipos y quincenas previas."
-            ),
-        )
 
     anticipos_previos = db.scalar(
         select(func.sum(Anticipo.importe)).where(
@@ -504,12 +495,9 @@ def obtener_comprobante_anticipo_detallado(
 
     estado_quincena = "LIQUIDADA" if quincena_pagada else "PENDIENTE"
 
-    # El saldo salarial estimado tras este anticipo debe descontar los anticipos acumulados
-    # Y los pagos salariales ya ejecutados (quincena / parciales)
-    saldo_estimado = max(
-        Decimal("0.00"),
-        trabajador.sueldoBase + ajustes_liq - total_acumulado - total_pagos_realizados,
-    )
+    # El saldo salarial estimado tras este anticipo descuenta los anticipos acumulados
+    # y los pagos ya realizados (quincena / parciales), conservando saldos negativos sin truncar a 0 (RF-Problema 4)
+    saldo_estimado = trabajador.sueldoBase + ajustes_liq - total_acumulado - total_pagos_realizados
 
     anticipos_periodo = [AnticipoOut.model_validate(a) for a in historicos_hasta_este]
 

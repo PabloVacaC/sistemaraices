@@ -256,13 +256,16 @@ class Liquidacion(Base):
     )
     fecha_liquidacion: Mapped[date] = mapped_column(Date, default=date.today, nullable=False, index=True)
     sueldo_base: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    dias_trabajados: Mapped[int] = mapped_column(Integer, default=30, nullable=False)
+    remuneracion_mensual: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=0.00, nullable=False)  # Total ganado proporcional
     ajustes: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=0.00, nullable=False)
     total_anticipos: Mapped[Decimal] = mapped_column(
         Numeric(12, 2), default=0.00, nullable=False
     )  # Anticipos descontables aplicados
+    total_quincena: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=0.00, nullable=False)
     monto_neto: Mapped[Decimal] = mapped_column(
         Numeric(12, 2), nullable=False
-    )  # sueldo_base + ajustes - total_anticipos
+    )  # total_ganado + ajustes - total_anticipos
     monto_pagado: Mapped[Decimal] = mapped_column(
         Numeric(12, 2), default=0.00, nullable=False
     )  # Suma de pagos realizados

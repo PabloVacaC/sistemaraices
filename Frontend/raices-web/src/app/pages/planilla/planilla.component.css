@@ -545,6 +545,7 @@
 }
 
 .modal-card {
+  position: relative;
   background: #ffffff;
   border-radius: 16px;
   padding: 1.75rem;
@@ -796,6 +797,145 @@
   }
 }
 
+/* --- Botón Cerrar Modal Accesible (Móvil y Escritorio) --- */
+.modal-close-btn {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid #e4e4e7;
+  background: #ffffff;
+  color: #71717a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  z-index: 20;
+}
+
+.modal-close-btn:hover {
+  background: #f4f4f5;
+  color: #09090b;
+  border-color: #d4d4d8;
+}
+
+/* --- Control Interactivo de Días Trabajados --- */
+.dias-input-container {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+}
+
+.input-dias-editable {
+  width: 48px;
+  padding: 0.25rem 0.2rem;
+  font-size: 0.88rem;
+  font-weight: 700;
+  text-align: center;
+  color: #0f172a;
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 6px;
+  outline: none;
+  transition: all 0.15s ease;
+}
+
+.input-dias-editable:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+  background: #eff6ff;
+}
+
+.input-dias-editable:disabled {
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+  color: #64748b;
+  cursor: not-allowed;
+}
+
+.dias-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+/* --- Pill para Anticipos Período Siguiente (Día 1-5) --- */
+.pill-next-period {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  border-radius: 9999px;
+  background: #f5f3ff;
+  border: 1px solid #ddd6fe;
+  color: #6d28d9;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* --- Gestión de Saldos Negativos --- */
+.text-red-negative {
+  color: #dc2626 !important;
+  font-weight: 700 !important;
+}
+
+.badge-negative-mini {
+  display: inline-block;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  margin-top: 0.2rem;
+}
+
+.row-negative {
+  background-color: #fffbfb !important;
+  border-left: 3px solid #ef4444 !important;
+}
+
+.saldo-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.1rem;
+}
+
+.badge-status.excedido {
+  background-color: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fca5a5;
+}
+
+.dias-detail-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: #f1f5f9;
+  padding: 0.2rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  color: #334155;
+}
+
+.alert-box-danger {
+  background-color: #fef2f2;
+  border: 1px solid #fca5a5;
+  border-radius: 8px;
+  color: #991b1b;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
 /* --- Responsividad Móvil --- */
 @media (max-width: 768px) {
   .module-header {
@@ -825,4 +965,15 @@
   .export-actions .btn {
     flex: 1;
   }
+
+  .modal-card {
+    padding: 1.25rem;
+    max-height: 94vh;
+  }
+
+  .modal-close-btn {
+    top: 0.75rem;
+    right: 0.75rem;
+  }
 }
+

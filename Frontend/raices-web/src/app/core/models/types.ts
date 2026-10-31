@@ -487,15 +487,19 @@ export interface PlanillaItem {
   estado_trabajador: boolean;
 
   sueldo_base: number;
+  dias_trabajados: number;
+  total_ganado: number;
   anticipos_antes_18: number;
   pago_quincena: number;
   anticipos_post_18: number;
   total_anticipos: number;
+  anticipos_siguiente_periodo: number;
   ajustes: number;
   total_ganado_bruto: number;
   liquido_pagable: number;
   total_pagado: number;
   saldo_pendiente: number;
+  es_saldo_negativo: boolean;
 
   estado_pago: string;
   quincena_liquidada: boolean;
@@ -524,9 +528,11 @@ export interface PlanillaResumen {
 
   total_trabajadores: number;
   total_sueldo_base: number;
+  total_ganado: number;
   total_anticipos_antes_18: number;
   total_anticipos_post_18: number;
   total_anticipos: number;
+  total_anticipos_siguiente_periodo: number;
   total_pagos_quincena: number;
   total_ajustes: number;
   total_ganado_bruto: number;

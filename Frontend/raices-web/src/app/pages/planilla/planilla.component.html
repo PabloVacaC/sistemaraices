@@ -7,7 +7,7 @@
       <div class="pill-badge">SISTEMAS RAÍCES • GESTIÓN DE NÓMINA</div>
       <h1>Módulo de Planilla Salarial</h1>
       <p class="subtitle">
-        Centralización y gestión de la nómina mensual por período, saldos salariales y cierre de planilla.
+        Centralización y gestión de la nómina mensual por período, cálculo proporcional de días trabajados, saldos salariales y cierre formal de planilla.
       </p>
     </div>
 
@@ -64,7 +64,7 @@
         @if (resumenPlanilla()?.periodo?.cerrado_por_nombre) {
           por <strong>{{ resumenPlanilla()?.periodo?.cerrado_por_nombre }}</strong>.
         }
-        Los registros históricos están congelados y no admiten nuevos anticipos ni modificaciones.
+        Los registros históricos están congelados y no admiten nuevos anticipos ni modificaciones de días trabajados.
       </div>
       @if (auth.isSuperAdmin()) {
         <button class="btn btn-sm btn-outline-warning" (click)="abrirModalReapertura()">
@@ -76,9 +76,10 @@
     <div class="status-banner abierto animate-in">
       <div class="banner-icon">🟢</div>
       <div class="banner-text">
-        <strong>Planilla en Curso (Abierta):</strong>
-        Los anticipos y liquidaciones registrados en el sistema se consolidan aquí en tiempo real.
-        Una vez completados los pagos, use el botón de cierre para sellar la planilla.
+        <strong>Planilla en Curso (Abierta e Interactiva):</strong>
+        Los días trabajados son editables directamente en la tabla (fórmula comercial:
+        <code>Total Ganado = Haber Básico / 30 × Días</code>).
+        Los anticipos del día 1 al 5 del período siguiente se muestran de forma informativa sin restar de este mes.
       </div>
       @if (auth.hasPermission('PLANILLA_CERRAR') || auth.isSuperAdmin()) {
         <button class="btn btn-sm btn-danger-soft" (click)="abrirModalCierre()">
@@ -95,7 +96,7 @@
     <!-- 1. Total Trabajadores -->
     <div class="kpi-card">
       <div class="kpi-header">
-        <span class="kpi-title">Trabajadores en Planilla</span>
+        <span class="kpi-title">Personal en Planilla</span>
         <div class="kpi-icon blue">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
@@ -113,10 +114,10 @@
       </div>
     </div>
 
-    <!-- 2. Masa Salarial Bruta -->
+    <!-- 2. Masa Salarial Proporcional Ganada -->
     <div class="kpi-card">
       <div class="kpi-header">
-        <span class="kpi-title">Masa Salarial Bruta</span>
+        <span class="kpi-title">Total Ganado (Días)</span>
         <div class="kpi-icon slate">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="12" y1="1" x2="12" y2="23"/>
@@ -125,17 +126,17 @@
         </div>
       </div>
       <div class="kpi-value">
-        Bs {{ (resumenPlanilla()?.total_sueldo_base || 0) | number:'1.2-2' }}
+        Bs {{ (resumenPlanilla()?.total_ganado || resumenPlanilla()?.total_sueldo_base || 0) | number:'1.2-2' }}
       </div>
       <div class="kpi-footer">
-        <span>Suma de sueldos base mensual</span>
+        <span>Haber Básico Mes: Bs {{ (resumenPlanilla()?.total_sueldo_base || 0) | number:'1.2-2' }}</span>
       </div>
     </div>
 
     <!-- 3. Total Anticipos Descontados -->
     <div class="kpi-card">
       <div class="kpi-header">
-        <span class="kpi-title">Total Anticipos</span>
+        <span class="kpi-title">Anticipos del Mes</span>
         <div class="kpi-icon amber">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -148,7 +149,7 @@
         Bs {{ (resumenPlanilla()?.total_anticipos || 0) | number:'1.2-2' }}
       </div>
       <div class="kpi-footer">
-        <span>&le; Día 18: Bs {{ (resumenPlanilla()?.total_anticipos_antes_18 || 0) | number:'1.2-2' }}</span>
+        <span>&le; 18: Bs {{ (resumenPlanilla()?.total_anticipos_antes_18 || 0) | number:'1.2-2' }}</span>
         <span>•</span>
         <span>&gt; 18: Bs {{ (resumenPlanilla()?.total_anticipos_post_18 || 0) | number:'1.2-2' }}</span>
       </div>
@@ -157,7 +158,7 @@
     <!-- 4. Total Pagado a la Fecha -->
     <div class="kpi-card">
       <div class="kpi-header">
-        <span class="kpi-title">Total Pagado a la Fecha</span>
+        <span class="kpi-title">Total Pagado</span>
         <div class="kpi-icon emerald">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="20 6 9 17 4 12"/>
@@ -172,10 +173,10 @@
       </div>
     </div>
 
-    <!-- 5. Saldo Salarial Pendiente -->
+    <!-- 5. Saldo Salarial Pendiente Global -->
     <div class="kpi-card highlight-card">
       <div class="kpi-header">
-        <span class="kpi-title">Saldo Pendiente Global</span>
+        <span class="kpi-title">Saldo Salarial Pendiente</span>
         <div class="kpi-icon red">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="10"/>
@@ -184,12 +185,19 @@
           </svg>
         </div>
       </div>
-      <div class="kpi-value" [class.text-red]="(resumenPlanilla()?.total_saldo_pendiente || 0) > 0" [class.text-emerald]="(resumenPlanilla()?.total_saldo_pendiente || 0) <= 0">
+      <div
+        class="kpi-value"
+        [class.text-red]="(resumenPlanilla()?.total_saldo_pendiente || 0) > 0"
+        [class.text-red-negative]="(resumenPlanilla()?.total_saldo_pendiente || 0) < 0"
+        [class.text-emerald]="(resumenPlanilla()?.total_saldo_pendiente || 0) === 0"
+      >
         Bs {{ (resumenPlanilla()?.total_saldo_pendiente || 0) | number:'1.2-2' }}
       </div>
       <div class="kpi-footer">
-        @if ((resumenPlanilla()?.total_saldo_pendiente || 0) <= 0) {
+        @if ((resumenPlanilla()?.total_saldo_pendiente || 0) === 0 && (resumenPlanilla()?.total_pagado || 0) > 0) {
           <span class="badge-status liquidado">100% LIQUIDADA</span>
+        } @else if ((resumenPlanilla()?.total_saldo_pendiente || 0) < 0) {
+          <span class="badge-negative-mini">HAY SALDOS POR REGULARIZAR</span>
         } @else {
           <span class="text-red font-semibold">Por liquidar a fin de mes</span>
         }
@@ -273,20 +281,23 @@
     </div>
 
     <!-- ================================================================= -->
-    <!-- TABLA CONSOLIDADA DE PLANILLA SALARIAL -->
+    <!-- TABLA CONSOLIDADA DE PLANILLA SALARIAL INTERACTIVA -->
     <!-- ================================================================= -->
     <div class="table-responsive mt-3">
       <table class="clean-table table-planilla">
         <thead>
           <tr>
-            <th class="text-center" style="width: 45px;">N°</th>
+            <th class="text-center" style="width: 40px;">N°</th>
             <th>Trabajador</th>
             <th>Área / Cargo</th>
-            <th class="text-right">Sueldo Base</th>
+            <th class="text-right">Haber Básico</th>
+            <th class="text-center" title="Días trabajados (Base mes comercial de 30 días). Editable interactivamente.">Días Trab.</th>
+            <th class="text-right" title="Fórmula: (Haber Básico / 30) × Días Trabajados">Total Ganado</th>
             <th class="text-right">Ant. &le; 18</th>
             <th class="text-right">Pago Quincena</th>
             <th class="text-right">Ant. &gt; 18</th>
             <th class="text-right">Total Anticipos</th>
+            <th class="text-center" title="Anticipos entregados entre el día 1 y 5 del mes siguiente. No descuentan en este período.">Ant. Sig. (1-5)</th>
             <th class="text-right">Líquido Pagable</th>
             <th class="text-right">Total Pagado</th>
             <th class="text-right">Saldo Pendiente</th>
@@ -296,7 +307,10 @@
         </thead>
         <tbody>
           @for (it of filteredItems(); track it.trabajador_id; let idx = $index) {
-            <tr [class.row-liquidado]="it.estado_pago === 'LIQUIDADO'">
+            <tr
+              [class.row-liquidado]="it.estado_pago === 'LIQUIDADO'"
+              [class.row-negative]="it.es_saldo_negativo || it.saldo_pendiente < 0"
+            >
               <td class="text-center font-mono text-xs text-slate-500">{{ idx + 1 }}</td>
               <td>
                 <div class="worker-cell">
@@ -318,9 +332,39 @@
               <td class="text-right font-medium text-slate-900">
                 Bs {{ it.sueldo_base | number:'1.2-2' }}
               </td>
+
+              <!-- Días Trabajados (Interactivo y Editable) -->
+              <td class="text-center">
+                <div class="dias-input-container">
+                  <input
+                    type="number"
+                    min="1"
+                    max="30"
+                    step="1"
+                    class="input-dias-editable"
+                    [value]="it.dias_trabajados"
+                    (change)="actualizarDias(it, $event)"
+                    [disabled]="resumenPlanilla()?.periodo?.estado === 'CERRADO'"
+                    title="Editar días trabajados (Presiona Enter o cambia el foco para recalcular)"
+                  />
+                  <span class="dias-label">/ 30</span>
+                </div>
+              </td>
+
+              <!-- Total Ganado Proporcional -->
+              <td class="text-right font-semibold text-slate-900">
+                Bs {{ it.total_ganado | number:'1.2-2' }}
+                @if (it.dias_trabajados < 30) {
+                  <div class="text-xs text-amber-600 font-normal">({{ it.dias_trabajados }}d)</div>
+                }
+              </td>
+
+              <!-- Anticipos <= 18 -->
               <td class="text-right text-slate-700">
                 Bs {{ it.anticipos_antes_18 | number:'1.2-2' }}
               </td>
+
+              <!-- Pago Quincena -->
               <td class="text-right">
                 @if (it.pago_quincena > 0) {
                   <span class="text-emerald font-semibold">Bs {{ it.pago_quincena | number:'1.2-2' }}</span>
@@ -330,23 +374,62 @@
                   <span class="text-slate-400">Bs 0.00</span>
                 }
               </td>
+
+              <!-- Anticipos > 18 -->
               <td class="text-right text-slate-700">
                 Bs {{ it.anticipos_post_18 | number:'1.2-2' }}
               </td>
+
+              <!-- Total Anticipos del Mes -->
               <td class="text-right font-semibold text-amber-700">
                 - Bs {{ it.total_anticipos | number:'1.2-2' }}
               </td>
-              <td class="text-right font-bold text-slate-900">
+
+              <!-- Anticipos Período Siguiente (Día 1-5) (Informativo, RF-Problema 2) -->
+              <td class="text-center">
+                @if (it.anticipos_siguiente_periodo > 0) {
+                  <span
+                    class="pill-next-period"
+                    title="Anticipo entregado entre el 1 y 5 del mes siguiente. Se descuenta en el siguiente período, no en este."
+                  >
+                    Bs {{ it.anticipos_siguiente_periodo | number:'1.2-2' }}
+                  </span>
+                } @else {
+                  <span class="text-slate-400 text-xs">—</span>
+                }
+              </td>
+
+              <!-- Líquido Pagable (Con soporte de saldos negativos, RF-Problema 4) -->
+              <td class="text-right font-bold" [class.text-red-negative]="it.liquido_pagable < 0" [class.text-slate-900]="it.liquido_pagable >= 0">
                 Bs {{ it.liquido_pagable | number:'1.2-2' }}
               </td>
+
+              <!-- Total Pagado -->
               <td class="text-right font-semibold text-emerald-700">
                 Bs {{ it.total_pagado | number:'1.2-2' }}
               </td>
-              <td class="text-right font-bold" [class.text-red]="it.saldo_pendiente > 0" [class.text-emerald]="it.saldo_pendiente <= 0">
-                Bs {{ it.saldo_pendiente | number:'1.2-2' }}
+
+              <!-- Saldo Pendiente (Con alerta si es negativo) -->
+              <td class="text-right font-bold">
+                <div class="saldo-stack">
+                  <span
+                    [class.text-red-negative]="it.saldo_pendiente < 0"
+                    [class.text-red]="it.saldo_pendiente > 0"
+                    [class.text-emerald]="it.saldo_pendiente === 0"
+                  >
+                    Bs {{ it.saldo_pendiente | number:'1.2-2' }}
+                  </span>
+                  @if (it.saldo_pendiente < 0 || it.es_saldo_negativo) {
+                    <span class="badge-negative-mini" title="Saldo negativo por regularizar">REGULARIZAR</span>
+                  }
+                </div>
               </td>
+
+              <!-- Estado -->
               <td class="text-center">
-                @if (it.estado_pago === 'LIQUIDADO' || it.saldo_pendiente <= 0) {
+                @if (it.saldo_pendiente < 0 || it.es_saldo_negativo) {
+                  <span class="badge-status excedido" title="El trabajador tiene un saldo salarial negativo">EXCEDIDO</span>
+                } @else if (it.estado_pago === 'LIQUIDADO' || it.saldo_pendiente <= 0) {
                   <span class="badge-status liquidado">LIQUIDADO</span>
                 } @else if (it.estado_pago === 'PARCIAL' || it.total_pagado > 0) {
                   <span class="badge-status parcial">PARCIAL</span>
@@ -354,6 +437,8 @@
                   <span class="badge-status pendiente">PENDIENTE</span>
                 }
               </td>
+
+              <!-- Acciones -->
               <td class="text-center">
                 <div class="row-actions">
                   <button
@@ -371,7 +456,7 @@
                   <button
                     class="btn-icon"
                     (click)="irAPagosTrabajador(it)"
-                    title="Gestionar en Módulo de Pagos"
+                    title="Gestionar en Módulo de Pagos y Anticipos"
                   >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <rect width="20" height="12" x="2" y="6" rx="2"/>
@@ -384,7 +469,7 @@
             </tr>
           } @empty {
             <tr>
-              <td colspan="13" class="empty-row text-center py-8">
+              <td colspan="16" class="empty-row text-center py-8">
                 <div class="empty-state-box">
                   <span class="empty-icon">📋</span>
                   <h4>No se encontraron trabajadores en esta planilla</h4>
@@ -398,13 +483,18 @@
           <tr class="table-total-row">
             <td colspan="3" class="text-right font-bold">TOTALES CONSOLIDADOS:</td>
             <td class="text-right font-bold">Bs {{ (resumenPlanilla()?.total_sueldo_base || 0) | number:'1.2-2' }}</td>
+            <td class="text-center font-bold text-xs text-slate-600">—</td>
+            <td class="text-right font-bold text-slate-900">Bs {{ (resumenPlanilla()?.total_ganado || resumenPlanilla()?.total_sueldo_base || 0) | number:'1.2-2' }}</td>
             <td class="text-right font-bold">Bs {{ (resumenPlanilla()?.total_anticipos_antes_18 || 0) | number:'1.2-2' }}</td>
             <td class="text-right font-bold text-emerald">Bs {{ (resumenPlanilla()?.total_pagos_quincena || 0) | number:'1.2-2' }}</td>
             <td class="text-right font-bold">Bs {{ (resumenPlanilla()?.total_anticipos_post_18 || 0) | number:'1.2-2' }}</td>
             <td class="text-right font-bold text-amber">Bs {{ (resumenPlanilla()?.total_anticipos || 0) | number:'1.2-2' }}</td>
+            <td class="text-center font-bold text-purple-700">Bs {{ (resumenPlanilla()?.total_anticipos_siguiente_periodo || 0) | number:'1.2-2' }}</td>
             <td class="text-right font-bold">Bs {{ (resumenPlanilla()?.total_liquido_pagable || 0) | number:'1.2-2' }}</td>
             <td class="text-right font-bold text-emerald">Bs {{ (resumenPlanilla()?.total_pagado || 0) | number:'1.2-2' }}</td>
-            <td class="text-right font-bold text-red">Bs {{ (resumenPlanilla()?.total_saldo_pendiente || 0) | number:'1.2-2' }}</td>
+            <td class="text-right font-bold" [class.text-red]="(resumenPlanilla()?.total_saldo_pendiente || 0) > 0" [class.text-red-negative]="(resumenPlanilla()?.total_saldo_pendiente || 0) < 0">
+              Bs {{ (resumenPlanilla()?.total_saldo_pendiente || 0) | number:'1.2-2' }}
+            </td>
             <td colspan="2"></td>
           </tr>
         </tfoot>
@@ -418,6 +508,9 @@
   @if (showModalCierre()) {
     <div class="modal-backdrop">
       <div class="modal-card animate-scale-up">
+        <!-- Botón cerrar flotante para teléfonos móviles -->
+        <button class="modal-close-btn" (click)="showModalCierre.set(false)" title="Cerrar modal">✕</button>
+
         <div class="modal-icon-badge red">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
@@ -476,7 +569,7 @@
           <textarea
             class="input-clean"
             rows="2"
-            placeholder="Ej. Cierre aprobado por Gerencia General tras revisión de quincenas y anticipos..."
+            placeholder="Ej. Cierre formal aprobado por Administración tras revisión de quincenas y anticipos..."
             [(ngModel)]="observacionesCierre"
           ></textarea>
         </div>
@@ -503,6 +596,9 @@
   @if (showModalReapertura()) {
     <div class="modal-backdrop">
       <div class="modal-card animate-scale-up">
+        <!-- Botón cerrar flotante para teléfonos móviles -->
+        <button class="modal-close-btn" (click)="showModalReapertura.set(false)" title="Cerrar modal">✕</button>
+
         <div class="modal-icon-badge amber">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
@@ -516,7 +612,7 @@
         </p>
 
         <p class="text-sm text-slate-600 mb-3 text-left">
-          Esta acción desbloqueará la edición de pagos y anticipos para este período.
+          Esta acción desbloqueará la edición de pagos, anticipos y días trabajados para este período.
           Por motivos de seguridad y auditoría legal, debe ingresar una justificación obligatoria.
         </p>
 
@@ -552,6 +648,9 @@
   @if (showModalDetalleTrabajador()) {
     <div class="modal-backdrop">
       <div class="modal-card modal-card-lg animate-scale-up">
+        <!-- Botón cerrar flotante para teléfonos móviles -->
+        <button class="modal-close-btn" (click)="showModalDetalleTrabajador.set(false)" title="Cerrar modal">✕</button>
+
         <div class="modal-icon-badge blue">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -580,17 +679,31 @@
           </div>
         </div>
 
-        <!-- Desglose Salarial Transparente -->
+        <!-- Desglose Salarial Transparente y Proporcional -->
         <div class="financial-breakdown-card text-left mb-4">
           <div class="fb-row">
-            <span>(+) Sueldo Base Mensual:</span>
+            <span>(+) Haber Básico Mensual:</span>
             <strong>Bs {{ (selectedItemDetalle()?.sueldo_base || 0) | number:'1.2-2' }}</strong>
           </div>
+
+          <div class="fb-row text-slate-700">
+            <span>Días Trabajados en el Período:</span>
+            <div class="dias-detail-badge">
+              <strong>{{ selectedItemDetalle()?.dias_trabajados || 30 }}</strong> / 30 días
+            </div>
+          </div>
+
+          <div class="fb-row highlight-subtotal">
+            <span>(=) Total Ganado Proporcional (Haber / 30 × Días):</span>
+            <strong class="text-blue">Bs {{ (selectedItemDetalle()?.total_ganado || 0) | number:'1.2-2' }}</strong>
+          </div>
+
           <div class="fb-row text-slate-700">
             <span>(+/-) Otros Ajustes / Bonos:</span>
             <span>Bs {{ (selectedItemDetalle()?.ajustes || 0) | number:'1.2-2' }}</span>
           </div>
-          <div class="fb-row highlight-subtotal">
+
+          <div class="fb-row font-semibold">
             <span>(=) Total Ganado Bruto:</span>
             <strong>Bs {{ (selectedItemDetalle()?.total_ganado_bruto || 0) | number:'1.2-2' }}</strong>
           </div>
@@ -606,16 +719,37 @@
             <span>- Bs {{ (selectedItemDetalle()?.anticipos_post_18 || 0) | number:'1.2-2' }}</span>
           </div>
           <div class="fb-row font-semibold text-amber-800">
-            <span>(-) Total Anticipos Descontados:</span>
+            <span>(-) Total Anticipos Descontados este Mes:</span>
             <span>- Bs {{ (selectedItemDetalle()?.total_anticipos || 0) | number:'1.2-2' }}</span>
           </div>
+
+          <!-- Anticipos período siguiente (informativo) -->
+          @if ((selectedItemDetalle()?.anticipos_siguiente_periodo || 0) > 0) {
+            <div class="fb-row text-purple-700 bg-purple-50 p-2 rounded">
+              <span>(ℹ) Anticipos para el Período Siguiente (Días 1-5):</span>
+              <strong class="pill-next-period">Bs {{ (selectedItemDetalle()?.anticipos_siguiente_periodo || 0) | number:'1.2-2' }}</strong>
+            </div>
+          }
 
           <div class="fb-divider"></div>
 
           <div class="fb-row highlight-liquid">
             <span>(=) Líquido Pagable del Mes:</span>
-            <strong class="text-blue font-bold">Bs {{ (selectedItemDetalle()?.liquido_pagable || 0) | number:'1.2-2' }}</strong>
+            <strong
+              [class.text-red-negative]="(selectedItemDetalle()?.liquido_pagable || 0) < 0"
+              [class.text-blue]="(selectedItemDetalle()?.liquido_pagable || 0) >= 0"
+              class="font-bold text-lg"
+            >
+              Bs {{ (selectedItemDetalle()?.liquido_pagable || 0) | number:'1.2-2' }}
+            </strong>
           </div>
+
+          @if ((selectedItemDetalle()?.liquido_pagable || 0) < 0) {
+            <div class="alert-box-danger my-2 p-2">
+              ⚠️ <strong>Líquido Pagable Negativo:</strong> Los anticipos acumulados superaron el total ganado del mes.
+              Este saldo deudor debe regularizarse administrativamente y no se traslada automáticamente a la planilla siguiente.
+            </div>
+          }
 
           <div class="fb-row text-emerald-700 font-semibold">
             <span>(-) Pagos Salariales Entregados (Quincena/Parciales):</span>
@@ -624,7 +758,11 @@
 
           <div class="fb-row highlight-final">
             <span>(=) Saldo Salarial Pendiente:</span>
-            <strong [class.text-emerald]="(selectedItemDetalle()?.saldo_pendiente || 0) <= 0" [class.text-red]="(selectedItemDetalle()?.saldo_pendiente || 0) > 0">
+            <strong
+              [class.text-red-negative]="(selectedItemDetalle()?.saldo_pendiente || 0) < 0"
+              [class.text-red]="(selectedItemDetalle()?.saldo_pendiente || 0) > 0"
+              [class.text-emerald]="(selectedItemDetalle()?.saldo_pendiente || 0) === 0"
+            >
               Bs {{ (selectedItemDetalle()?.saldo_pendiente || 0) | number:'1.2-2' }}
             </strong>
           </div>
