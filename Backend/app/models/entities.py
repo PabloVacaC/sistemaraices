@@ -187,10 +187,22 @@ class PeriodoSalarial(Base):
     fecha_pago_estimada: Mapped[date] = mapped_column(Date, nullable=False)
     estado: Mapped[str] = mapped_column(String(20), default="ABIERTO", nullable=False)  # ABIERTO, CERRADO
     descripcion: Mapped[str] = mapped_column(String(100), nullable=False)  # e.g. "Septiembre 2026"
+    fecha_cierre: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    cerrado_por: Mapped[Optional[str]] = mapped_column(
+        String(30), ForeignKey("usuario.ci", ondelete="SET NULL"), nullable=True, index=True
+    )
+    observaciones_cierre: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     # Relaciones
     anticipos = relationship("Anticipo", back_populates="periodo")
     liquidaciones = relationship("Liquidacion", back_populates="periodo")
+    usuario_cierre = relationship("Usuario", foreign_keys=[cerrado_por], lazy="joined")
+
+    @property
+    def cerrado_por_nombre(self) -> Optional[str]:
+        if self.usuario_cierre:
+            return f"{self.usuario_cierre.nombre} {self.usuario_cierre.apellido}".strip()
+        return None
 
 
 class Anticipo(Base):

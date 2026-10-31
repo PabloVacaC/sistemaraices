@@ -473,3 +473,97 @@ export interface ContabilidadReporteAnual {
   desglose_areas: DesglosePorArea[];
   metodos_pago_resumen: { [key: string]: number };
 }
+
+// ==========================================
+// MÓDULO DE PLANILLAS SALARIALES
+// ==========================================
+export interface PlanillaItem {
+  trabajador_id: number;
+  ci?: string;
+  nombre_completo: string;
+  cargo: string;
+  area: string;
+  fecha_ingreso?: string;
+  estado_trabajador: boolean;
+
+  sueldo_base: number;
+  anticipos_antes_18: number;
+  pago_quincena: number;
+  anticipos_post_18: number;
+  total_anticipos: number;
+  ajustes: number;
+  total_ganado_bruto: number;
+  liquido_pagable: number;
+  total_pagado: number;
+  saldo_pendiente: number;
+
+  estado_pago: string;
+  quincena_liquidada: boolean;
+  liquidacion_id?: number | null;
+  numero_comprobante_liq?: string | null;
+  observaciones?: string | null;
+}
+
+export interface PlanillaPeriodoHeader {
+  id: number;
+  mes: number;
+  anio: number;
+  descripcion: string;
+  fecha_inicio: string;
+  fecha_fin: string;
+  fecha_pago_estimada: string;
+  estado: string; // ABIERTO, CERRADO
+  fecha_cierre?: string | null;
+  cerrado_por?: string | null;
+  cerrado_por_nombre?: string | null;
+  observaciones_cierre?: string | null;
+}
+
+export interface PlanillaResumen {
+  periodo: PlanillaPeriodoHeader;
+
+  total_trabajadores: number;
+  total_sueldo_base: number;
+  total_anticipos_antes_18: number;
+  total_anticipos_post_18: number;
+  total_anticipos: number;
+  total_pagos_quincena: number;
+  total_ajustes: number;
+  total_ganado_bruto: number;
+  total_liquido_pagable: number;
+  total_pagado: number;
+  total_saldo_pendiente: number;
+
+  trabajadores_liquidados: number;
+  trabajadores_parciales: number;
+  trabajadores_pendientes: number;
+
+  es_cerrable: boolean;
+  advertencias_cierre: string[];
+  items: PlanillaItem[];
+}
+
+export interface CierrePlanillaRequest {
+  confirmar_con_pendientes: boolean;
+  observaciones?: string;
+}
+
+export interface ReaperturaPlanillaRequest {
+  motivo: string;
+}
+
+export interface PeriodoPlanillaListItem {
+  id: number;
+  mes: number;
+  anio: number;
+  descripcion: string;
+  estado: string;
+  fecha_inicio: string;
+  fecha_fin: string;
+  fecha_cierre?: string | null;
+  total_trabajadores: number;
+  total_sueldo_base: number;
+  total_pagado: number;
+  total_saldo_pendiente: number;
+  porcentaje_avance: number;
+}

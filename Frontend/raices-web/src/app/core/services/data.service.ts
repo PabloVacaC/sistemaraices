@@ -28,6 +28,10 @@ import {
   ReporteGastosResumen,
   ContabilidadReporteMensual,
   ContabilidadReporteAnual,
+  PlanillaResumen,
+  CierrePlanillaRequest,
+  ReaperturaPlanillaRequest,
+  PeriodoPlanillaListItem,
 } from '../models/types';
 
 @Injectable({
@@ -412,6 +416,37 @@ export class DataService {
     return this.http.get<ContabilidadReporteAnual>(`${this.API_URL}/contabilidad/anual`, {
       headers: this.auth.getHeaders(),
       params
+    });
+  }
+
+  // --- Módulo de Planillas Salariales ---
+  getPlanillaPeriodoActual(): Observable<PlanillaResumen> {
+    return this.http.get<PlanillaResumen>(`${this.API_URL}/planillas/periodo-actual`, {
+      headers: this.auth.getHeaders()
+    });
+  }
+
+  getPlanillaPorPeriodo(periodoId: number): Observable<PlanillaResumen> {
+    return this.http.get<PlanillaResumen>(`${this.API_URL}/planillas/${periodoId}`, {
+      headers: this.auth.getHeaders()
+    });
+  }
+
+  getPeriodosPlanilla(): Observable<PeriodoPlanillaListItem[]> {
+    return this.http.get<PeriodoPlanillaListItem[]>(`${this.API_URL}/planillas/periodos`, {
+      headers: this.auth.getHeaders()
+    });
+  }
+
+  cerrarPlanilla(periodoId: number, data: CierrePlanillaRequest): Observable<PlanillaResumen> {
+    return this.http.post<PlanillaResumen>(`${this.API_URL}/planillas/${periodoId}/cerrar`, data, {
+      headers: this.auth.getHeaders()
+    });
+  }
+
+  reabrirPlanilla(periodoId: number, data: ReaperturaPlanillaRequest): Observable<PlanillaResumen> {
+    return this.http.post<PlanillaResumen>(`${this.API_URL}/planillas/${periodoId}/reabrir`, data, {
+      headers: this.auth.getHeaders()
     });
   }
 }

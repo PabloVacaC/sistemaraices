@@ -1,6 +1,6 @@
 from datetime import date
 from sqlalchemy.orm import Session
-from sqlalchemy import select
+from sqlalchemy import select, text
 from app.database.connection import engine, SessionLocal, Base
 from app.models.entities import (
     Permiso,
@@ -18,7 +18,14 @@ from app.core.security import get_password_hash
 def init_db():
     print("Creando tablas en PostgreSQL...")
     Base.metadata.create_all(bind=engine)
-    print("Tablas creadas exitosamente.")
+
+    # Migraciones seguras para columnas añadidas
+    with engine.begin() as conn:
+        conn.execute(text("ALTER TABLE periodo_salarial ADD COLUMN IF NOT EXISTS fecha_cierre TIMESTAMP NULL;"))
+        conn.execute(text("ALTER TABLE periodo_salarial ADD COLUMN IF NOT EXISTS cerrado_por VARCHAR(30) NULL;"))
+        conn.execute(text("ALTER TABLE periodo_salarial ADD COLUMN IF NOT EXISTS observaciones_cierre TEXT NULL;"))
+
+    print("Tablas y columnas sincronizadas exitosamente.")
 
     db: Session = SessionLocal()
     try:
@@ -49,6 +56,9 @@ def init_db():
             "INVENTARIO_GASTOS_REGISTRAR",
             "INVENTARIO_GASTOS_ANULAR",
             "INVENTARIO_REPORTES",
+            "PLANILLA_VER",
+            "PLANILLA_CERRAR",
+            "PLANILLA_REABRIR",
         ]
 
         permisos_db = {}
@@ -96,6 +106,8 @@ def init_db():
                     "INVENTARIO_GASTOS_REGISTRAR",
                     "INVENTARIO_GASTOS_ANULAR",
                     "INVENTARIO_REPORTES",
+                    "PLANILLA_VER",
+                    "PLANILLA_CERRAR",
                 ],
             },
             {

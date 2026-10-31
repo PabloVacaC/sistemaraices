@@ -9,6 +9,7 @@ from app.modules.users.router import router as users_router
 from app.modules.trabajadores.router import router as trabajadores_router
 from app.modules.bitacora.router import router as bitacora_router
 from app.modules.pagos.router import router as pagos_router
+from app.modules.planillas.router import router as planillas_router
 from app.modules.inventario.router import router as inventario_router
 from app.modules.contabilidad.router import router as contabilidad_router
 
@@ -45,6 +46,7 @@ app.include_router(users_router, prefix="/api")
 app.include_router(trabajadores_router, prefix="/api")
 app.include_router(bitacora_router, prefix="/api")
 app.include_router(pagos_router, prefix="/api")
+app.include_router(planillas_router, prefix="/api")
 app.include_router(inventario_router, prefix="/api")
 app.include_router(contabilidad_router, prefix="/api")
 

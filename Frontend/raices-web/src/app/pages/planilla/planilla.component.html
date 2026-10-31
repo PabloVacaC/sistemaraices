@@ -1,0 +1,644 @@
+<div class="planilla-container">
+  <!-- ================================================================= -->
+  <!-- HEADER DEL MÓDULO -->
+  <!-- ================================================================= -->
+  <header class="module-header">
+    <div class="header-titles">
+      <div class="pill-badge">SISTEMAS RAÍCES • GESTIÓN DE NÓMINA</div>
+      <h1>Módulo de Planilla Salarial</h1>
+      <p class="subtitle">
+        Centralización y gestión de la nómina mensual por período, saldos salariales y cierre de planilla.
+      </p>
+    </div>
+
+    <!-- Selector de Período Salarial -->
+    <div class="periodo-selector-card">
+      <div class="periodo-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
+          <line x1="16" x2="16" y1="2" y2="6"/>
+          <line x1="8" x2="8" y1="2" y2="6"/>
+          <line x1="3" x2="21" y1="10" y2="10"/>
+        </svg>
+      </div>
+      <div class="periodo-info">
+        <label>Período de Planilla</label>
+        <select
+          class="periodo-select"
+          [ngModel]="selectedPeriodoId()"
+          (ngModelChange)="onPeriodoChange($event)"
+        >
+          @for (p of periodos(); track p.id) {
+            <option [value]="p.id">
+              {{ p.descripcion }} — {{ p.estado }} ({{ p.porcentaje_avance }}% Pagado)
+            </option>
+          }
+        </select>
+      </div>
+
+      <!-- Badge de Estado del Período -->
+      @if (resumenPlanilla()?.periodo?.estado === 'CERRADO') {
+        <span class="badge-periodo cerrado" title="Planilla cerrada e inmutable">
+          🔒 CERRADA
+        </span>
+      } @else {
+        <span class="badge-periodo abierto" title="Planilla abierta y editable">
+          🟢 ABIERTA
+        </span>
+      }
+    </div>
+  </header>
+
+  <!-- ================================================================= -->
+  <!-- BANNER INFORMATIVO SEGÚN ESTADO DE PLANILLA -->
+  <!-- ================================================================= -->
+  @if (resumenPlanilla()?.periodo?.estado === 'CERRADO') {
+    <div class="status-banner cerrado animate-in">
+      <div class="banner-icon">🔒</div>
+      <div class="banner-text">
+        <strong>Planilla Salarial Cerrada:</strong>
+        Este período fue formalmente cerrado
+        @if (resumenPlanilla()?.periodo?.fecha_cierre) {
+          el {{ resumenPlanilla()?.periodo?.fecha_cierre | date:'dd/MM/yyyy HH:mm' }}
+        }
+        @if (resumenPlanilla()?.periodo?.cerrado_por_nombre) {
+          por <strong>{{ resumenPlanilla()?.periodo?.cerrado_por_nombre }}</strong>.
+        }
+        Los registros históricos están congelados y no admiten nuevos anticipos ni modificaciones.
+      </div>
+      @if (auth.isSuperAdmin()) {
+        <button class="btn btn-sm btn-outline-warning" (click)="abrirModalReapertura()">
+          🔓 Reabrir Planilla
+        </button>
+      }
+    </div>
+  } @else {
+    <div class="status-banner abierto animate-in">
+      <div class="banner-icon">🟢</div>
+      <div class="banner-text">
+        <strong>Planilla en Curso (Abierta):</strong>
+        Los anticipos y liquidaciones registrados en el sistema se consolidan aquí en tiempo real.
+        Una vez completados los pagos, use el botón de cierre para sellar la planilla.
+      </div>
+      @if (auth.hasPermission('PLANILLA_CERRAR') || auth.isSuperAdmin()) {
+        <button class="btn btn-sm btn-danger-soft" (click)="abrirModalCierre()">
+          🔒 Cerrar Planilla
+        </button>
+      }
+    </div>
+  }
+
+  <!-- ================================================================= -->
+  <!-- TARJETAS DE INDICADORES / KPIS SALARIALES -->
+  <!-- ================================================================= -->
+  <section class="kpi-grid">
+    <!-- 1. Total Trabajadores -->
+    <div class="kpi-card">
+      <div class="kpi-header">
+        <span class="kpi-title">Trabajadores en Planilla</span>
+        <div class="kpi-icon blue">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+        </div>
+      </div>
+      <div class="kpi-value">{{ resumenPlanilla()?.total_trabajadores || 0 }}</div>
+      <div class="kpi-footer">
+        <span class="text-emerald font-semibold">{{ resumenPlanilla()?.trabajadores_liquidados || 0 }} Liquidados</span>
+        <span>•</span>
+        <span class="text-amber font-semibold">{{ (resumenPlanilla()?.trabajadores_pendientes || 0) + (resumenPlanilla()?.trabajadores_parciales || 0) }} Pendientes</span>
+      </div>
+    </div>
+
+    <!-- 2. Masa Salarial Bruta -->
+    <div class="kpi-card">
+      <div class="kpi-header">
+        <span class="kpi-title">Masa Salarial Bruta</span>
+        <div class="kpi-icon slate">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="1" x2="12" y2="23"/>
+            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+          </svg>
+        </div>
+      </div>
+      <div class="kpi-value">
+        Bs {{ (resumenPlanilla()?.total_sueldo_base || 0) | number:'1.2-2' }}
+      </div>
+      <div class="kpi-footer">
+        <span>Suma de sueldos base mensual</span>
+      </div>
+    </div>
+
+    <!-- 3. Total Anticipos Descontados -->
+    <div class="kpi-card">
+      <div class="kpi-header">
+        <span class="kpi-title">Total Anticipos</span>
+        <div class="kpi-icon amber">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" x2="12" y1="15" y2="3"/>
+          </svg>
+        </div>
+      </div>
+      <div class="kpi-value text-amber">
+        Bs {{ (resumenPlanilla()?.total_anticipos || 0) | number:'1.2-2' }}
+      </div>
+      <div class="kpi-footer">
+        <span>&le; Día 18: Bs {{ (resumenPlanilla()?.total_anticipos_antes_18 || 0) | number:'1.2-2' }}</span>
+        <span>•</span>
+        <span>&gt; 18: Bs {{ (resumenPlanilla()?.total_anticipos_post_18 || 0) | number:'1.2-2' }}</span>
+      </div>
+    </div>
+
+    <!-- 4. Total Pagado a la Fecha -->
+    <div class="kpi-card">
+      <div class="kpi-header">
+        <span class="kpi-title">Total Pagado a la Fecha</span>
+        <div class="kpi-icon emerald">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+        </div>
+      </div>
+      <div class="kpi-value text-emerald">
+        Bs {{ (resumenPlanilla()?.total_pagado || 0) | number:'1.2-2' }}
+      </div>
+      <div class="kpi-footer">
+        <span>Quincenas: Bs {{ (resumenPlanilla()?.total_pagos_quincena || 0) | number:'1.2-2' }}</span>
+      </div>
+    </div>
+
+    <!-- 5. Saldo Salarial Pendiente -->
+    <div class="kpi-card highlight-card">
+      <div class="kpi-header">
+        <span class="kpi-title">Saldo Pendiente Global</span>
+        <div class="kpi-icon red">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" x2="12" y1="8" y2="12"/>
+            <line x1="12" x2="12.01" y2="16"/>
+          </svg>
+        </div>
+      </div>
+      <div class="kpi-value" [class.text-red]="(resumenPlanilla()?.total_saldo_pendiente || 0) > 0" [class.text-emerald]="(resumenPlanilla()?.total_saldo_pendiente || 0) <= 0">
+        Bs {{ (resumenPlanilla()?.total_saldo_pendiente || 0) | number:'1.2-2' }}
+      </div>
+      <div class="kpi-footer">
+        @if ((resumenPlanilla()?.total_saldo_pendiente || 0) <= 0) {
+          <span class="badge-status liquidado">100% LIQUIDADA</span>
+        } @else {
+          <span class="text-red font-semibold">Por liquidar a fin de mes</span>
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================================= -->
+  <!-- BARRA DE ACCIONES Y FILTROS -->
+  <!-- ================================================================= -->
+  <div class="panel-card mt-2">
+    <div class="toolbar-box">
+      <!-- Filtro Búsqueda -->
+      <div class="search-input-group">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/>
+          <line x1="21" x2="16.65" y1="21" y2="16.65"/>
+        </svg>
+        <input
+          type="text"
+          placeholder="Buscar por carné, nombre o cargo..."
+          class="input-search"
+          [ngModel]="searchTerm()"
+          (ngModelChange)="searchTerm.set($event)"
+        />
+        @if (searchTerm()) {
+          <button class="btn-clear" (click)="searchTerm.set('')">✕</button>
+        }
+      </div>
+
+      <!-- Filtro por Área -->
+      <div class="filter-group">
+        <label>Área:</label>
+        <select
+          class="select-sm"
+          [ngModel]="selectedAreaFilter()"
+          (ngModelChange)="selectedAreaFilter.set($event)"
+        >
+          <option [ngValue]="null">Todas las Áreas</option>
+          @for (a of areas(); track a.id) {
+            <option [value]="a.id">{{ a.nombre }}</option>
+          }
+        </select>
+      </div>
+
+      <!-- Filtro por Estado -->
+      <div class="filter-group">
+        <label>Estado:</label>
+        <select
+          class="select-sm"
+          [ngModel]="statusFilter()"
+          (ngModelChange)="statusFilter.set($event)"
+        >
+          <option value="TODOS">Todos los Estados</option>
+          <option value="LIQUIDADO">Liquidados</option>
+          <option value="PARCIAL">Parciales</option>
+          <option value="PENDIENTE">Pendientes</option>
+        </select>
+      </div>
+
+      <!-- Botones de Exportación / Impresión -->
+      <div class="export-actions">
+        <button class="btn btn-sm btn-secondary" (click)="imprimirPlanilla()" title="Imprimir o guardar como PDF">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 6 2 18 2 18 9"/>
+            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+            <rect width="12" height="8" x="6" y="14"/>
+          </svg>
+          <span>Imprimir / PDF</span>
+        </button>
+
+        <button class="btn btn-sm btn-secondary" (click)="exportarCSV()" title="Descargar como archivo CSV para Excel">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" x2="12" y1="15" y2="3"/>
+          </svg>
+          <span>Exportar CSV</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- TABLA CONSOLIDADA DE PLANILLA SALARIAL -->
+    <!-- ================================================================= -->
+    <div class="table-responsive mt-3">
+      <table class="clean-table table-planilla">
+        <thead>
+          <tr>
+            <th class="text-center" style="width: 45px;">N°</th>
+            <th>Trabajador</th>
+            <th>Área / Cargo</th>
+            <th class="text-right">Sueldo Base</th>
+            <th class="text-right">Ant. &le; 18</th>
+            <th class="text-right">Pago Quincena</th>
+            <th class="text-right">Ant. &gt; 18</th>
+            <th class="text-right">Total Anticipos</th>
+            <th class="text-right">Líquido Pagable</th>
+            <th class="text-right">Total Pagado</th>
+            <th class="text-right">Saldo Pendiente</th>
+            <th class="text-center">Estado</th>
+            <th class="text-center">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (it of filteredItems(); track it.trabajador_id; let idx = $index) {
+            <tr [class.row-liquidado]="it.estado_pago === 'LIQUIDADO'">
+              <td class="text-center font-mono text-xs text-slate-500">{{ idx + 1 }}</td>
+              <td>
+                <div class="worker-cell">
+                  <div class="worker-avatar">
+                    {{ it.nombre_completo.charAt(0) }}
+                  </div>
+                  <div class="worker-details">
+                    <span class="font-bold text-slate-900">{{ it.nombre_completo }}</span>
+                    <span class="text-xs text-slate-500">CI: {{ it.ci || 'S/N' }}</span>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <div class="area-cargo-cell">
+                  <span class="badge-area">{{ it.area }}</span>
+                  <span class="text-xs text-slate-600">{{ it.cargo }}</span>
+                </div>
+              </td>
+              <td class="text-right font-medium text-slate-900">
+                Bs {{ it.sueldo_base | number:'1.2-2' }}
+              </td>
+              <td class="text-right text-slate-700">
+                Bs {{ it.anticipos_antes_18 | number:'1.2-2' }}
+              </td>
+              <td class="text-right">
+                @if (it.pago_quincena > 0) {
+                  <span class="text-emerald font-semibold">Bs {{ it.pago_quincena | number:'1.2-2' }}</span>
+                } @else if (it.quincena_liquidada) {
+                  <span class="badge-mini liquidado">Revisada (Bs 0.00)</span>
+                } @else {
+                  <span class="text-slate-400">Bs 0.00</span>
+                }
+              </td>
+              <td class="text-right text-slate-700">
+                Bs {{ it.anticipos_post_18 | number:'1.2-2' }}
+              </td>
+              <td class="text-right font-semibold text-amber-700">
+                - Bs {{ it.total_anticipos | number:'1.2-2' }}
+              </td>
+              <td class="text-right font-bold text-slate-900">
+                Bs {{ it.liquido_pagable | number:'1.2-2' }}
+              </td>
+              <td class="text-right font-semibold text-emerald-700">
+                Bs {{ it.total_pagado | number:'1.2-2' }}
+              </td>
+              <td class="text-right font-bold" [class.text-red]="it.saldo_pendiente > 0" [class.text-emerald]="it.saldo_pendiente <= 0">
+                Bs {{ it.saldo_pendiente | number:'1.2-2' }}
+              </td>
+              <td class="text-center">
+                @if (it.estado_pago === 'LIQUIDADO' || it.saldo_pendiente <= 0) {
+                  <span class="badge-status liquidado">LIQUIDADO</span>
+                } @else if (it.estado_pago === 'PARCIAL' || it.total_pagado > 0) {
+                  <span class="badge-status parcial">PARCIAL</span>
+                } @else {
+                  <span class="badge-status pendiente">PENDIENTE</span>
+                }
+              </td>
+              <td class="text-center">
+                <div class="row-actions">
+                  <button
+                    class="btn-icon"
+                    (click)="verDetalleTrabajador(it)"
+                    title="Ver Ficha y Desglose Salarial"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <circle cx="12" cy="12" r="10"/>
+                      <line x1="12" x2="12" y1="16" y2="12"/>
+                      <line x1="12" x2="12.01" y1="8" y2="8"/>
+                    </svg>
+                  </button>
+
+                  <button
+                    class="btn-icon"
+                    (click)="irAPagosTrabajador(it)"
+                    title="Gestionar en Módulo de Pagos"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect width="20" height="12" x="2" y="6" rx="2"/>
+                      <circle cx="12" cy="12" r="2"/>
+                      <path d="M6 12h.01M18 12h.01"/>
+                    </svg>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="13" class="empty-row text-center py-8">
+                <div class="empty-state-box">
+                  <span class="empty-icon">📋</span>
+                  <h4>No se encontraron trabajadores en esta planilla</h4>
+                  <p class="text-xs text-slate-500">Prueba ajustando los filtros de búsqueda o seleccionando otro período.</p>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+        <tfoot>
+          <tr class="table-total-row">
+            <td colspan="3" class="text-right font-bold">TOTALES CONSOLIDADOS:</td>
+            <td class="text-right font-bold">Bs {{ (resumenPlanilla()?.total_sueldo_base || 0) | number:'1.2-2' }}</td>
+            <td class="text-right font-bold">Bs {{ (resumenPlanilla()?.total_anticipos_antes_18 || 0) | number:'1.2-2' }}</td>
+            <td class="text-right font-bold text-emerald">Bs {{ (resumenPlanilla()?.total_pagos_quincena || 0) | number:'1.2-2' }}</td>
+            <td class="text-right font-bold">Bs {{ (resumenPlanilla()?.total_anticipos_post_18 || 0) | number:'1.2-2' }}</td>
+            <td class="text-right font-bold text-amber">Bs {{ (resumenPlanilla()?.total_anticipos || 0) | number:'1.2-2' }}</td>
+            <td class="text-right font-bold">Bs {{ (resumenPlanilla()?.total_liquido_pagable || 0) | number:'1.2-2' }}</td>
+            <td class="text-right font-bold text-emerald">Bs {{ (resumenPlanilla()?.total_pagado || 0) | number:'1.2-2' }}</td>
+            <td class="text-right font-bold text-red">Bs {{ (resumenPlanilla()?.total_saldo_pendiente || 0) | number:'1.2-2' }}</td>
+            <td colspan="2"></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+
+  <!-- ================================================================= -->
+  <!-- MODAL: CIERRE FORMAL DE PLANILLA (RF-9, RF-10, RF-11) -->
+  <!-- ================================================================= -->
+  @if (showModalCierre()) {
+    <div class="modal-backdrop">
+      <div class="modal-card animate-scale-up">
+        <div class="modal-icon-badge red">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+        </div>
+
+        <h3>Cierre Formal de Planilla Salarial</h3>
+        <p class="modal-desc">
+          Período: <strong>{{ resumenPlanilla()?.periodo?.descripcion }}</strong>
+        </p>
+
+        <!-- Advertencia de pagos pendientes (RF-10) -->
+        @if ((resumenPlanilla()?.total_saldo_pendiente || 0) > 0) {
+          <div class="alert-box-warning mb-4">
+            <div class="alert-icon">⚠️</div>
+            <div class="alert-content">
+              <strong>Atención: Pagos Pendientes Detectados</strong>
+              <p>
+                Existen <strong>{{ trabajadoresPendientes().length }} trabajadores</strong> que aún tienen
+                un saldo salarial pendiente por cobrar, por un monto acumulado de
+                <strong>Bs {{ (resumenPlanilla()?.total_saldo_pendiente || 0) | number:'1.2-2' }}</strong>.
+              </p>
+              <div class="pending-workers-preview">
+                @for (tp of trabajadoresPendientes().slice(0, 4); track tp.trabajador_id) {
+                  <span class="pending-pill">
+                    {{ tp.nombre_completo }}: Bs {{ tp.saldo_pendiente | number:'1.2-2' }}
+                  </span>
+                }
+                @if (trabajadoresPendientes().length > 4) {
+                  <span class="pending-pill">... y {{ trabajadoresPendientes().length - 4 }} más</span>
+                }
+              </div>
+            </div>
+          </div>
+
+          <label class="checkbox-container text-left mb-4">
+            <input type="checkbox" [(ngModel)]="confirmarPendientes" />
+            <span class="checkmark"></span>
+            <span class="check-label font-bold text-red-700">
+              Entiendo que existen pagos pendientes y confirmo conscientemente que deseo cerrar la planilla de este período.
+            </span>
+          </label>
+        } @else {
+          <div class="alert-box-success mb-4">
+            <div class="alert-icon">✅</div>
+            <div class="alert-content">
+              <strong>Planilla 100% Liquidada:</strong>
+              Todos los trabajadores han recibido la totalidad de sus haberes y anticipos sin saldos pendientes.
+            </div>
+          </div>
+        }
+
+        <div class="form-group text-left">
+          <label>Observaciones del Cierre (Opcional)</label>
+          <textarea
+            class="input-clean"
+            rows="2"
+            placeholder="Ej. Cierre aprobado por Gerencia General tras revisión de quincenas y anticipos..."
+            [(ngModel)]="observacionesCierre"
+          ></textarea>
+        </div>
+
+        <div class="modal-actions mt-4">
+          <button class="btn btn-secondary" (click)="showModalCierre.set(false)">
+            Cancelar
+          </button>
+          <button
+            class="btn btn-danger"
+            [disabled]="(resumenPlanilla()?.total_saldo_pendiente || 0) > 0 && !confirmarPendientes()"
+            (click)="confirmarCierre()"
+          >
+            🔒 Confirmar y Cerrar Planilla
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ================================================================= -->
+  <!-- MODAL: REAPERTURA ADMINISTRATIVA DE PLANILLA -->
+  <!-- ================================================================= -->
+  @if (showModalReapertura()) {
+    <div class="modal-backdrop">
+      <div class="modal-card animate-scale-up">
+        <div class="modal-icon-badge amber">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
+            <path d="M7 11V7a5 5 0 0 1 9.9-1"/>
+          </svg>
+        </div>
+
+        <h3>Reapertura Administrativa de Planilla</h3>
+        <p class="modal-desc">
+          Período: <strong>{{ resumenPlanilla()?.periodo?.descripcion }}</strong>
+        </p>
+
+        <p class="text-sm text-slate-600 mb-3 text-left">
+          Esta acción desbloqueará la edición de pagos y anticipos para este período.
+          Por motivos de seguridad y auditoría legal, debe ingresar una justificación obligatoria.
+        </p>
+
+        <div class="form-group text-left">
+          <label>Motivo de Reapertura *</label>
+          <textarea
+            class="input-clean"
+            rows="3"
+            placeholder="Indica la razón o autorización expresa para reabrir esta planilla..."
+            [(ngModel)]="motivoReapertura"
+          ></textarea>
+        </div>
+
+        <div class="modal-actions mt-4">
+          <button class="btn btn-secondary" (click)="showModalReapertura.set(false)">
+            Cancelar
+          </button>
+          <button
+            class="btn btn-warning"
+            [disabled]="motivoReapertura().trim().length < 5"
+            (click)="confirmarReapertura()"
+          >
+            🔓 Confirmar Reapertura
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ================================================================= -->
+  <!-- MODAL: DETALLE / FICHA DE NÓMINA DEL TRABAJADOR -->
+  <!-- ================================================================= -->
+  @if (showModalDetalleTrabajador()) {
+    <div class="modal-backdrop">
+      <div class="modal-card modal-card-lg animate-scale-up">
+        <div class="modal-icon-badge blue">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" x2="8" y1="13" y2="13"/>
+            <line x1="16" x2="8" y1="17" y2="17"/>
+            <polyline points="10 9 9 9 8 9"/>
+          </svg>
+        </div>
+
+        <h3>Ficha Salarial de Nómina</h3>
+        <p class="modal-desc">
+          Período: <strong>{{ resumenPlanilla()?.periodo?.descripcion }}</strong>
+        </p>
+
+        <div class="worker-profile-banner text-left mb-4">
+          <div class="wp-name font-bold text-slate-900 text-lg">
+            {{ selectedItemDetalle()?.nombre_completo }}
+          </div>
+          <div class="wp-meta text-xs text-slate-500">
+            <span>CI: <strong>{{ selectedItemDetalle()?.ci || 'S/N' }}</strong></span>
+            <span>•</span>
+            <span>Área: <strong>{{ selectedItemDetalle()?.area }}</strong></span>
+            <span>•</span>
+            <span>Cargo: <strong>{{ selectedItemDetalle()?.cargo }}</strong></span>
+          </div>
+        </div>
+
+        <!-- Desglose Salarial Transparente -->
+        <div class="financial-breakdown-card text-left mb-4">
+          <div class="fb-row">
+            <span>(+) Sueldo Base Mensual:</span>
+            <strong>Bs {{ (selectedItemDetalle()?.sueldo_base || 0) | number:'1.2-2' }}</strong>
+          </div>
+          <div class="fb-row text-slate-700">
+            <span>(+/-) Otros Ajustes / Bonos:</span>
+            <span>Bs {{ (selectedItemDetalle()?.ajustes || 0) | number:'1.2-2' }}</span>
+          </div>
+          <div class="fb-row highlight-subtotal">
+            <span>(=) Total Ganado Bruto:</span>
+            <strong>Bs {{ (selectedItemDetalle()?.total_ganado_bruto || 0) | number:'1.2-2' }}</strong>
+          </div>
+
+          <div class="fb-divider"></div>
+
+          <div class="fb-row text-amber-700">
+            <span>(-) Anticipos hasta Día 18:</span>
+            <span>- Bs {{ (selectedItemDetalle()?.anticipos_antes_18 || 0) | number:'1.2-2' }}</span>
+          </div>
+          <div class="fb-row text-amber-700">
+            <span>(-) Anticipos después de Día 18:</span>
+            <span>- Bs {{ (selectedItemDetalle()?.anticipos_post_18 || 0) | number:'1.2-2' }}</span>
+          </div>
+          <div class="fb-row font-semibold text-amber-800">
+            <span>(-) Total Anticipos Descontados:</span>
+            <span>- Bs {{ (selectedItemDetalle()?.total_anticipos || 0) | number:'1.2-2' }}</span>
+          </div>
+
+          <div class="fb-divider"></div>
+
+          <div class="fb-row highlight-liquid">
+            <span>(=) Líquido Pagable del Mes:</span>
+            <strong class="text-blue font-bold">Bs {{ (selectedItemDetalle()?.liquido_pagable || 0) | number:'1.2-2' }}</strong>
+          </div>
+
+          <div class="fb-row text-emerald-700 font-semibold">
+            <span>(-) Pagos Salariales Entregados (Quincena/Parciales):</span>
+            <span>- Bs {{ (selectedItemDetalle()?.total_pagado || 0) | number:'1.2-2' }}</span>
+          </div>
+
+          <div class="fb-row highlight-final">
+            <span>(=) Saldo Salarial Pendiente:</span>
+            <strong [class.text-emerald]="(selectedItemDetalle()?.saldo_pendiente || 0) <= 0" [class.text-red]="(selectedItemDetalle()?.saldo_pendiente || 0) > 0">
+              Bs {{ (selectedItemDetalle()?.saldo_pendiente || 0) | number:'1.2-2' }}
+            </strong>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button class="btn btn-secondary" (click)="showModalDetalleTrabajador.set(false)">
+            Cerrar Ficha
+          </button>
+          <button class="btn btn-primary" (click)="irAPagosTrabajador(selectedItemDetalle()!)">
+            Ir a Gestión de Pagos
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

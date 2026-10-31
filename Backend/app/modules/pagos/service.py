@@ -304,6 +304,12 @@ def registrar_anticipo(
     if periodo.estado == "CERRADO":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
+            detail="El período salarial se encuentra CERRADO. No se admiten nuevas liquidaciones.",
+        )
+
+    if periodo.estado == "CERRADO":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail="El período salarial se encuentra CERRADO. No se admiten nuevos anticipos.",
         )
 
@@ -787,6 +793,12 @@ def registrar_liquidacion(
             detail="Período salarial no encontrado.",
         )
 
+    if periodo.estado == "CERRADO":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="El período salarial se encuentra CERRADO. No se admiten nuevas liquidaciones.",
+        )
+
     m = calcular_metricas_trabajador_periodo(db, trabajador, periodo)
     existente = m["liquidacion"]
 
@@ -1179,6 +1191,8 @@ def anular_anticipo(db: Session, anticipo_id: int, motivo: str, usuario_ci: Opti
     anticipo = db.execute(select(Anticipo).where(Anticipo.id == anticipo_id)).scalars().first()
     if not anticipo:
         raise HTTPException(status_code=404, detail="Anticipo no encontrado.")
+    if anticipo.periodo and anticipo.periodo.estado == "CERRADO":
+        raise HTTPException(status_code=400, detail="No se pueden anular anticipos de un período salarial CERRADO.")
     if anticipo.estado == "ANULADO":
         raise HTTPException(status_code=400, detail="El anticipo ya se encuentra anulado.")
 
@@ -1228,6 +1242,8 @@ def anular_liquidacion(db: Session, liquidacion_id: int, motivo: str, usuario_ci
     liq = db.execute(select(Liquidacion).where(Liquidacion.id == liquidacion_id)).scalars().first()
     if not liq:
         raise HTTPException(status_code=404, detail="Liquidación no encontrada.")
+    if liq.periodo and liq.periodo.estado == "CERRADO":
+        raise HTTPException(status_code=400, detail="No se pueden anular liquidaciones de un período salarial CERRADO.")
     if liq.estado == "ANULADO":
         raise HTTPException(status_code=400, detail="La liquidación ya se encuentra anulada.")
 
@@ -1254,6 +1270,8 @@ def anular_pago_liquidacion(db: Session, pago_id: int, motivo: str, usuario_ci: 
     pago = db.execute(select(PagoLiquidacion).where(PagoLiquidacion.id == pago_id)).scalars().first()
     if not pago:
         raise HTTPException(status_code=404, detail="Pago no encontrado.")
+    if pago.liquidacion and pago.liquidacion.periodo and pago.liquidacion.periodo.estado == "CERRADO":
+        raise HTTPException(status_code=400, detail="No se pueden anular pagos de un período salarial CERRADO.")
     if pago.estado == "ANULADO":
         raise HTTPException(status_code=400, detail="El pago ya se encuentra anulado.")
 
