@@ -232,6 +232,9 @@ def init_db():
                 db.add(p_obj)
                 db.commit()
 
+        from app.modules.pagos.service import asegurar_periodos_automaticos
+        asegurar_periodos_automaticos(db)
+
         # 4. Sembrar Super Administrador
         super_email = "juanpablovacacarvalho@gmail.com"
         super_admin = db.execute(select(Usuario).where(Usuario.email == super_email)).scalars().first()

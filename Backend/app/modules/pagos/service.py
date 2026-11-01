@@ -1,4 +1,5 @@
 from datetime import date, datetime, timezone, timedelta
+import calendar
 from typing import List, Optional, Dict, Any
 from collections import defaultdict
 from decimal import Decimal
@@ -175,9 +176,74 @@ def obtener_base_salarial_periodo(
 
 
 # =========================================================================
-# PERÍODOS SALARIALES
+# PERÍODOS SALARIALES Y APERTURA AUTOMÁTICA
 # =========================================================================
+MESES_ES = {
+    1: "Enero", 2: "Febrero", 3: "Marzo", 4: "Abril",
+    5: "Mayo", 6: "Junio", 7: "Julio", 8: "Agosto",
+    9: "Septiembre", 10: "Octubre", 11: "Noviembre", 12: "Diciembre"
+}
+
+def calcular_mes_siguiente(anio: int, mes: int) -> tuple[int, int]:
+    if mes == 12:
+        return anio + 1, 1
+    return anio, mes + 1
+
+
+def asegurar_periodos_automaticos(db: Session):
+    """
+    Apertura Automática Inteligente de Períodos:
+    Garantiza que el mes actual, el mes siguiente y el subsiguiente estén siempre
+    creados y disponibles en la base de datos con sus fechas exactas (inicio, fin, pago día 5).
+    """
+    now = datetime.now(timezone(timedelta(hours=-4)))
+    anio_hoy = now.year
+    mes_hoy = now.month
+
+    # Asegurar mes actual, siguiente y subsiguiente
+    m1_anio, m1_mes = anio_hoy, mes_hoy
+    m2_anio, m2_mes = calcular_mes_siguiente(m1_anio, m1_mes)
+    m3_anio, m3_mes = calcular_mes_siguiente(m2_anio, m2_mes)
+
+    objetivos = [(m1_anio, m1_mes), (m2_anio, m2_mes), (m3_anio, m3_mes)]
+
+    nuevos_creados = False
+    for a, m in objetivos:
+        existe = db.scalar(
+            select(PeriodoSalarial.id).where(
+                PeriodoSalarial.anio == a,
+                PeriodoSalarial.mes == m
+            )
+        )
+        if not existe:
+            _, ultimo_dia = calendar.monthrange(a, m)
+            f_inicio = date(a, m, 1)
+            f_fin = date(a, m, ultimo_dia)
+            p_anio, p_mes = calcular_mes_siguiente(a, m)
+            f_pago = date(p_anio, p_mes, 5)
+            desc_mes = f"{MESES_ES[m]} {a}"
+
+            nuevo = PeriodoSalarial(
+                mes=m,
+                anio=a,
+                fecha_inicio=f_inicio,
+                fecha_fin=f_fin,
+                fecha_pago_estimada=f_pago,
+                estado="ABIERTO",
+                descripcion=desc_mes
+            )
+            db.add(nuevo)
+            nuevos_creados = True
+
+    if nuevos_creados:
+        try:
+            db.commit()
+        except Exception:
+            db.rollback()
+
+
 def listar_periodos(db: Session) -> List[PeriodoSalarial]:
+    asegurar_periodos_automaticos(db)
     stmt = select(PeriodoSalarial).order_by(
         desc(PeriodoSalarial.anio), desc(PeriodoSalarial.mes)
     )
