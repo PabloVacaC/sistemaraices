@@ -573,6 +573,14 @@ export class PlanillaComponent implements OnInit {
       if (fila.liquidacion_comprobante) {
         const pid = this.selectedPeriodoId();
         const periodoDesc = this.periodos().find(p => p.id === pid)?.descripcion || '';
+
+        // El importe de la liquidación final debe reflejar el monto de la liquidación (sin mezclar la quincena)
+        const montoLiquidado = (fila.pago_liquidacion !== undefined && fila.pago_liquidacion !== null && Number(fila.pago_liquidacion) > 0)
+          ? Number(fila.pago_liquidacion)
+          : (Number(fila.monto_pagado_total || 0) > Number(fila.pago_quincena || 0)
+              ? Number(fila.monto_pagado_total) - Number(fila.pago_quincena || 0)
+              : Math.max(0, Number(fila.liquido_pagable || 0)));
+
         this.abrirComprobantePago({
           tipo: 'LIQUIDACION',
           numero_comprobante: fila.liquidacion_comprobante,
@@ -581,16 +589,18 @@ export class PlanillaComponent implements OnInit {
           trabajador_cargo: fila.cargo,
           trabajador_area: fila.area,
           periodo_descripcion: periodoDesc,
-          fecha: new Date().toISOString().substring(0, 10),
-          importe: fila.monto_pagado_total || fila.liquido_pagable,
-          metodo_pago: 'EFECTIVO',
-          sueldo_base: fila.haber_basico,
+          fecha: fila.fecha_liquidacion || new Date().toISOString().substring(0, 10),
+          importe: montoLiquidado > 0 ? montoLiquidado : (Number(fila.liquido_pagable) || Number(fila.total_ganado)),
+          metodo_pago: fila.liquidacion_metodo_pago || 'EFECTIVO',
+          sueldo_base: fila.total_ganado || fila.haber_basico,
           anticipos_descontados: fila.pago_anticipos,
+          descuentos_salariales: fila.total_descuentos,
           quincena_descontada: fila.pago_quincena,
-          saldo_restante: 0,
-          observaciones: 'Liquidación salarial completada',
+          ajustes: fila.liquidacion_ajustes || 0,
+          saldo_restante: fila.saldo_pendiente_real || 0,
+          observaciones: fila.liquidacion_observaciones || 'Liquidación salarial completada',
           usuario_nombre: this.auth.currentUser()?.nombre || 'Administrador',
-          usuario_id: this.auth.currentUser()?.ci || '',
+          usuario_id: fila.liquidacion_usuario_id || this.auth.currentUser()?.ci || '',
         });
       }
       return;
@@ -665,6 +675,7 @@ export class PlanillaComponent implements OnInit {
           metodo_pago: this.liquidacionFilaForm.pago_inmediato ? this.liquidacionFilaForm.metodo_pago_inmediato : 'POR PAGAR',
           sueldo_base: liq.sueldo_base || fila.haber_basico,
           anticipos_descontados: liq.total_anticipos || fila.pago_anticipos,
+          descuentos_salariales: fila.total_descuentos,
           quincena_descontada: liq.pago_quincena_previo ?? fila.pago_quincena,
           ajustes: liq.ajustes,
           saldo_restante: liq.saldo_pendiente,

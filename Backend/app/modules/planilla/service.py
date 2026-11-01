@@ -250,6 +250,18 @@ def obtener_o_generar_planilla(db: Session, periodo_id: int) -> PlanillaMensualO
 
         total_pagado = sum((p.monto for p in pagos_confirmados), Decimal("0.00"))
 
+        pagos_liquidacion = [
+            p for p in pagos_confirmados
+            if getattr(p, "tipo_pago", "") not in ("PAGO_QUINCENA", "REVISION_QUINCENA")
+        ]
+        monto_pago_liquidacion = sum((p.monto for p in pagos_liquidacion), Decimal("0.00"))
+        ultimo_pago_liq = pagos_liquidacion[-1] if pagos_liquidacion else None
+        fecha_liq = liq.fecha_liquidacion if liq else None
+        metodo_pago_liq = ultimo_pago_liq.metodo_pago if ultimo_pago_liq else "EFECTIVO"
+        obs_liq = liq.observaciones if liq else None
+        ajustes_liq = liq.ajustes if liq else Decimal("0.00")
+        usuario_id_liq = ultimo_pago_liq.usuario_id if (ultimo_pago_liq and ultimo_pago_liq.usuario_id) else (liq.usuario_id if liq else None)
+
         # Col 13: Líquido Pagable (RF-46)
         # Líquido pagable = total ganado − total de anticipos y descuentos − pago de quincena
         liquido_pagable = total_ganado - total_anticipos_descuentos - monto_quincena
@@ -312,6 +324,12 @@ def obtener_o_generar_planilla(db: Session, periodo_id: int) -> PlanillaMensualO
             estado_liquidacion=estado_liq,
             liquidacion_id=liq.id if liq else None,
             liquidacion_comprobante=liq.numero_comprobante if liq else None,
+            pago_liquidacion=monto_pago_liquidacion,
+            fecha_liquidacion=fecha_liq,
+            liquidacion_metodo_pago=metodo_pago_liq,
+            liquidacion_observaciones=obs_liq,
+            liquidacion_ajustes=ajustes_liq,
+            liquidacion_usuario_id=usuario_id_liq,
         )
         filas_out.append(fila)
         nro_consecutivo += 1

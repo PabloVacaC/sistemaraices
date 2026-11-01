@@ -843,6 +843,24 @@
                   <span class="text-amber-700 font-medium">- Bs {{ (currentReceipt()?.anticipos_descontados || 0) | number:'1.2-2' }}</span>
                 </div>
               }
+              @if ((currentReceipt()?.descuentos_salariales || 0) > 0) {
+                <div class="rb-row text-slate-700">
+                  <span>(-) Otros Descuentos / Sanciones:</span>
+                  <span class="text-rose-700 font-medium">- Bs {{ (currentReceipt()?.descuentos_salariales || 0) | number:'1.2-2' }}</span>
+                </div>
+              }
+              @if ((currentReceipt()?.quincena_descontada || 0) > 0) {
+                <div class="rb-row text-slate-700">
+                  <span>(-) Quincena Pagada:</span>
+                  <span class="text-blue-700 font-medium">- Bs {{ (currentReceipt()?.quincena_descontada || 0) | number:'1.2-2' }}</span>
+                </div>
+              }
+              @if ((currentReceipt()?.ajustes || 0) !== 0) {
+                <div class="rb-row text-slate-700">
+                  <span>(+/-) Otros Ajustes / Bonos:</span>
+                  <span class="text-purple-700 font-medium">{{ (currentReceipt()?.ajustes || 0) > 0 ? '+' : '' }} Bs {{ (currentReceipt()?.ajustes || 0) | number:'1.2-2' }}</span>
+                </div>
+              }
               <div class="rb-row font-bold text-slate-900 border-t pt-1.5 mt-1">
                 <span>(=) Monto Entregado:</span>
                 <span class="text-emerald-700 font-bold">Bs {{ (currentReceipt()?.importe || 0) | number:'1.2-2' }}</span>

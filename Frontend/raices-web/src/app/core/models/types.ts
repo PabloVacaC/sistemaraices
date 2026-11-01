@@ -512,6 +512,12 @@ export interface PlanillaFila {
   estado_liquidacion: string;
   liquidacion_id?: number | null;
   liquidacion_comprobante?: string | null;
+  pago_liquidacion?: number;
+  fecha_liquidacion?: string;
+  liquidacion_metodo_pago?: string;
+  liquidacion_observaciones?: string;
+  liquidacion_ajustes?: number;
+  liquidacion_usuario_id?: string;
 }
 
 export interface PlanillaResumenTotales {

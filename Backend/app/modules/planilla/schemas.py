@@ -90,6 +90,12 @@ class PlanillaFilaOut(BaseModel):
     estado_liquidacion: str = "PENDIENTE"  # PENDIENTE, PARCIAL, LIQUIDADO
     liquidacion_id: Optional[int] = None
     liquidacion_comprobante: Optional[str] = None
+    pago_liquidacion: Decimal = Decimal("0.00")
+    fecha_liquidacion: Optional[date] = None
+    liquidacion_metodo_pago: Optional[str] = None
+    liquidacion_observaciones: Optional[str] = None
+    liquidacion_ajustes: Decimal = Decimal("0.00")
+    liquidacion_usuario_id: Optional[str] = None
 
 
 class PlanillaResumenTotales(BaseModel):
