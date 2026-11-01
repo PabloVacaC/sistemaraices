@@ -260,7 +260,7 @@ def calcular_metricas_trabajador_periodo(
         Descuento.periodo_id == periodo.id,
         Descuento.estado == "APLICADO",
     )
-    descuentos = list(db.execute(stmt_desc).scalars().all())
+    descuentos = list(db.execute(stmt_desc).scalars().unique().all())
     total_descuentos = sum((d.monto for d in descuentos), Decimal("0.00"))
 
     # 2. Liquidación y pagos parciales existentes
@@ -611,7 +611,7 @@ def obtener_comprobante_anticipo_detallado(
         Descuento.periodo_id == periodo.id,
         Descuento.estado == "APLICADO",
     )
-    total_descuentos = sum((d.monto for d in db.execute(stmt_desc).scalars().all()), Decimal("0.00"))
+    total_descuentos = sum((d.monto for d in db.execute(stmt_desc).scalars().unique().all()), Decimal("0.00"))
 
     # El saldo salarial estimado tras este anticipo debe descontar los anticipos acumulados,
     # los descuentos aplicados y los pagos salariales ya ejecutados (quincena / parciales)
@@ -707,7 +707,7 @@ def listar_resumen_pagos_parciales(
     detalles_periodo = list(
         db.execute(
             select(PlanillaDetalle).where(PlanillaDetalle.periodo_id == periodo_id)
-        ).scalars().all()
+        ).scalars().unique().all()
     )
     detalles_por_trab = {d.trabajador_id: d for d in detalles_periodo}
 
@@ -717,7 +717,7 @@ def listar_resumen_pagos_parciales(
                 Descuento.periodo_id == periodo_id,
                 Descuento.estado == "APLICADO"
             )
-        ).scalars().all()
+        ).scalars().unique().all()
     )
     descuentos_por_trab = defaultdict(list)
     for d in descuentos_periodo:
@@ -1277,9 +1277,9 @@ def obtener_panel_general(db: Session, periodo_id: Optional[int] = None) -> Pane
     periodo_obj = None
     if periodo_id:
         periodo_obj = db.execute(select(PeriodoSalarial).where(PeriodoSalarial.id == periodo_id)).scalars().first()
-        det_list = db.execute(select(PlanillaDetalle).where(PlanillaDetalle.periodo_id == periodo_id)).scalars().all()
+        det_list = db.execute(select(PlanillaDetalle).where(PlanillaDetalle.periodo_id == periodo_id)).scalars().unique().all()
         detalles_dict = {d.trabajador_id: d for d in det_list}
-        desc_list = db.execute(select(Descuento).where(Descuento.periodo_id == periodo_id, Descuento.estado == "APLICADO")).scalars().all()
+        desc_list = db.execute(select(Descuento).where(Descuento.periodo_id == periodo_id, Descuento.estado == "APLICADO")).scalars().unique().all()
         for d in desc_list:
             descuentos_dict[d.trabajador_id] += d.monto
 
