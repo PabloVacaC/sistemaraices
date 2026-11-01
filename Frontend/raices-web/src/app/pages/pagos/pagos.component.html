@@ -525,6 +525,8 @@
                   <input
                     type="date"
                     class="input-clean"
+                    [min]="periodoActual()?.fecha_inicio"
+                    [max]="periodoActual()?.fecha_fin"
                     [ngModel]="anticipoFechaEntrega()"
                     (ngModelChange)="onAnticipoFechaEntregaChange($event)"
                   />
@@ -1059,7 +1061,13 @@
 
           <div class="form-group">
             <label>Fecha de Pago *</label>
-            <input type="date" class="input-clean" [(ngModel)]="pagoParcialForm.fecha_pago" />
+            <input
+              type="date"
+              class="input-clean"
+              [min]="periodoActual()?.fecha_inicio"
+              [max]="periodoActual()?.fecha_fin"
+              [(ngModel)]="pagoParcialForm.fecha_pago"
+            />
           </div>
 
           <div class="form-group">
@@ -1170,7 +1178,13 @@
 
           <div class="form-group">
             <label>Fecha de Pago *</label>
-            <input type="date" class="input-clean" [(ngModel)]="pagoQuincenaForm.fecha_pago" />
+            <input
+              type="date"
+              class="input-clean"
+              [min]="periodoActual()?.fecha_inicio"
+              [max]="periodoActual()?.fecha_fin"
+              [(ngModel)]="pagoQuincenaForm.fecha_pago"
+            />
           </div>
 
           <div class="form-group col-span-2">
@@ -1246,7 +1260,13 @@
 
           <div class="form-group">
             <label>Fecha de Liquidación *</label>
-            <input type="date" class="input-clean" [(ngModel)]="liquidacionDirectaForm.fecha_liquidacion" />
+            <input
+              type="date"
+              class="input-clean"
+              [min]="periodoActual()?.fecha_inicio"
+              [max]="periodoActual()?.fecha_fin"
+              [(ngModel)]="liquidacionDirectaForm.fecha_liquidacion"
+            />
           </div>
 
           <div class="form-group col-span-2">

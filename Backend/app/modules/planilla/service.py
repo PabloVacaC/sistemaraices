@@ -472,6 +472,15 @@ def registrar_descuento(
             detail="La planilla de este período se encuentra CERRADA. No se admiten nuevos descuentos.",
         )
 
+    if not (periodo.fecha_inicio <= datos.fecha <= periodo.fecha_fin):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"La fecha del descuento ({datos.fecha}) no corresponde al período {periodo.descripcion}. "
+                f"Debe estar entre {periodo.fecha_inicio} y {periodo.fecha_fin}."
+            ),
+        )
+
     trabajador = db.execute(
         select(Trabajador).where(Trabajador.id == datos.trabajador_id)
     ).scalars().first()

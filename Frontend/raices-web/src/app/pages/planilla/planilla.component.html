@@ -411,7 +411,13 @@
 
               <div class="form-group">
                 <label>Fecha *</label>
-                <input type="date" class="input-clean" [(ngModel)]="descuentoForm.fecha" />
+                <input
+                  type="date"
+                  class="input-clean"
+                  [min]="periodoActual()?.fecha_inicio"
+                  [max]="periodoActual()?.fecha_fin"
+                  [(ngModel)]="descuentoForm.fecha"
+                />
               </div>
 
               <div class="form-group col-span-2">
@@ -541,7 +547,13 @@
 
               <div class="form-group">
                 <label>Fecha de Entrega *</label>
-                <input type="date" class="input-clean" [(ngModel)]="anticipoFilaForm.fecha_entrega" />
+                <input
+                  type="date"
+                  class="input-clean"
+                  [min]="periodoActual()?.fecha_inicio"
+                  [max]="periodoActual()?.fecha_fin"
+                  [(ngModel)]="anticipoFilaForm.fecha_entrega"
+                />
               </div>
 
               <div class="form-group col-span-2">
@@ -731,7 +743,13 @@
 
           <div class="form-group">
             <label>Fecha de Pago *</label>
-            <input type="date" class="input-clean" [(ngModel)]="pagoQuincenaForm.fecha_pago" />
+            <input
+              type="date"
+              class="input-clean"
+              [min]="periodoActual()?.fecha_inicio"
+              [max]="periodoActual()?.fecha_fin"
+              [(ngModel)]="pagoQuincenaForm.fecha_pago"
+            />
           </div>
 
           <div class="form-group col-span-2">
@@ -936,7 +954,13 @@
 
           <div class="form-group">
             <label>Fecha de Liquidación *</label>
-            <input type="date" class="input-clean" [(ngModel)]="liquidacionFilaForm.fecha_liquidacion" />
+            <input
+              type="date"
+              class="input-clean"
+              [min]="periodoActual()?.fecha_inicio"
+              [max]="periodoActual()?.fecha_fin"
+              [(ngModel)]="liquidacionFilaForm.fecha_liquidacion"
+            />
           </div>
 
           <div class="form-group col-span-2">

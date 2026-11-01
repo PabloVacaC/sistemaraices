@@ -411,6 +411,15 @@ def registrar_anticipo(
             detail="El período salarial se encuentra CERRADO. No se admiten nuevos anticipos.",
         )
 
+    if not (periodo.fecha_inicio <= datos.fecha_entrega <= periodo.fecha_fin):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"La fecha de entrega ({datos.fecha_entrega}) no corresponde al período {periodo.descripcion}. "
+                f"Debe estar entre {periodo.fecha_inicio} y {periodo.fecha_fin}."
+            ),
+        )
+
     # Verificar si ya existe una liquidación completamente cerrada
     liq_existente = db.execute(
         select(Liquidacion).where(
@@ -825,6 +834,15 @@ def registrar_pago_parcial_directo(
     if periodo.estado == "CERRADO":
         raise HTTPException(status_code=400, detail="El período salarial está CERRADO.")
 
+    if not (periodo.fecha_inicio <= datos.fecha_pago <= periodo.fecha_fin):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"La fecha de pago ({datos.fecha_pago}) no corresponde al período {periodo.descripcion}. "
+                f"Debe estar entre {periodo.fecha_inicio} y {periodo.fecha_fin}."
+            ),
+        )
+
     m = calcular_metricas_trabajador_periodo(db, trabajador, periodo)
 
     # Validar regla: una sola quincena por trabajador en el período
@@ -931,6 +949,21 @@ def registrar_liquidacion(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Período salarial no encontrado.",
+        )
+
+    if periodo.estado == "CERRADO":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="El período salarial se encuentra CERRADO. No se pueden registrar o actualizar liquidaciones.",
+        )
+
+    if not (periodo.fecha_inicio <= datos.fecha_liquidacion <= periodo.fecha_fin):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"La fecha de liquidación ({datos.fecha_liquidacion}) no corresponde al período {periodo.descripcion}. "
+                f"Debe estar entre {periodo.fecha_inicio} y {periodo.fecha_fin}."
+            ),
         )
 
     m = calcular_metricas_trabajador_periodo(db, trabajador, periodo)
@@ -1085,6 +1118,21 @@ def registrar_pago_liquidacion(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="La liquidación se encuentra ANULADA. No se pueden registrar pagos.",
+        )
+
+    if liq.periodo.estado == "CERRADO":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="El período salarial se encuentra CERRADO. No se admiten nuevos pagos.",
+        )
+
+    if not (liq.periodo.fecha_inicio <= datos.fecha_pago <= liq.periodo.fecha_fin):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"La fecha de pago ({datos.fecha_pago}) no corresponde al período {liq.periodo.descripcion}. "
+                f"Debe estar entre {liq.periodo.fecha_inicio} y {liq.periodo.fecha_fin}."
+            ),
         )
 
     if liq.estado == "LIQUIDADO" or liq.saldo_pendiente <= 0:

@@ -34,6 +34,35 @@ export class PlanillaComponent implements OnInit {
   planilla = signal<PlanillaMensual | null>(null);
   areas = signal<Area[]>([]);
 
+  periodoActual = computed(() => {
+    const id = this.selectedPeriodoId();
+    return this.periodos().find(p => p.id === id) || null;
+  });
+
+  getFechaValidaEnPeriodo(diaPreferido?: number): string {
+    const per = this.periodoActual();
+    if (!per) return new Date().toISOString().substring(0, 10);
+
+    const hoy = new Date().toISOString().substring(0, 10);
+    if (hoy >= per.fecha_inicio && hoy <= per.fecha_fin) {
+      return hoy;
+    }
+
+    if (diaPreferido) {
+      const year = per.anio;
+      const month = String(per.mes).padStart(2, '0');
+      const maxDia = new Date(year, per.mes, 0).getDate();
+      const diaClamped = Math.min(diaPreferido, maxDia);
+      const diaStr = String(diaClamped).padStart(2, '0');
+      const candidate = `${year}-${month}-${diaStr}`;
+      if (candidate >= per.fecha_inicio && candidate <= per.fecha_fin) {
+        return candidate;
+      }
+    }
+
+    return per.fecha_inicio;
+  }
+
   // Filtros
   searchTerm = signal<string>('');
   selectedAreaFilter = signal<number | null>(null);
@@ -240,7 +269,7 @@ export class PlanillaComponent implements OnInit {
     this.selectedFilaDescuentos.set(fila);
     this.showFormNuevoDescuento.set(false);
     this.descuentoForm = {
-      fecha: new Date().toISOString().substring(0, 10),
+      fecha: this.getFechaValidaEnPeriodo(),
       importe: null,
       concepto: '',
       observaciones: ''
@@ -326,7 +355,7 @@ export class PlanillaComponent implements OnInit {
     this.anticipoFilaForm = {
       importe: null,
       metodo_pago: 'EFECTIVO',
-      fecha_entrega: new Date().toISOString().substring(0, 10),
+      fecha_entrega: this.getFechaValidaEnPeriodo(),
       observaciones: '',
       confirmar_excedente: false
     };
@@ -445,7 +474,7 @@ export class PlanillaComponent implements OnInit {
     this.selectedFilaQuincena.set(fila);
     this.pagoQuincenaForm.monto = Number(fila.quincena_sugerida || 0);
     this.pagoQuincenaForm.tipo_pago = fila.supera_quincena ? 'REVISION_QUINCENA' : 'PAGO_QUINCENA';
-    this.pagoQuincenaForm.fecha_pago = new Date().toISOString().substring(0, 10);
+    this.pagoQuincenaForm.fecha_pago = this.getFechaValidaEnPeriodo(18);
     this.pagoQuincenaForm.metodo_pago = 'EFECTIVO';
     this.pagoQuincenaForm.observaciones = fila.supera_quincena
       ? 'Quincena cubierta en su totalidad por anticipos acumulados'
@@ -553,7 +582,7 @@ export class PlanillaComponent implements OnInit {
     this.selectedFilaLiquidacion.set(fila);
     const saldoCalculado = fila.saldo_pendiente_real > 0 ? fila.saldo_pendiente_real : Math.max(0, fila.liquido_pagable);
     this.liquidacionFilaForm = {
-      fecha_liquidacion: new Date().toISOString().substring(0, 10),
+      fecha_liquidacion: this.getFechaValidaEnPeriodo(),
       ajustes: 0,
       observaciones: 'Liquidación de sueldo restante (Día 5)',
       pago_inmediato: true,

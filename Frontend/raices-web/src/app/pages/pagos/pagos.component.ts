@@ -43,6 +43,35 @@ export class PagosComponent implements OnInit {
   areas = signal<Area[]>([]);
   panelIndicadores = signal<PanelResumenPagos | null>(null);
 
+  periodoActual = computed(() => {
+    const id = this.selectedPeriodoId();
+    return this.periodos().find(p => p.id === id) || null;
+  });
+
+  getFechaValidaEnPeriodo(diaPreferido?: number): string {
+    const per = this.periodoActual();
+    if (!per) return new Date().toISOString().substring(0, 10);
+
+    const hoy = new Date().toISOString().substring(0, 10);
+    if (hoy >= per.fecha_inicio && hoy <= per.fecha_fin) {
+      return hoy;
+    }
+
+    if (diaPreferido) {
+      const year = per.anio;
+      const month = String(per.mes).padStart(2, '0');
+      const maxDia = new Date(year, per.mes, 0).getDate();
+      const diaClamped = Math.min(diaPreferido, maxDia);
+      const diaStr = String(diaClamped).padStart(2, '0');
+      const candidate = `${year}-${month}-${diaStr}`;
+      if (candidate >= per.fecha_inicio && candidate <= per.fecha_fin) {
+        return candidate;
+      }
+    }
+
+    return per.fecha_inicio;
+  }
+
   // Listados
   anticiposList = signal<Anticipo[]>([]);
   liquidacionesList = signal<Liquidacion[]>([]);
@@ -218,6 +247,9 @@ export class PagosComponent implements OnInit {
           // Seleccionar período actual o más reciente
           const actual = pers.find(p => p.mes === (new Date().getMonth() + 1) && p.anio === new Date().getFullYear()) || pers[0];
           this.selectedPeriodoId.set(actual.id);
+          const f = this.getFechaValidaEnPeriodo();
+          this.anticipoFechaEntrega.set(f);
+          this.anticipoForm.fecha_entrega = f;
         }
         this.cargarIndicadores();
         this.cargarLiquidaciones();
@@ -273,6 +305,9 @@ export class PagosComponent implements OnInit {
   onPeriodoChange(periodoId: any) {
     const pid = Number(periodoId);
     this.selectedPeriodoId.set(pid);
+    const f = this.getFechaValidaEnPeriodo();
+    this.anticipoFechaEntrega.set(f);
+    this.anticipoForm.fecha_entrega = f;
     this.cargarIndicadores();
     this.cargarLiquidaciones();
     this.cargarAnticipos();
@@ -314,7 +349,7 @@ export class PagosComponent implements OnInit {
     this.selectedTrabajadorQuincena.set(trab);
     this.pagoQuincenaForm.monto = trab.monto_sugerido_quincena;
     this.pagoQuincenaForm.tipo_pago = trab.supera_quincena ? 'REVISION_QUINCENA' : 'PAGO_QUINCENA';
-    this.pagoQuincenaForm.fecha_pago = new Date().toISOString().substring(0, 10);
+    this.pagoQuincenaForm.fecha_pago = this.getFechaValidaEnPeriodo(18);
     this.pagoQuincenaForm.metodo_pago = 'EFECTIVO';
     this.pagoQuincenaForm.observaciones = trab.supera_quincena
       ? 'Quincena cubierta en su totalidad por anticipos acumulados'
@@ -407,7 +442,7 @@ export class PagosComponent implements OnInit {
     const saldoRestante = Math.max(0, base - anticipos - pagos);
 
     this.liquidacionDirectaForm = {
-      fecha_liquidacion: new Date().toISOString().substring(0, 10),
+      fecha_liquidacion: this.getFechaValidaEnPeriodo(),
       ajustes: 0,
       observaciones: 'Liquidación de sueldo restante (Día 5)',
       pago_inmediato: true,
@@ -642,7 +677,7 @@ export class PagosComponent implements OnInit {
   abrirModalPagoParcial(liq: Liquidacion) {
     this.selectedLiquidacionForPago.set(liq);
     this.pagoParcialForm.monto = liq.saldo_pendiente;
-    this.pagoParcialForm.fecha_pago = new Date().toISOString().substring(0, 10);
+    this.pagoParcialForm.fecha_pago = this.getFechaValidaEnPeriodo();
     this.pagoParcialForm.metodo_pago = 'EFECTIVO';
     this.pagoParcialForm.observaciones = '';
     this.showPagoParcialModal.set(true);
