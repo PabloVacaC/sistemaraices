@@ -339,6 +339,8 @@ def obtener_o_generar_planilla(db: Session, periodo_id: int) -> PlanillaMensualO
         anio=periodo.anio,
         fecha_inicio=periodo.fecha_inicio,
         fecha_fin=periodo.fecha_fin,
+        fecha_pago_estimada=periodo.fecha_pago_estimada,
+        fecha_limite_pago=periodo.fecha_limite_pago,
         estado_periodo=periodo.estado,
         filas=filas_out,
         totales=totales_resumen,

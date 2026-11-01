@@ -15,6 +15,7 @@ class PeriodoSalarialOut(BaseModel):
     fecha_inicio: date
     fecha_fin: date
     fecha_pago_estimada: date
+    fecha_limite_pago: Optional[date] = None
     estado: str
     descripcion: str
 

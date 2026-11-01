@@ -72,6 +72,23 @@ export class PagosComponent implements OnInit {
     return per.fecha_inicio;
   }
 
+  getFechaValidaParaLiquidacion(): string {
+    const per = this.periodoActual();
+    if (!per) return new Date().toISOString().substring(0, 10);
+
+    const maxFecha = per.fecha_limite_pago || per.fecha_fin;
+    const hoy = new Date().toISOString().substring(0, 10);
+    if (hoy >= per.fecha_inicio && hoy <= maxFecha) {
+      return hoy;
+    }
+
+    if (per.fecha_pago_estimada && per.fecha_pago_estimada >= per.fecha_inicio && per.fecha_pago_estimada <= maxFecha) {
+      return per.fecha_pago_estimada;
+    }
+
+    return per.fecha_fin;
+  }
+
   // Listados
   anticiposList = signal<Anticipo[]>([]);
   liquidacionesList = signal<Liquidacion[]>([]);
@@ -442,7 +459,7 @@ export class PagosComponent implements OnInit {
     const saldoRestante = Math.max(0, base - anticipos - pagos);
 
     this.liquidacionDirectaForm = {
-      fecha_liquidacion: this.getFechaValidaEnPeriodo(),
+      fecha_liquidacion: this.getFechaValidaParaLiquidacion(),
       ajustes: 0,
       observaciones: 'Liquidación de sueldo restante (Día 5)',
       pago_inmediato: true,
@@ -677,7 +694,7 @@ export class PagosComponent implements OnInit {
   abrirModalPagoParcial(liq: Liquidacion) {
     this.selectedLiquidacionForPago.set(liq);
     this.pagoParcialForm.monto = liq.saldo_pendiente;
-    this.pagoParcialForm.fecha_pago = this.getFechaValidaEnPeriodo();
+    this.pagoParcialForm.fecha_pago = this.getFechaValidaParaLiquidacion();
     this.pagoParcialForm.metodo_pago = 'EFECTIVO';
     this.pagoParcialForm.observaciones = '';
     this.showPagoParcialModal.set(true);

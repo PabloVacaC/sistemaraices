@@ -113,6 +113,8 @@ class PlanillaMensualOut(BaseModel):
     anio: int
     fecha_inicio: date
     fecha_fin: date
+    fecha_pago_estimada: Optional[date] = None
+    fecha_limite_pago: Optional[date] = None
     estado_periodo: str  # ABIERTO, CERRADO
     filas: List[PlanillaFilaOut]
     totales: PlanillaResumenTotales

@@ -1,3 +1,4 @@
+import calendar
 from datetime import date, time, datetime
 from typing import Optional, List
 from decimal import Decimal
@@ -200,6 +201,14 @@ class PeriodoSalarial(Base):
     liquidaciones = relationship("Liquidacion", back_populates="periodo")
     descuentos = relationship("Descuento", back_populates="periodo")
     detalles_planilla = relationship("PlanillaDetalle", back_populates="periodo", cascade="all, delete-orphan")
+
+    @property
+    def fecha_limite_pago(self) -> date:
+        """Fin del mes siguiente al período para permitir ventana de tolerancia en liquidación de sueldos."""
+        mes_sig = 1 if self.mes == 12 else self.mes + 1
+        anio_sig = self.anio + 1 if self.mes == 12 else self.anio
+        ultimo_dia = calendar.monthrange(anio_sig, mes_sig)[1]
+        return date(anio_sig, mes_sig, ultimo_dia)
 
 
 class Anticipo(Base):

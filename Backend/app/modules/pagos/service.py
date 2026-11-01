@@ -900,12 +900,13 @@ def registrar_pago_parcial_directo(
     if periodo.estado == "CERRADO":
         raise HTTPException(status_code=400, detail="El período salarial está CERRADO.")
 
-    if not (periodo.fecha_inicio <= datos.fecha_pago <= periodo.fecha_fin):
+    limite_max_pago = periodo.fecha_fin if datos.tipo_pago in ("PAGO_QUINCENA", "REVISION_QUINCENA") else periodo.fecha_limite_pago
+    if not (periodo.fecha_inicio <= datos.fecha_pago <= limite_max_pago):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=(
-                f"La fecha de pago ({datos.fecha_pago}) no corresponde al período {periodo.descripcion}. "
-                f"Debe estar entre {periodo.fecha_inicio} y {periodo.fecha_fin}."
+                f"La fecha de pago ({datos.fecha_pago}) no corresponde a la ventana permitida del período {periodo.descripcion}. "
+                f"Debe estar entre {periodo.fecha_inicio} y {limite_max_pago}."
             ),
         )
 
@@ -1023,12 +1024,12 @@ def registrar_liquidacion(
             detail="El período salarial se encuentra CERRADO. No se pueden registrar o actualizar liquidaciones.",
         )
 
-    if not (periodo.fecha_inicio <= datos.fecha_liquidacion <= periodo.fecha_fin):
+    if not (periodo.fecha_inicio <= datos.fecha_liquidacion <= periodo.fecha_limite_pago):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=(
-                f"La fecha de liquidación ({datos.fecha_liquidacion}) no corresponde al período {periodo.descripcion}. "
-                f"Debe estar entre {periodo.fecha_inicio} y {periodo.fecha_fin}."
+                f"La fecha de liquidación ({datos.fecha_liquidacion}) no corresponde a la ventana permitida del período {periodo.descripcion}. "
+                f"Debe estar entre {periodo.fecha_inicio} y {periodo.fecha_limite_pago}."
             ),
         )
 
@@ -1192,12 +1193,12 @@ def registrar_pago_liquidacion(
             detail="El período salarial se encuentra CERRADO. No se admiten nuevos pagos.",
         )
 
-    if not (liq.periodo.fecha_inicio <= datos.fecha_pago <= liq.periodo.fecha_fin):
+    if not (liq.periodo.fecha_inicio <= datos.fecha_pago <= liq.periodo.fecha_limite_pago):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=(
-                f"La fecha de pago ({datos.fecha_pago}) no corresponde al período {liq.periodo.descripcion}. "
-                f"Debe estar entre {liq.periodo.fecha_inicio} y {liq.periodo.fecha_fin}."
+                f"La fecha de pago ({datos.fecha_pago}) no corresponde a la ventana permitida del período {liq.periodo.descripcion}. "
+                f"Debe estar entre {liq.periodo.fecha_inicio} y {liq.periodo.fecha_limite_pago}."
             ),
         )
 

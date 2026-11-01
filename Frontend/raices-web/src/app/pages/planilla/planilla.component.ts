@@ -63,6 +63,23 @@ export class PlanillaComponent implements OnInit {
     return per.fecha_inicio;
   }
 
+  getFechaValidaParaLiquidacion(): string {
+    const per = this.periodoActual();
+    if (!per) return new Date().toISOString().substring(0, 10);
+
+    const maxFecha = per.fecha_limite_pago || per.fecha_fin;
+    const hoy = new Date().toISOString().substring(0, 10);
+    if (hoy >= per.fecha_inicio && hoy <= maxFecha) {
+      return hoy;
+    }
+
+    if (per.fecha_pago_estimada && per.fecha_pago_estimada >= per.fecha_inicio && per.fecha_pago_estimada <= maxFecha) {
+      return per.fecha_pago_estimada;
+    }
+
+    return per.fecha_fin;
+  }
+
   // Filtros
   searchTerm = signal<string>('');
   selectedAreaFilter = signal<number | null>(null);
@@ -582,7 +599,7 @@ export class PlanillaComponent implements OnInit {
     this.selectedFilaLiquidacion.set(fila);
     const saldoCalculado = fila.saldo_pendiente_real > 0 ? fila.saldo_pendiente_real : Math.max(0, fila.liquido_pagable);
     this.liquidacionFilaForm = {
-      fecha_liquidacion: this.getFechaValidaEnPeriodo(),
+      fecha_liquidacion: this.getFechaValidaParaLiquidacion(),
       ajustes: 0,
       observaciones: 'Liquidación de sueldo restante (Día 5)',
       pago_inmediato: true,

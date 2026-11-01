@@ -89,6 +89,7 @@ export interface PeriodoSalarial {
   fecha_inicio: string;
   fecha_fin: string;
   fecha_pago_estimada: string;
+  fecha_limite_pago?: string;
   estado: string;
   descripcion: string;
 }
@@ -534,6 +535,8 @@ export interface PlanillaMensual {
   anio: number;
   fecha_inicio: string;
   fecha_fin: string;
+  fecha_pago_estimada?: string;
+  fecha_limite_pago?: string;
   estado_periodo: string;
   filas: PlanillaFila[];
   totales: PlanillaResumenTotales;
