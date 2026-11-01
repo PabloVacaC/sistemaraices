@@ -256,16 +256,36 @@
 
               <!-- 13. Líquido pagable = Total ganado − Total ant/desc − Pago quincena (RF-46 a RF-50) -->
               <td class="col-liquido">
-                <div class="liquido-cell">
-                  @if (f.liquido_pagable >= 0) {
-                    <span class="liquido-val text-emerald-700 font-bold">
-                      Bs {{ f.liquido_pagable | number:'1.2-2' }}
-                    </span>
+                <div class="action-amount-cell">
+                  <div class="stacked-totals">
+                    @if (f.liquido_pagable >= 0) {
+                      <span class="liquido-val text-emerald-700 font-bold">
+                        Bs {{ f.liquido_pagable | number:'1.2-2' }}
+                      </span>
+                    } @else {
+                      <!-- Saldo negativo exacto con advertencia (RF-48) -->
+                      <span class="liquido-val text-red-600 font-bold" title="Saldo negativo salarial (excede ingresos)">
+                        - Bs {{ (f.liquido_pagable * -1) | number:'1.2-2' }}
+                      </span>
+                    }
+                    @if (f.estado_liquidacion === 'LIQUIDADO') {
+                      <span class="badge-quincena-pagada">LIQUIDADO</span>
+                    } @else if (f.estado_liquidacion === 'PARCIAL') {
+                      <span class="badge-sig-per">PARCIAL</span>
+                    } @else {
+                      <span class="badge-quincena-pendiente">PENDIENTE</span>
+                    }
+                  </div>
+                  @if (f.estado_liquidacion === 'LIQUIDADO') {
+                    <button class="btn btn-xs btn-outline-emerald" (click)="abrirModalLiquidarFila(f)" title="Sueldo liquidado completamente. Clic para ver comprobante o detalle">
+                      <span>Liquidado</span>
+                      <span>✓</span>
+                    </button>
                   } @else {
-                    <!-- Saldo negativo exacto con advertencia (RF-48) -->
-                    <span class="liquido-val text-red-600 font-bold" title="Saldo negativo salarial (excede ingresos)">
-                      - Bs {{ (f.liquido_pagable * -1) | number:'1.2-2' }}
-                    </span>
+                    <button class="btn btn-xs btn-outline-emerald" (click)="abrirModalLiquidarFila(f)" title="Liquidar sueldo restante (Día 5)">
+                      <span>Liquidar</span>
+                      <span>+</span>
+                    </button>
                   }
                 </div>
               </td>
@@ -871,6 +891,125 @@
               <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2m.01 1.67c2.2 0 4.26.86 5.82 2.41a8.17 8.17 0 0 1 2.41 5.83c0 4.54-3.7 8.24-8.24 8.24-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.17 8.17 0 0 1-1.25-4.36c0-4.54 3.7-8.24 8.24-8.24m4.52 11.66c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.13-1.06-.39-2.01-1.24-.74-.66-1.24-1.48-1.39-1.73-.14-.25-.02-.39.11-.51.11-.11.25-.29.37-.43.13-.15.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.13-.56-1.34-.76-1.84-.2-.49-.4-.42-.56-.43h-.48c-.17 0-.44.06-.67.31-.23.25-.88.86-.88 2.1 0 1.24.9 2.44 1.03 2.61.13.17 1.78 2.71 4.3 3.8.6.26 1.07.41 1.43.53.6.19 1.15.16 1.58.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.15-1.18-.06-.1-.23-.17-.48-.3"/>
             </svg>
             <span>Compartir por WhatsApp</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ================================================================= -->
+  <!-- MODAL 7: REGISTRAR LIQUIDACIÓN FINAL DE SUELDO (DÍA 5) -->
+  <!-- ================================================================= -->
+  @if (showModalLiquidarFila()) {
+    <div class="modal-backdrop">
+      <div class="modal-card modal-card-lg animate-scale-up">
+        <div class="modal-icon-badge emerald">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" x2="8" y1="13" y2="13"/>
+            <line x1="16" x2="8" y1="17" y2="17"/>
+            <polyline points="10 9 9 9 8 9"/>
+          </svg>
+        </div>
+        <h3>Liquidar Sueldo Restante (Día 5)</h3>
+        <p class="modal-desc">
+          Trabajador: <strong>{{ selectedFilaLiquidacion()?.nombre_completo }}</strong>
+          (CI: <strong>{{ selectedFilaLiquidacion()?.ci || 'S/N' }}</strong> — {{ selectedFilaLiquidacion()?.cargo }})
+        </p>
+
+        <!-- Desglose de Cálculo Salarial Transparente -->
+        <div class="confirmation-summary-box mb-4">
+          <div class="summary-line">
+            <span>(+) Total Ganado (Días Trab.):</span>
+            <strong>Bs {{ (selectedFilaLiquidacion()?.total_ganado || 0) | number:'1.2-2' }}</strong>
+          </div>
+          <div class="summary-line">
+            <span>(-) Total Anticipos del Período:</span>
+            <strong class="text-amber">- Bs {{ (selectedFilaLiquidacion()?.pago_anticipos || 0) | number:'1.2-2' }}</strong>
+          </div>
+          @if ((selectedFilaLiquidacion()?.total_descuentos || 0) > 0) {
+            <div class="summary-line">
+              <span>(-) Total Descuentos:</span>
+              <strong class="text-red">- Bs {{ (selectedFilaLiquidacion()?.total_descuentos || 0) | number:'1.2-2' }}</strong>
+            </div>
+          }
+          <div class="summary-line">
+            <span>(-) Pagos de Quincena & Parciales:</span>
+            <strong class="text-emerald">- Bs {{ (selectedFilaLiquidacion()?.pago_quincena || 0) | number:'1.2-2' }}</strong>
+          </div>
+          <div class="summary-line highlight-line">
+            <span>(=) Saldo Restante a Liquidar:</span>
+            <strong class="text-blue font-bold text-lg">Bs {{ calcularSaldoLiquidacionFila() | number:'1.2-2' }}</strong>
+          </div>
+        </div>
+
+        <div class="form-grid text-left">
+          <div class="form-group">
+            <label>(+) Otros Ajustes / Bonos (Bs)</label>
+            <input
+              type="number"
+              step="50"
+              class="input-clean"
+              placeholder="0.00"
+              [(ngModel)]="liquidacionFilaForm.ajustes"
+            />
+          </div>
+
+          <div class="form-group">
+            <label>Fecha de Liquidación *</label>
+            <input type="date" class="input-clean" [(ngModel)]="liquidacionFilaForm.fecha_liquidacion" />
+          </div>
+
+          <div class="form-group col-span-2">
+            <label class="checkbox-clean">
+              <input type="checkbox" [(ngModel)]="liquidacionFilaForm.pago_inmediato" />
+              <span class="font-semibold">Realizar entrega / pago del saldo inmediatamente al liquidar</span>
+            </label>
+          </div>
+
+          @if (liquidacionFilaForm.pago_inmediato) {
+            <div class="form-group">
+              <label>Monto a entregar ahora (Bs) *</label>
+              <div class="input-currency-wrapper">
+                <span class="currency-prefix">Bs</span>
+                <input
+                  type="number"
+                  min="0"
+                  class="input-clean font-bold text-lg"
+                  [(ngModel)]="liquidacionFilaForm.monto_pago_inmediato"
+                />
+              </div>
+              <span class="text-xs text-slate-500 mt-1">Saldo restante estimado: Bs {{ calcularSaldoLiquidacionFila() | number:'1.2-2' }}</span>
+            </div>
+
+            <div class="form-group">
+              <label>Método de Pago *</label>
+              <select class="select-clean" [(ngModel)]="liquidacionFilaForm.metodo_pago_inmediato">
+                <option value="EFECTIVO">Efectivo</option>
+                <option value="TRANSFERENCIA">Transferencia Bancaria</option>
+                <option value="CHEQUE">Cheque</option>
+              </select>
+            </div>
+          }
+
+          <div class="form-group col-span-2">
+            <label>Observaciones de Liquidación</label>
+            <input
+              type="text"
+              placeholder="Detalles sobre el cierre o liquidación salarial..."
+              class="input-clean"
+              [(ngModel)]="liquidacionFilaForm.observaciones"
+            />
+          </div>
+        </div>
+
+        <div class="modal-actions mt-6">
+          <button class="btn btn-secondary" (click)="showModalLiquidarFila.set(false)">
+            Cancelar
+          </button>
+          <button class="btn btn-success" (click)="confirmarLiquidacionFila()" [disabled]="loading()">
+            Confirmar Liquidación y Generar Comprobante
           </button>
         </div>
       </div>

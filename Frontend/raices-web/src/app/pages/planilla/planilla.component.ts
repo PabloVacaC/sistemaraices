@@ -92,6 +92,18 @@ export class PlanillaComponent implements OnInit {
   showReceiptModal = signal<boolean>(false);
   currentReceipt = signal<any | null>(null);
 
+  // Modal Liquidación de Sueldo Restante (Día 5)
+  showModalLiquidarFila = signal<boolean>(false);
+  selectedFilaLiquidacion = signal<PlanillaFila | null>(null);
+  liquidacionFilaForm = {
+    fecha_liquidacion: new Date().toISOString().substring(0, 10),
+    ajustes: 0,
+    observaciones: 'Liquidación de sueldo restante (Día 5)',
+    pago_inmediato: true,
+    monto_pago_inmediato: null as number | null,
+    metodo_pago_inmediato: 'EFECTIVO'
+  };
+
   // Filas filtradas de la tabla
   filasFiltradas = computed(() => {
     const pl = this.planilla();
@@ -495,6 +507,130 @@ export class PlanillaComponent implements OnInit {
       },
       error: (err: any) => {
         this.toast.error(err?.error?.detail || 'Error al registrar el pago de quincena');
+        this.loading.set(false);
+      }
+    });
+  }
+
+  // ==========================================
+  // GESTIÓN DE LIQUIDACIÓN DE SUELDO (DÍA 5)
+  // ==========================================
+  calcularSaldoLiquidacionFila(): number {
+    const fila = this.selectedFilaLiquidacion();
+    if (!fila) return 0;
+    const saldoBase = fila.saldo_pendiente_real > 0 ? fila.saldo_pendiente_real : Math.max(0, fila.liquido_pagable);
+    const ajustes = Number(this.liquidacionFilaForm.ajustes || 0);
+    return Math.max(0, saldoBase + ajustes);
+  }
+
+  abrirModalLiquidarFila(fila: PlanillaFila) {
+    if (fila.estado_liquidacion === 'LIQUIDADO') {
+      this.toast.info(`El trabajador ${fila.nombre_completo} ya tiene su sueldo liquidado en este período.`);
+      if (fila.liquidacion_comprobante) {
+        const pid = this.selectedPeriodoId();
+        const periodoDesc = this.periodos().find(p => p.id === pid)?.descripcion || '';
+        this.abrirComprobantePago({
+          tipo: 'LIQUIDACION',
+          numero_comprobante: fila.liquidacion_comprobante,
+          trabajador_nombre: fila.nombre_completo,
+          trabajador_ci: fila.ci || '',
+          trabajador_cargo: fila.cargo,
+          trabajador_area: fila.area,
+          periodo_descripcion: periodoDesc,
+          fecha: new Date().toISOString().substring(0, 10),
+          importe: fila.monto_pagado_total || fila.liquido_pagable,
+          metodo_pago: 'EFECTIVO',
+          sueldo_base: fila.haber_basico,
+          anticipos_descontados: fila.pago_anticipos,
+          quincena_descontada: fila.pago_quincena,
+          saldo_restante: 0,
+          observaciones: 'Liquidación salarial completada',
+          usuario_nombre: this.auth.currentUser()?.nombre || 'Administrador',
+          usuario_id: this.auth.currentUser()?.ci || '',
+        });
+      }
+      return;
+    }
+
+    this.selectedFilaLiquidacion.set(fila);
+    const saldoCalculado = fila.saldo_pendiente_real > 0 ? fila.saldo_pendiente_real : Math.max(0, fila.liquido_pagable);
+    this.liquidacionFilaForm = {
+      fecha_liquidacion: new Date().toISOString().substring(0, 10),
+      ajustes: 0,
+      observaciones: 'Liquidación de sueldo restante (Día 5)',
+      pago_inmediato: true,
+      monto_pago_inmediato: saldoCalculado,
+      metodo_pago_inmediato: 'EFECTIVO'
+    };
+    this.showModalLiquidarFila.set(true);
+  }
+
+  confirmarLiquidacionFila() {
+    const fila = this.selectedFilaLiquidacion();
+    const pid = this.selectedPeriodoId();
+    if (!fila || !pid) return;
+
+    const saldoCalculado = this.calcularSaldoLiquidacionFila();
+    if (this.liquidacionFilaForm.pago_inmediato) {
+      const monto = Number(this.liquidacionFilaForm.monto_pago_inmediato ?? 0);
+      if (monto < 0) {
+        this.toast.warning('El monto a pagar no puede ser negativo.');
+        return;
+      }
+      if (monto > saldoCalculado && saldoCalculado > 0) {
+        this.toast.warning(`El monto a pagar supera el saldo de Bs ${saldoCalculado}.`);
+        return;
+      }
+    }
+
+    this.loading.set(true);
+    this.showModalLiquidarFila.set(false);
+
+    const payload = {
+      trabajador_id: fila.trabajador_id,
+      periodo_id: pid,
+      fecha_liquidacion: this.liquidacionFilaForm.fecha_liquidacion,
+      ajustes: Number(this.liquidacionFilaForm.ajustes || 0),
+      observaciones: this.liquidacionFilaForm.observaciones,
+      pago_inmediato: this.liquidacionFilaForm.pago_inmediato,
+      monto_pago_inmediato: this.liquidacionFilaForm.pago_inmediato ? this.liquidacionFilaForm.monto_pago_inmediato : null,
+      metodo_pago_inmediato: this.liquidacionFilaForm.metodo_pago_inmediato
+    };
+
+    this.dataService.createLiquidacion(payload).subscribe({
+      next: (liq) => {
+        this.toast.success(`Liquidación registrada: ${liq.numero_comprobante}`);
+        this.loading.set(false);
+        this.cargarPlanilla();
+
+        const periodoDesc = this.periodos().find(p => p.id === pid)?.descripcion || '';
+        const montoEntregado = (liq.pago_inmediato_monto !== undefined && liq.pago_inmediato_monto !== null)
+          ? Number(liq.pago_inmediato_monto)
+          : (this.liquidacionFilaForm.pago_inmediato ? Number(this.liquidacionFilaForm.monto_pago_inmediato || 0) : 0);
+
+        this.abrirComprobantePago({
+          tipo: 'LIQUIDACION',
+          numero_comprobante: liq.numero_comprobante,
+          trabajador_nombre: fila.nombre_completo,
+          trabajador_ci: fila.ci || '',
+          trabajador_cargo: fila.cargo,
+          trabajador_area: fila.area,
+          periodo_descripcion: periodoDesc,
+          fecha: liq.fecha_liquidacion,
+          importe: montoEntregado,
+          metodo_pago: this.liquidacionFilaForm.pago_inmediato ? this.liquidacionFilaForm.metodo_pago_inmediato : 'POR PAGAR',
+          sueldo_base: liq.sueldo_base || fila.haber_basico,
+          anticipos_descontados: liq.total_anticipos || fila.pago_anticipos,
+          quincena_descontada: liq.pago_quincena_previo ?? fila.pago_quincena,
+          ajustes: liq.ajustes,
+          saldo_restante: liq.saldo_pendiente,
+          observaciones: liq.observaciones || 'Liquidación Salarial Final (Día 5)',
+          usuario_nombre: liq.usuario_nombre || this.auth.currentUser()?.nombre || 'Administrador',
+          usuario_id: liq.usuario_id || this.auth.currentUser()?.ci || '',
+        });
+      },
+      error: (err: any) => {
+        this.toast.error(err?.error?.detail || 'Error al registrar liquidación');
         this.loading.set(false);
       }
     });

@@ -643,6 +643,42 @@
   font-size: 0.88rem;
 }
 
+.summary-line.highlight-line {
+  border-top: 1px solid #cbd5e1;
+  padding-top: 0.5rem;
+  margin-top: 0.35rem;
+}
+
+.btn-success {
+  background: #059669;
+  color: #ffffff;
+}
+
+.btn-success:hover {
+  background: #047857;
+}
+
+.modal-icon-badge.emerald {
+  background: #ecfdf5;
+  color: #059669;
+}
+
+.checkbox-clean {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+}
+
+.checkbox-clean input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
 .quincena-alert-box {
   display: flex;
   align-items: center;
