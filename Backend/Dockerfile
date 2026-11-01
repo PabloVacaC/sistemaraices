@@ -24,6 +24,6 @@ COPY . .
 # Exponer el puerto de FastAPI
 EXPOSE 8000
 
-# Ejecutar Uvicorn
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Ejecutar Uvicorn con workers para soporte de concurrencia
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
 

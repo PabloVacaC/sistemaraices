@@ -185,6 +185,7 @@ def obtener_o_generar_planilla(db: Session, periodo_id: int) -> PlanillaMensualO
 
     # Construir filas de la planilla
     nro_consecutivo = 1
+    nuevos_detalles_creados = False
     for t in trabajadores:
         # Si ingresó después del fin del período, no incluirlo
         if t.fecha_ingreso > periodo.fecha_fin:
@@ -215,6 +216,7 @@ def obtener_o_generar_planilla(db: Session, periodo_id: int) -> PlanillaMensualO
             )
             db.add(nuevo_det)
             detalles_guardados[t.id] = nuevo_det
+            nuevos_detalles_creados = True
 
         # Anticipos del período
         ants_t = anticipos_por_trab.get(t.id, [])

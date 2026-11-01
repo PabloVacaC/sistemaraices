@@ -1,9 +1,9 @@
-from datetime import date, datetime
+from datetime import date, datetime, timezone, timedelta
 from typing import List, Optional, Dict, Any
 from collections import defaultdict
 from decimal import Decimal
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import select, func, and_, or_, desc
+from sqlalchemy import select, func, and_, or_, desc, text
 from fastapi import HTTPException, status
 
 from app.models.entities import (
@@ -14,6 +14,7 @@ from app.models.entities import (
     PagoLiquidacion,
     Descuento,
     Usuario,
+    PlanillaDetalle,
 )
 from app.modules.pagos.schemas import (
     AnticipoCreate,
@@ -37,10 +38,27 @@ from app.modules.bitacora.service import registrar_bitacora
 # UTILIDADES DE GENERACIÓN DE COMPROBANTES ÚNICOS
 # =========================================================================
 def generar_numero_comprobante(db: Session, prefijo: str) -> str:
-    """Genera números correlativos únicos y seguros tipo: ANT-202610-0001, LIQ-202610-0001, PAG-202610-0001"""
-    now = datetime.now()
+    """
+    Genera números correlativos únicos y seguros tipo: ANT-202610-0001, LIQ-202610-0001, PAG-202610-0001
+    Aplica bloqueo transaccional a nivel de PostgreSQL (pg_advisory_xact_lock) para evitar
+    condiciones de carrera y colisiones de comprobantes concurrentes.
+    Usa hora de Bolivia (UTC-4) para evitar saltos prematuros de mes en servidores en la nube.
+    """
+    # Zona horaria Bolivia (UTC-4)
+    now = datetime.now(timezone(timedelta(hours=-4)))
     ym = now.strftime("%Y%m")
     prefix_ym = f"{prefijo}-{ym}-"
+
+    # Bloqueo transaccional de concurrencia en PostgreSQL (se libera automáticamente al hacer commit o rollback)
+    try:
+        bind = db.get_bind()
+        if bind and bind.dialect.name == "postgresql":
+            db.execute(
+                text("SELECT pg_advisory_xact_lock(hashtext(:lock_key))"),
+                {"lock_key": prefix_ym},
+            )
+    except Exception:
+        pass
 
     max_code = None
     if prefijo == "ANT":
@@ -92,6 +110,68 @@ def generar_numero_comprobante(db: Session, prefijo: str) -> str:
         if not existe:
             return candidato
         correlativo += 1
+
+
+# =========================================================================
+# HELPERS DE SINCRONIZACIÓN SALARIAL (PLANILLA VS PAGOS)
+# =========================================================================
+def calcular_dias_trabajados_base(trabajador: Trabajador, periodo: PeriodoSalarial) -> int:
+    """Calcula los días comerciales estándar (base 30) según ingreso o cese en el mes."""
+    if trabajador.fecha_ingreso > periodo.fecha_fin:
+        return 0
+
+    if (
+        trabajador.fecha_ingreso.year == periodo.anio
+        and trabajador.fecha_ingreso.month == periodo.mes
+    ):
+        dia_ingreso = trabajador.fecha_ingreso.day
+        return max(1, min(30, 30 - dia_ingreso + 1))
+
+    if (
+        trabajador.fecha_inactividad
+        and trabajador.fecha_inactividad.year == periodo.anio
+        and trabajador.fecha_inactividad.month == periodo.mes
+    ):
+        return max(1, min(30, trabajador.fecha_inactividad.day))
+
+    if (
+        trabajador.fecha_inactividad
+        and trabajador.fecha_inactividad < date(periodo.anio, periodo.mes, 1)
+        and not trabajador.estado
+    ):
+        return 0
+
+    return 30
+
+
+def calcular_sueldo_proporcional(haber_basico: Decimal, dias: int) -> Decimal:
+    """Calcula el total ganado proporcional a los días trabajados en base a 30 días comerciales."""
+    if dias >= 30:
+        return haber_basico
+    if dias <= 0:
+        return Decimal("0.00")
+    val = (haber_basico / Decimal("30")) * Decimal(dias)
+    return round(val, 2)
+
+
+def obtener_base_salarial_periodo(
+    db: Session, trabajador: Trabajador, periodo: PeriodoSalarial
+) -> Decimal:
+    """
+    Obtiene la base salarial efectiva/proporcional para el período:
+    1. Si existe PlanillaDetalle registrado, usa su total_ganado (respeta días ajustados manualmente).
+    2. Si no existe aún registro de planilla, calcula automáticamente según fecha de ingreso/inactividad.
+    """
+    stmt_det = select(PlanillaDetalle).where(
+        PlanillaDetalle.trabajador_id == trabajador.id,
+        PlanillaDetalle.periodo_id == periodo.id,
+    )
+    det = db.execute(stmt_det).scalars().first()
+    if det:
+        return det.total_ganado
+
+    dias = calcular_dias_trabajados_base(trabajador, periodo)
+    return calcular_sueldo_proporcional(trabajador.sueldoBase, dias)
 
 
 # =========================================================================
@@ -171,6 +251,18 @@ def calcular_metricas_trabajador_periodo(
     excedente_quincena = (anticipos_antes_18 - quincena_ref) if supera_quincena else Decimal("0.00")
     monto_sugerido_quincena = max(Decimal("0.00"), diferencia_quincena)
 
+    # Base salarial efectiva y proporcional sincronizada con Planilla
+    sueldo_base_efectivo = obtener_base_salarial_periodo(db, trabajador, periodo)
+
+    # Descuentos aplicados en el período
+    stmt_desc = select(Descuento).where(
+        Descuento.trabajador_id == trabajador.id,
+        Descuento.periodo_id == periodo.id,
+        Descuento.estado == "APLICADO",
+    )
+    descuentos = list(db.execute(stmt_desc).scalars().all())
+    total_descuentos = sum((d.monto for d in descuentos), Decimal("0.00"))
+
     # 2. Liquidación y pagos parciales existentes
     stmt_liq = select(Liquidacion).where(
         Liquidacion.trabajador_id == trabajador.id,
@@ -193,12 +285,12 @@ def calcular_metricas_trabajador_periodo(
         )
         quincena_pagada = any(getattr(p, "tipo_pago", "") in ("PAGO_QUINCENA", "REVISION_QUINCENA") for p in pagos) or (liquidacion.estado == "LIQUIDADO")
         total_pagos_parciales = sum((p.monto for p in pagos), Decimal("0.00"))
-        # SALDO = SUELDO_BASE + AJUSTES - TOTAL_ANTICIPOS - TOTAL_PAGOS_PARCIALES
-        saldo_salarial_pendiente = trabajador.sueldoBase + liquidacion.ajustes - total_anticipos - total_pagos_parciales
+        # SALDO = SUELDO_PROPORCIONAL + AJUSTES - TOTAL_ANTICIPOS - TOTAL_DESCUENTOS - TOTAL_PAGOS_PARCIALES
+        saldo_salarial_pendiente = sueldo_base_efectivo + liquidacion.ajustes - total_anticipos - total_descuentos - total_pagos_parciales
         estado_periodo = liquidacion.estado
     else:
         total_pagos_parciales = Decimal("0.00")
-        saldo_salarial_pendiente = trabajador.sueldoBase - total_anticipos
+        saldo_salarial_pendiente = sueldo_base_efectivo - total_anticipos - total_descuentos
         if total_anticipos > 0:
             estado_periodo = "ANTICIPOS_PENDIENTES"
         else:
@@ -207,6 +299,9 @@ def calcular_metricas_trabajador_periodo(
     return {
         "trabajador": trabajador,
         "periodo": periodo,
+        "sueldo_base_efectivo": sueldo_base_efectivo,
+        "descuentos": descuentos,
+        "total_descuentos": total_descuentos,
         "anticipos": anticipos,
         "total_anticipos": total_anticipos,
         "anticipos_antes_18": anticipos_antes_18,
@@ -509,11 +604,20 @@ def obtener_comprobante_anticipo_detallado(
 
     estado_quincena = "LIQUIDADA" if quincena_pagada else "PENDIENTE"
 
-    # El saldo salarial estimado tras este anticipo debe descontar los anticipos acumulados
-    # Y los pagos salariales ya ejecutados (quincena / parciales)
+    # Base salarial efectiva y descuentos aplicados al momento del comprobante
+    base_sal = obtener_base_salarial_periodo(db, trabajador, periodo)
+    stmt_desc = select(Descuento).where(
+        Descuento.trabajador_id == trabajador.id,
+        Descuento.periodo_id == periodo.id,
+        Descuento.estado == "APLICADO",
+    )
+    total_descuentos = sum((d.monto for d in db.execute(stmt_desc).scalars().all()), Decimal("0.00"))
+
+    # El saldo salarial estimado tras este anticipo debe descontar los anticipos acumulados,
+    # los descuentos aplicados y los pagos salariales ya ejecutados (quincena / parciales)
     saldo_estimado = max(
         Decimal("0.00"),
-        trabajador.sueldoBase + ajustes_liq - total_acumulado - total_pagos_realizados,
+        base_sal + ajustes_liq - total_acumulado - total_descuentos - total_pagos_realizados,
     )
 
     anticipos_periodo = [AnticipoOut.model_validate(a) for a in historicos_hasta_este]
@@ -599,7 +703,27 @@ def listar_resumen_pagos_parciales(
     )
     liquidaciones_por_trab = {liq.trabajador_id: liq for liq in liquidaciones_periodo}
 
-    # 4. Cálculo en memoria ultrarrápido
+    # 4. Cargar detalles de planilla y descuentos para sincronización salarial exacta
+    detalles_periodo = list(
+        db.execute(
+            select(PlanillaDetalle).where(PlanillaDetalle.periodo_id == periodo_id)
+        ).scalars().all()
+    )
+    detalles_por_trab = {d.trabajador_id: d for d in detalles_periodo}
+
+    descuentos_periodo = list(
+        db.execute(
+            select(Descuento).where(
+                Descuento.periodo_id == periodo_id,
+                Descuento.estado == "APLICADO"
+            )
+        ).scalars().all()
+    )
+    descuentos_por_trab = defaultdict(list)
+    for d in descuentos_periodo:
+        descuentos_por_trab[d.trabajador_id].append(d)
+
+    # 5. Cálculo en memoria ultrarrápido
     dia_18_limite = date(periodo.anio, periodo.mes, 18)
     quincena_ref = IMPORTE_REFERENCIA_QUINCENA
 
@@ -619,6 +743,17 @@ def listar_resumen_pagos_parciales(
         excedente_quincena = (anticipos_antes_18 - quincena_ref) if supera_quincena else Decimal("0.00")
         monto_sugerido_quincena = max(Decimal("0.00"), diferencia_quincena)
 
+        # Base salarial efectiva y descuentos
+        det = detalles_por_trab.get(t.id)
+        if det:
+            base_sueldo = det.total_ganado
+        else:
+            dias = calcular_dias_trabajados_base(t, periodo)
+            base_sueldo = calcular_sueldo_proporcional(t.sueldoBase, dias)
+
+        descs = descuentos_por_trab.get(t.id, [])
+        total_descuentos = sum((d.monto for d in descs), Decimal("0.00"))
+
         liq = liquidaciones_por_trab.get(t.id)
         if liq:
             pagos_confirmados = [p for p in liq.pagos if p.estado == "CONFIRMADO"]
@@ -628,13 +763,13 @@ def listar_resumen_pagos_parciales(
             )
             quincena_pagada = any(getattr(p, "tipo_pago", "") in ("PAGO_QUINCENA", "REVISION_QUINCENA") for p in pagos_confirmados)
             total_pagos_parciales = sum((p.monto for p in pagos_confirmados), Decimal("0.00"))
-            saldo_salarial_pendiente = t.sueldoBase + liq.ajustes - total_anticipos - total_pagos_parciales
+            saldo_salarial_pendiente = base_sueldo + liq.ajustes - total_anticipos - total_descuentos - total_pagos_parciales
             estado_periodo = liq.estado
         else:
             pago_quincena_realizado = Decimal("0.00")
             quincena_pagada = False
             total_pagos_parciales = Decimal("0.00")
-            saldo_salarial_pendiente = t.sueldoBase - total_anticipos
+            saldo_salarial_pendiente = base_sueldo - total_anticipos - total_descuentos
             estado_periodo = "ANTICIPOS_PENDIENTES" if total_anticipos > 0 else "PENDIENTE"
 
         resultados.append(
@@ -714,12 +849,12 @@ def registrar_pago_parcial_directo(
             trabajador_id=trabajador.id,
             periodo_id=periodo.id,
             fecha_liquidacion=datos.fecha_pago,
-            sueldo_base=trabajador.sueldoBase,
+            sueldo_base=m["sueldo_base_efectivo"],
             ajustes=Decimal("0.00"),
             total_anticipos=m["total_anticipos"],
-            monto_neto=trabajador.sueldoBase - m["total_anticipos"],
+            monto_neto=m["sueldo_base_efectivo"] - m["total_anticipos"] - m["total_descuentos"],
             monto_pagado=Decimal("0.00"),
-            saldo_pendiente=trabajador.sueldoBase - m["total_anticipos"],
+            saldo_pendiente=m["sueldo_base_efectivo"] - m["total_anticipos"] - m["total_descuentos"],
             estado="PENDIENTE",
             observaciones="Liquidación iniciada por control de pagos parciales",
             usuario_id=usuario_ci,
@@ -749,7 +884,7 @@ def registrar_pago_parcial_directo(
     # Actualizar balances de la liquidación de forma atómica
     liq.monto_pagado += datos.monto
     liq.total_anticipos = m["total_anticipos"]
-    liq.monto_neto = liq.sueldo_base + liq.ajustes - liq.total_anticipos
+    liq.monto_neto = liq.sueldo_base + liq.ajustes - liq.total_anticipos - m["total_descuentos"]
     liq.saldo_pendiente = liq.monto_neto - liq.monto_pagado
 
     if liq.saldo_pendiente <= 0 and liq.monto_pagado > 0:
@@ -810,13 +945,14 @@ def registrar_liquidacion(
             ),
         )
 
-    sueldo_base = trabajador.sueldoBase
+    sueldo_base = m["sueldo_base_efectivo"]
     ajustes = datos.ajustes or Decimal("0.00")
     total_anticipos = m["total_anticipos"]
+    total_descuentos = m["total_descuentos"]
     total_pagos_previos = m["total_pagos_parciales"]
 
-    # Monto neto restando anticipos
-    monto_neto = sueldo_base + ajustes - total_anticipos
+    # Monto neto restando anticipos y descuentos
+    monto_neto = sueldo_base + ajustes - total_anticipos - total_descuentos
     saldo_final_restante = monto_neto - total_pagos_previos
 
     if existente:
@@ -1135,6 +1271,18 @@ def obtener_panel_general(db: Session, periodo_id: Optional[int] = None) -> Pane
     stmt_ants_trab = stmt_ants_trab.group_by(Anticipo.trabajador_id)
     anticipos_dict = dict(db.execute(stmt_ants_trab).all())
 
+    # Cargar detalles de planilla y descuentos para sincronización exacta
+    detalles_dict = {}
+    descuentos_dict = defaultdict(Decimal)
+    periodo_obj = None
+    if periodo_id:
+        periodo_obj = db.execute(select(PeriodoSalarial).where(PeriodoSalarial.id == periodo_id)).scalars().first()
+        det_list = db.execute(select(PlanillaDetalle).where(PlanillaDetalle.periodo_id == periodo_id)).scalars().all()
+        detalles_dict = {d.trabajador_id: d for d in det_list}
+        desc_list = db.execute(select(Descuento).where(Descuento.periodo_id == periodo_id, Descuento.estado == "APLICADO")).scalars().all()
+        for d in desc_list:
+            descuentos_dict[d.trabajador_id] += d.monto
+
     total_dinero_pendiente = Decimal("0.00")
     trabajadores_con_pendientes_count = 0
     trabajadores_liquidados_count = 0
@@ -1150,7 +1298,16 @@ def obtener_panel_general(db: Session, periodo_id: Optional[int] = None) -> Pane
                     trabajadores_con_pendientes_count += 1
         else:
             t_ants = anticipos_dict.get(t.id, Decimal("0.00"))
-            saldo = t.sueldoBase - t_ants
+            t_descs = descuentos_dict.get(t.id, Decimal("0.00"))
+            det = detalles_dict.get(t.id)
+            if det:
+                base_sal = det.total_ganado
+            elif periodo_obj:
+                dias = calcular_dias_trabajados_base(t, periodo_obj)
+                base_sal = calcular_sueldo_proporcional(t.sueldoBase, dias)
+            else:
+                base_sal = t.sueldoBase
+            saldo = base_sal - t_ants - t_descs
             if saldo > 0:
                 total_dinero_pendiente += saldo
                 trabajadores_con_pendientes_count += 1

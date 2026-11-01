@@ -1,57 +1,47 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
-import { LoginComponent } from './pages/login/login.component';
-import { DashboardComponent } from './pages/dashboard/dashboard.component';
-import { ResumenComponent } from './pages/resumen/resumen.component';
-import { UsuariosComponent } from './pages/usuarios/usuarios.component';
-import { TrabajadoresComponent } from './pages/trabajadores/trabajadores.component';
-import { BitacoraComponent } from './pages/bitacora/bitacora.component';
-import { PagosComponent } from './pages/pagos/pagos.component';
-import { InventarioComponent } from './pages/inventario/inventario.component';
-import { PlanillaComponent } from './pages/planilla/planilla.component';
-import { ContabilidadComponent } from './pages/contabilidad/contabilidad.component';
 
 export const routes: Routes = [
   {
     path: 'login',
-    component: LoginComponent
+    loadComponent: () => import('./pages/login/login.component').then(m => m.LoginComponent)
   },
   {
     path: 'dashboard',
-    component: DashboardComponent,
+    loadComponent: () => import('./pages/dashboard/dashboard.component').then(m => m.DashboardComponent),
     canActivate: [authGuard],
     children: [
       {
         path: '',
-        component: ResumenComponent
+        loadComponent: () => import('./pages/resumen/resumen.component').then(m => m.ResumenComponent)
       },
       {
         path: 'usuarios',
-        component: UsuariosComponent
+        loadComponent: () => import('./pages/usuarios/usuarios.component').then(m => m.UsuariosComponent)
       },
       {
         path: 'trabajadores',
-        component: TrabajadoresComponent
+        loadComponent: () => import('./pages/trabajadores/trabajadores.component').then(m => m.TrabajadoresComponent)
       },
       {
         path: 'inventario',
-        component: InventarioComponent
+        loadComponent: () => import('./pages/inventario/inventario.component').then(m => m.InventarioComponent)
       },
       {
         path: 'planilla',
-        component: PlanillaComponent
+        loadComponent: () => import('./pages/planilla/planilla.component').then(m => m.PlanillaComponent)
       },
       {
         path: 'pagos',
-        component: PagosComponent
+        loadComponent: () => import('./pages/pagos/pagos.component').then(m => m.PagosComponent)
       },
       {
         path: 'contabilidad',
-        component: ContabilidadComponent
+        loadComponent: () => import('./pages/contabilidad/contabilidad.component').then(m => m.ContabilidadComponent)
       },
       {
         path: 'bitacora',
-        component: BitacoraComponent
+        loadComponent: () => import('./pages/bitacora/bitacora.component').then(m => m.BitacoraComponent)
       }
     ]
   },
