@@ -193,6 +193,7 @@ export interface ResumenTrabajadorPagosParciales {
   pago_quincena_realizado: number;
   anticipos_posteriores_dia_18: number;
   total_anticipos_periodo: number;
+  total_descuentos?: number;
   total_pagos_parciales: number;
   saldo_salarial_pendiente: number;
   estado_periodo: string;

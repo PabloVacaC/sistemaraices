@@ -1441,6 +1441,12 @@
                   <span class="text-amber-700 font-medium">- Bs {{ (currentReceipt()?.anticipos_descontados || 0) | number:'1.2-2' }}</span>
                 </div>
               }
+              @if ((currentReceipt()?.descuentos_salariales || 0) > 0) {
+                <div class="rb-row text-slate-700">
+                  <span>(-) Otros Descuentos / Sanciones:</span>
+                  <span class="text-rose-700 font-medium">- Bs {{ (currentReceipt()?.descuentos_salariales || 0) | number:'1.2-2' }}</span>
+                </div>
+              }
               @if ((currentReceipt()?.quincena_descontada || 0) > 0) {
                 <div class="rb-row text-slate-700">
                   <span>(-) Quincena Pagada:</span>

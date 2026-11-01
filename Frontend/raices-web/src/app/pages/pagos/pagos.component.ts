@@ -170,6 +170,7 @@ export class PagosComponent implements OnInit {
     metodo_pago: string;
     sueldo_base?: number;
     anticipos_descontados?: number;
+    descuentos_salariales?: number;
     quincena_descontada?: number;
     ajustes?: number;
     saldo_restante?: number;
@@ -447,16 +448,18 @@ export class PagosComponent implements OnInit {
     const base = Number(trab.sueldo_base || 0);
     const ajustes = Number(this.liquidacionDirectaForm.ajustes || 0);
     const anticipos = Number(trab.total_anticipos_periodo || 0);
+    const descuentos = Number(trab.total_descuentos || 0);
     const pagos = Number(trab.total_pagos_parciales || 0);
-    return Math.max(0, base + ajustes - anticipos - pagos);
+    return Math.max(0, base + ajustes - anticipos - descuentos - pagos);
   }
 
   abrirModalLiquidarTrabajador(trab: ResumenTrabajadorPagosParciales) {
     this.selectedTrabajadorForLiquidacion.set(trab);
     const base = Number(trab.sueldo_base || 0);
     const anticipos = Number(trab.total_anticipos_periodo || 0);
+    const descuentos = Number(trab.total_descuentos || 0);
     const pagos = Number(trab.total_pagos_parciales || 0);
-    const saldoRestante = Math.max(0, base - anticipos - pagos);
+    const saldoRestante = Math.max(0, base - anticipos - descuentos - pagos);
 
     this.liquidacionDirectaForm = {
       fecha_liquidacion: this.getFechaValidaParaLiquidacion(),
@@ -531,6 +534,7 @@ export class PagosComponent implements OnInit {
           metodo_pago: this.liquidacionDirectaForm.pago_inmediato ? this.liquidacionDirectaForm.metodo_pago_inmediato : 'POR PAGAR',
           sueldo_base: liq.sueldo_base,
           anticipos_descontados: liq.total_anticipos,
+          descuentos_salariales: Number(trab.total_descuentos || 0),
           quincena_descontada: liq.pago_quincena_previo ?? (liq.total_pagos_previos || Number(trab.total_pagos_parciales || 0)),
           ajustes: liq.ajustes,
           saldo_restante: liq.saldo_pendiente,

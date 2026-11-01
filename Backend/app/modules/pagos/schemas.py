@@ -187,6 +187,7 @@ class ResumenTrabajadorPagosParcialesOut(BaseModel):
     quincena_pagada: bool = False
     anticipos_posteriores_dia_18: Decimal
     total_anticipos_periodo: Decimal
+    total_descuentos: Decimal = Decimal("0.00")
     total_pagos_parciales: Decimal
     saldo_salarial_pendiente: Decimal
     estado_periodo: str

@@ -272,7 +272,23 @@ def obtener_o_generar_planilla(db: Session, periodo_id: int) -> PlanillaMensualO
             total_ganado + (liq.ajustes if liq else Decimal("0.00")) - total_anticipos_descuentos - total_pagado,
         ) if liquido_pagable > 0 else Decimal("0.00")
 
-        estado_liq = liq.estado if liq else ("LIQUIDADO" if (total_pagado >= total_ganado and total_ganado > 0) else "PENDIENTE")
+        if liq:
+            neto_real = total_ganado + (liq.ajustes or Decimal("0.00")) - total_anticipos_descuentos
+            saldo_real = max(Decimal("0.00"), neto_real - total_pagado)
+            liq.monto_neto = neto_real
+            liq.total_anticipos = monto_anticipos
+            liq.monto_pagado = total_pagado
+            liq.saldo_pendiente = saldo_real
+            if saldo_real <= 0 and (total_pagado > 0 or neto_real <= 0):
+                liq.estado = "LIQUIDADO"
+            elif total_pagado > 0:
+                liq.estado = "PARCIAL"
+            else:
+                liq.estado = "PENDIENTE"
+            estado_liq = liq.estado
+            saldo_pendiente_real = saldo_real
+        else:
+            estado_liq = "LIQUIDADO" if (total_pagado >= total_ganado and total_ganado > 0) else "PENDIENTE"
 
         if estado_liq == "LIQUIDADO":
             count_liquidados += 1

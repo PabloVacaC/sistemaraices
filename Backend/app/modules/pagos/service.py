@@ -324,10 +324,10 @@ def calcular_metricas_trabajador_periodo(
     stmt_desc = select(Descuento).where(
         Descuento.trabajador_id == trabajador.id,
         Descuento.periodo_id == periodo.id,
-        Descuento.estado == "APLICADO",
+        Descuento.estado == "CONFIRMADO",
     )
     descuentos = list(db.execute(stmt_desc).scalars().unique().all())
-    total_descuentos = sum((d.monto for d in descuentos), Decimal("0.00"))
+    total_descuentos = sum((d.importe for d in descuentos), Decimal("0.00"))
 
     # 2. Liquidación y pagos parciales existentes
     stmt_liq = select(Liquidacion).where(
@@ -684,9 +684,9 @@ def obtener_comprobante_anticipo_detallado(
     stmt_desc = select(Descuento).where(
         Descuento.trabajador_id == trabajador.id,
         Descuento.periodo_id == periodo.id,
-        Descuento.estado == "APLICADO",
+        Descuento.estado == "CONFIRMADO",
     )
-    total_descuentos = sum((d.monto for d in db.execute(stmt_desc).scalars().unique().all()), Decimal("0.00"))
+    total_descuentos = sum((d.importe for d in db.execute(stmt_desc).scalars().unique().all()), Decimal("0.00"))
 
     # El saldo salarial estimado tras este anticipo debe descontar los anticipos acumulados,
     # los descuentos aplicados y los pagos salariales ya ejecutados (quincena / parciales)
@@ -790,7 +790,7 @@ def listar_resumen_pagos_parciales(
         db.execute(
             select(Descuento).where(
                 Descuento.periodo_id == periodo_id,
-                Descuento.estado == "APLICADO"
+                Descuento.estado == "CONFIRMADO"
             )
         ).scalars().unique().all()
     )
@@ -827,7 +827,7 @@ def listar_resumen_pagos_parciales(
             base_sueldo = calcular_sueldo_proporcional(t.sueldoBase, dias)
 
         descs = descuentos_por_trab.get(t.id, [])
-        total_descuentos = sum((d.monto for d in descs), Decimal("0.00"))
+        total_descuentos = sum((d.importe for d in descs), Decimal("0.00"))
 
         liq = liquidaciones_por_trab.get(t.id)
         if liq:
@@ -862,6 +862,7 @@ def listar_resumen_pagos_parciales(
                 quincena_pagada=quincena_pagada,
                 anticipos_posteriores_dia_18=anticipos_post_18,
                 total_anticipos_periodo=total_anticipos,
+                total_descuentos=total_descuentos,
                 total_pagos_parciales=total_pagos_parciales,
                 saldo_salarial_pendiente=saldo_salarial_pendiente,
                 estado_periodo=estado_periodo,
@@ -1394,9 +1395,9 @@ def obtener_panel_general(db: Session, periodo_id: Optional[int] = None) -> Pane
         periodo_obj = db.execute(select(PeriodoSalarial).where(PeriodoSalarial.id == periodo_id)).scalars().first()
         det_list = db.execute(select(PlanillaDetalle).where(PlanillaDetalle.periodo_id == periodo_id)).scalars().unique().all()
         detalles_dict = {d.trabajador_id: d for d in det_list}
-        desc_list = db.execute(select(Descuento).where(Descuento.periodo_id == periodo_id, Descuento.estado == "APLICADO")).scalars().unique().all()
+        desc_list = db.execute(select(Descuento).where(Descuento.periodo_id == periodo_id, Descuento.estado == "CONFIRMADO")).scalars().unique().all()
         for d in desc_list:
-            descuentos_dict[d.trabajador_id] += d.monto
+            descuentos_dict[d.trabajador_id] += d.importe
 
     total_dinero_pendiente = Decimal("0.00")
     trabajadores_con_pendientes_count = 0
