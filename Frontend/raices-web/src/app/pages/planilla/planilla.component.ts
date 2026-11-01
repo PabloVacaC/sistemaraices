@@ -66,7 +66,6 @@ export class PlanillaComponent implements OnInit {
     metodo_pago: 'EFECTIVO',
     fecha_entrega: new Date().toISOString().substring(0, 10),
     observaciones: '',
-    es_periodo_siguiente: false,
     confirmar_excedente: false
   };
 
@@ -329,7 +328,6 @@ export class PlanillaComponent implements OnInit {
       metodo_pago: 'EFECTIVO',
       fecha_entrega: new Date().toISOString().substring(0, 10),
       observaciones: '',
-      es_periodo_siguiente: false,
       confirmar_excedente: false
     };
     this.cargarAnticiposDeFila(fila.trabajador_id);
@@ -368,7 +366,7 @@ export class PlanillaComponent implements OnInit {
       metodo_pago: this.anticipoFilaForm.metodo_pago,
       fecha_entrega: this.anticipoFilaForm.fecha_entrega,
       observaciones: this.anticipoFilaForm.observaciones,
-      es_periodo_siguiente: this.anticipoFilaForm.es_periodo_siguiente,
+      es_periodo_siguiente: false,
       confirmar_excedente: this.anticipoFilaForm.confirmar_excedente
     };
 

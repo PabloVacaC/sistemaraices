@@ -144,7 +144,6 @@
             <th class="col-quincena">Pago Quincena</th>
             <th class="col-anticipos">Pago Anticipos</th>
             <th class="col-ant-desc">Total Ant. y Desc.</th>
-            <th class="col-sig-per">Ant. Per. Sig. (1-5)</th>
             <th class="col-liquido">Líquido Pagable</th>
           </tr>
         </thead>
@@ -249,12 +248,7 @@
                 </div>
               </td>
 
-              <!-- 12. Anticipos para el período siguiente (RF-40 a RF-45) -->
-              <td class="col-sig-per">
-                <span class="font-mono text-slate-600">Bs {{ f.anticipos_periodo_siguiente | number:'1.2-2' }}</span>
-              </td>
-
-              <!-- 13. Líquido pagable = Total ganado − Total ant/desc − Pago quincena (RF-46 a RF-50) -->
+              <!-- 12. Líquido pagable = Total ganado − Total ant/desc − Pago quincena (RF-46 a RF-50) -->
               <td class="col-liquido">
                 <div class="action-amount-cell">
                   <div class="stacked-totals">
@@ -292,7 +286,7 @@
             </tr>
           } @empty {
             <tr>
-              <td colspan="13" class="empty-row">
+              <td colspan="12" class="empty-row">
                 No se encontraron trabajadores en este período salarial.
               </td>
             </tr>
@@ -307,7 +301,6 @@
             <td class="font-bold text-indigo-900">Bs {{ (planilla()?.totales?.total_quincena || 0) | number:'1.2-2' }}</td>
             <td class="font-bold text-amber-900">Bs {{ (planilla()?.totales?.total_anticipos || 0) | number:'1.2-2' }}</td>
             <td class="font-bold text-red-900">Bs {{ (planilla()?.totales?.total_anticipos_descuentos || 0) | number:'1.2-2' }}</td>
-            <td class="font-bold text-slate-700">Bs {{ (planilla()?.totales?.total_anticipos_periodo_siguiente || 0) | number:'1.2-2' }}</td>
             <td class="font-bold" [class.text-emerald-800]="(planilla()?.totales?.total_liquido_pagable || 0) >= 0" [class.text-red-700]="(planilla()?.totales?.total_liquido_pagable || 0) < 0">
               Bs {{ (planilla()?.totales?.total_liquido_pagable || 0) | number:'1.2-2' }}
             </td>
@@ -551,13 +544,6 @@
                 <input type="date" class="input-clean" [(ngModel)]="anticipoFilaForm.fecha_entrega" />
               </div>
 
-              <div class="form-group flex-col justify-center">
-                <label class="checkbox-label">
-                  <input type="checkbox" [(ngModel)]="anticipoFilaForm.es_periodo_siguiente" />
-                  <span>Anticipo correspondiente al período siguiente (Días 1 al 5)</span>
-                </label>
-              </div>
-
               <div class="form-group col-span-2">
                 <label>Motivo / Observaciones</label>
                 <input
@@ -586,7 +572,6 @@
                 <th>Fecha Entrega</th>
                 <th>Método</th>
                 <th>Importe</th>
-                <th>Destino</th>
                 <th>Observaciones</th>
               </tr>
             </thead>
@@ -597,18 +582,11 @@
                   <td>{{ a.fecha_entrega }}</td>
                   <td><span class="pill-mini">{{ a.metodo_pago }}</span></td>
                   <td class="font-bold text-amber-800">Bs {{ a.importe | number:'1.2-2' }}</td>
-                  <td>
-                    @if (a.es_periodo_siguiente) {
-                      <span class="badge-sig-per">Período Siguiente</span>
-                    } @else {
-                      <span class="text-xs text-slate-500">Período Actual</span>
-                    }
-                  </td>
                   <td class="text-xs text-slate-600">{{ a.observaciones || '—' }}</td>
                 </tr>
               } @empty {
                 <tr>
-                  <td colspan="6" class="empty-row">No hay anticipos registrados para este trabajador.</td>
+                  <td colspan="5" class="empty-row">No hay anticipos registrados para este trabajador.</td>
                 </tr>
               }
             </tbody>

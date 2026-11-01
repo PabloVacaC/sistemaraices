@@ -138,13 +138,8 @@ def obtener_o_generar_planilla(db: Session, periodo_id: int) -> PlanillaMensualO
     anticipos_todos = list(db.execute(stmt_ants).scalars().unique().all())
 
     anticipos_por_trab = {}
-    anticipos_sig_por_trab = {}
     for a in anticipos_todos:
-        tid = a.trabajador_id
-        if getattr(a, "es_periodo_siguiente", False):
-            anticipos_sig_por_trab.setdefault(tid, []).append(a)
-        else:
-            anticipos_por_trab.setdefault(tid, []).append(a)
+        anticipos_por_trab.setdefault(a.trabajador_id, []).append(a)
 
     # 4. Cargar descuentos del período
     stmt_desc = select(Descuento).where(
@@ -232,9 +227,8 @@ def obtener_o_generar_planilla(db: Session, periodo_id: int) -> PlanillaMensualO
         excedente_quincena = (ants_pre_18 - IMPORTE_REFERENCIA_QUINCENA) if supera_quincena else Decimal("0.00")
         diferencia_quincena = max(Decimal("0.00"), IMPORTE_REFERENCIA_QUINCENA - ants_pre_18)
 
-        # Anticipos para el período siguiente (RF-40 a RF-45)
-        ants_sig_t = anticipos_sig_por_trab.get(t.id, [])
-        monto_anticipos_sig = sum((a.importe for a in ants_sig_t), Decimal("0.00"))
+        # Anticipos para el período siguiente (deprecado / no utilizado)
+        monto_anticipos_sig = Decimal("0.00")
 
         # Descuentos del período (RF-29 a RF-32)
         descs_t = descuentos_por_trab.get(t.id, [])
