@@ -496,6 +496,9 @@ export interface PlanillaFila {
   quincena_sugerida: number;
   supera_quincena: boolean;
   excedente_quincena: number;
+  quincena_referencia?: number;
+  anticipos_antes_dia_18?: number;
+  diferencia_quincena?: number;
   pago_anticipos: number;
   anticipos_count: number;
   total_descuentos: number;

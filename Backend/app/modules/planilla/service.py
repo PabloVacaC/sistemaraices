@@ -228,6 +228,7 @@ def obtener_o_generar_planilla(db: Session, periodo_id: int) -> PlanillaMensualO
         quincena_sugerida = max(Decimal("0.00"), IMPORTE_REFERENCIA_QUINCENA - ants_pre_18)
         supera_quincena = ants_pre_18 > IMPORTE_REFERENCIA_QUINCENA
         excedente_quincena = (ants_pre_18 - IMPORTE_REFERENCIA_QUINCENA) if supera_quincena else Decimal("0.00")
+        diferencia_quincena = max(Decimal("0.00"), IMPORTE_REFERENCIA_QUINCENA - ants_pre_18)
 
         # Anticipos para el período siguiente (RF-40 a RF-45)
         ants_sig_t = anticipos_sig_por_trab.get(t.id, [])
@@ -300,6 +301,9 @@ def obtener_o_generar_planilla(db: Session, periodo_id: int) -> PlanillaMensualO
             quincena_sugerida=quincena_sugerida,
             supera_quincena=supera_quincena,
             excedente_quincena=excedente_quincena,
+            quincena_referencia=IMPORTE_REFERENCIA_QUINCENA,
+            anticipos_antes_dia_18=ants_pre_18,
+            diferencia_quincena=diferencia_quincena,
             pago_anticipos=monto_anticipos,
             anticipos_count=len(ants_t),
             total_descuentos=monto_descuentos,

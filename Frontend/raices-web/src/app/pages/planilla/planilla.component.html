@@ -199,12 +199,25 @@
 
               <!-- 9. Pago de quincena (RF-33 a RF-39) -->
               <td class="col-quincena">
-                <div class="quincena-cell">
-                  <span class="font-semibold text-indigo-900">Bs {{ f.pago_quincena | number:'1.2-2' }}</span>
+                <div class="action-amount-cell">
+                  <div class="stacked-totals">
+                    <span class="font-semibold text-indigo-900">Bs {{ f.pago_quincena | number:'1.2-2' }}</span>
+                    @if (f.estado_quincena === 'LIQUIDADA') {
+                      <span class="badge-quincena-pagada">LIQUIDADA</span>
+                    } @else {
+                      <span class="badge-quincena-pendiente">PENDIENTE</span>
+                    }
+                  </div>
                   @if (f.estado_quincena === 'LIQUIDADA') {
-                    <span class="badge-quincena-pagada">LIQUIDADA</span>
+                    <button class="btn btn-xs btn-outline-emerald" (click)="abrirModalPagoQuincenaFila(f)" title="Quincena pagada. Clic para registrar pago extraordinario o ver">
+                      <span>Pagada</span>
+                      <span>✓</span>
+                    </button>
                   } @else {
-                    <span class="badge-quincena-pendiente">PENDIENTE</span>
+                    <button class="btn btn-xs btn-outline-indigo" (click)="abrirModalPagoQuincenaFila(f)" title="Pagar Quincena (Día 18)">
+                      <span>Pagar</span>
+                      <span>+</span>
+                    </button>
                   }
                 </div>
               </td>
@@ -624,6 +637,240 @@
           <button class="btn btn-secondary" (click)="showModalCerrarPlanilla.set(false)">Cancelar</button>
           <button class="btn btn-danger" (click)="confirmarCierrePlanilla()" [disabled]="loading()">
             {{ cerrarPlanillaForm.confirmar_pendientes ? 'Confirmar Cierre con Pendientes' : 'Cerrar Planilla Formalmente' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ================================================================= -->
+  <!-- MODAL 5: GESTIÓN DE PAGO DE QUINCENA (DÍA 18) -->
+  <!-- ================================================================= -->
+  @if (showModalPagoQuincena()) {
+    <div class="modal-backdrop">
+      <div class="modal-card modal-card-lg animate-scale-up">
+        <div class="modal-icon-badge blue">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect width="20" height="14" x="2" y="5" rx="2"/>
+            <line x1="2" x2="22" y1="10" y2="10"/>
+          </svg>
+        </div>
+        <h3>Gestión de Pago de Quincena (Día 18)</h3>
+        <p class="modal-desc">
+          Trabajador: <strong>{{ selectedFilaQuincena()?.nombre_completo }}</strong>
+          (Sueldo Base: <strong>Bs {{ (selectedFilaQuincena()?.haber_basico || 0) | number:'1.2-2' }}</strong>)
+        </p>
+
+        <!-- Resumen Financiero de Quincena -->
+        <div class="confirmation-summary-box mb-4">
+          <div class="summary-line">
+            <span>Quincena de Referencia:</span>
+            <strong>Bs {{ (selectedFilaQuincena()?.quincena_referencia || 1000) | number:'1.2-2' }}</strong>
+          </div>
+          <div class="summary-line">
+            <span>Anticipos recibidos &le; Día 18:</span>
+            <strong class="text-amber">Bs {{ (selectedFilaQuincena()?.anticipos_antes_dia_18 || 0) | number:'1.2-2' }}</strong>
+          </div>
+          <div class="summary-line">
+            <span>Diferencia de Quincena:</span>
+            @if (selectedFilaQuincena()?.supera_quincena) {
+              <strong class="text-red">Superó en Bs {{ (selectedFilaQuincena()?.excedente_quincena || 0) | number:'1.2-2' }}</strong>
+            } @else {
+              <strong class="text-emerald">Faltan Bs {{ (selectedFilaQuincena()?.diferencia_quincena || 0) | number:'1.2-2' }}</strong>
+            }
+          </div>
+          <div class="summary-line">
+            <span>Monto sugerido para quincena:</span>
+            <strong class="text-blue font-bold">Bs {{ (selectedFilaQuincena()?.quincena_sugerida || 0) | number:'1.2-2' }}</strong>
+          </div>
+        </div>
+
+        @if (selectedFilaQuincena()?.supera_quincena) {
+          <div class="quincena-alert-box warning mb-4">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="8" x2="12" y2="12"/>
+              <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            <span>
+              La quincena referencial ya fue cubierta o superada por anticipos previos. Puede registrar con importe <strong>Bs 0.00</strong> para dejar constancia de revisión, o ingresar otro monto si cuenta con autorización expresa.
+            </span>
+          </div>
+        }
+
+        <div class="form-grid text-left">
+          <div class="form-group">
+            <label>Importe a Pagar (Bs) *</label>
+            <div class="input-currency-wrapper">
+              <span class="currency-prefix">Bs</span>
+              <input
+                type="number"
+                min="0"
+                class="input-clean font-bold text-lg"
+                [(ngModel)]="pagoQuincenaForm.monto"
+              />
+            </div>
+            <span class="text-xs text-slate-500 mt-1">Sugerido automáticamente: Bs {{ (selectedFilaQuincena()?.quincena_sugerida || 0) | number:'1.2-2' }}</span>
+          </div>
+
+          <div class="form-group">
+            <label>Tipo de Registro *</label>
+            <select class="select-clean" [(ngModel)]="pagoQuincenaForm.tipo_pago">
+              <option value="PAGO_QUINCENA">Pago Efectivo de Quincena</option>
+              <option value="REVISION_QUINCENA">Revisión / Constancia de Quincena (Bs 0.00)</option>
+              <option value="PAGO_PARCIAL">Pago Parcial Extraordinario</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Método de Pago *</label>
+            <select class="select-clean" [(ngModel)]="pagoQuincenaForm.metodo_pago">
+              <option value="EFECTIVO">Efectivo</option>
+              <option value="TRANSFERENCIA">Transferencia Bancaria</option>
+              <option value="CHEQUE">Cheque</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Fecha de Pago *</label>
+            <input type="date" class="input-clean" [(ngModel)]="pagoQuincenaForm.fecha_pago" />
+          </div>
+
+          <div class="form-group col-span-2">
+            <label>Observaciones (Opcional)</label>
+            <input type="text" placeholder="Ej. Quincena mes en curso cancelada..." class="input-clean" [(ngModel)]="pagoQuincenaForm.observaciones" />
+          </div>
+        </div>
+
+        <div class="modal-actions mt-6">
+          <button class="btn btn-secondary" (click)="showModalPagoQuincena.set(false)">
+            Cancelar
+          </button>
+          <button class="btn btn-primary" (click)="confirmarPagoQuincenaFila()" [disabled]="loading()">
+            Confirmar Pago y Generar Comprobante
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ================================================================= -->
+  <!-- MODAL 6: VISTA DE COMPROBANTE OFICIAL (IMPRIMIR & WHATSAPP) -->
+  <!-- ================================================================= -->
+  @if (showReceiptModal()) {
+    <div class="modal-backdrop" (click)="showReceiptModal.set(false)">
+      <div class="receipt-modal-card animate-scale-up" (click)="$event.stopPropagation()">
+        <!-- Botón de Cerrar Superior Rápido -->
+        <button class="btn-close-receipt" (click)="showReceiptModal.set(false)" type="button" aria-label="Cerrar comprobante" title="Cerrar">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M18 6L6 18M6 6l12 12"/>
+          </svg>
+        </button>
+
+        <!-- Encabezado del Comprobante -->
+        <div class="receipt-paper" id="printable-receipt">
+          <div class="receipt-header">
+            <div class="receipt-brand">
+              <div class="brand-badge">SISTEMAS RAÍCES</div>
+              <span class="company-sub">Gestión Empresarial y Recursos</span>
+            </div>
+            <div class="receipt-id-box">
+              <span class="receipt-type">{{ currentReceipt()?.tipo }}</span>
+              <div class="receipt-number">{{ currentReceipt()?.numero_comprobante }}</div>
+              <span class="receipt-date">{{ currentReceipt()?.fecha }}</span>
+            </div>
+          </div>
+
+          <div class="receipt-divider"></div>
+
+          <!-- Datos del Beneficiario -->
+          <div class="receipt-grid">
+            <div class="receipt-col">
+              <span class="label">Trabajador:</span>
+              <span class="val font-bold">{{ currentReceipt()?.trabajador_nombre }}</span>
+            </div>
+            <div class="receipt-col">
+              <span class="label">Carné de Identidad:</span>
+              <span class="val">{{ currentReceipt()?.trabajador_ci || 'No especificado' }}</span>
+            </div>
+            <div class="receipt-col">
+              <span class="label">Área / Cargo:</span>
+              <span class="val">{{ currentReceipt()?.trabajador_area }} • {{ currentReceipt()?.trabajador_cargo }}</span>
+            </div>
+            <div class="receipt-col">
+              <span class="label">Período Salarial:</span>
+              <span class="val font-semibold">{{ currentReceipt()?.periodo_descripcion }}</span>
+            </div>
+          </div>
+
+          <div class="receipt-divider"></div>
+
+          <!-- Monto Principal -->
+          <div class="receipt-amount-box">
+            <span class="amount-label">IMPORTE ENTREGADO</span>
+            <div class="amount-val">
+              Bs {{ (currentReceipt()?.importe || 0) | number:'1.2-2' }}
+            </div>
+            <span class="amount-method">Método de entrega: {{ currentReceipt()?.metodo_pago }}</span>
+          </div>
+
+          @if (currentReceipt()?.sueldo_base) {
+            <div class="receipt-breakdown">
+              <div class="rb-title font-bold text-slate-800 mb-2">Estado y Desglose Salarial del Pago</div>
+              <div class="rb-row">
+                <span>Sueldo Base Mensual:</span>
+                <span class="font-bold text-slate-900">Bs {{ (currentReceipt()?.sueldo_base || 0) | number:'1.2-2' }}</span>
+              </div>
+              @if ((currentReceipt()?.anticipos_descontados || 0) > 0) {
+                <div class="rb-row text-slate-700">
+                  <span>(-) Total Anticipos Descontados:</span>
+                  <span class="text-amber-700 font-medium">- Bs {{ (currentReceipt()?.anticipos_descontados || 0) | number:'1.2-2' }}</span>
+                </div>
+              }
+              <div class="rb-row font-bold text-slate-900 border-t pt-1.5 mt-1">
+                <span>(=) Monto Entregado:</span>
+                <span class="text-emerald-700 font-bold">Bs {{ (currentReceipt()?.importe || 0) | number:'1.2-2' }}</span>
+              </div>
+              <div class="rb-row items-center py-1 border-t mt-1">
+                <span>Saldo Salarial Estimado Restante:</span>
+                <span class="font-bold text-slate-800">Bs {{ (currentReceipt()?.saldo_restante || 0) | number:'1.2-2' }}</span>
+              </div>
+            </div>
+          }
+
+          <div class="receipt-footer-notes">
+            <p>Observaciones: {{ currentReceipt()?.observaciones || 'Sin observaciones registradas.' }}</p>
+            <div class="signatures-box">
+              <div class="sig-line">
+                <div class="line"></div>
+                <span>Entregado por ({{ getUsuarioDisplay(currentReceipt()?.usuario_nombre, currentReceipt()?.usuario_id) }})</span>
+              </div>
+              <div class="sig-line">
+                <div class="line"></div>
+                <span>Recibí Conforme (Trabajador)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Acciones del Comprobante -->
+        <div class="receipt-actions-bar">
+          <button class="btn btn-secondary" (click)="showReceiptModal.set(false)">
+            Cerrar
+          </button>
+          <button class="btn btn-secondary" (click)="imprimirComprobante()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 6 2 18 2 18 9"/>
+              <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+              <rect width="12" height="8" x="6" y="14"/>
+            </svg>
+            <span>Imprimir / PDF</span>
+          </button>
+          <button class="btn btn-whatsapp" (click)="compartirWhatsApp()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2m.01 1.67c2.2 0 4.26.86 5.82 2.41a8.17 8.17 0 0 1 2.41 5.83c0 4.54-3.7 8.24-8.24 8.24-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.17 8.17 0 0 1-1.25-4.36c0-4.54 3.7-8.24 8.24-8.24m4.52 11.66c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.13-1.06-.39-2.01-1.24-.74-.66-1.24-1.48-1.39-1.73-.14-.25-.02-.39.11-.51.11-.11.25-.29.37-.43.13-.15.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.13-.56-1.34-.76-1.84-.2-.49-.4-.42-.56-.43h-.48c-.17 0-.44.06-.67.31-.23.25-.88.86-.88 2.1 0 1.24.9 2.44 1.03 2.61.13.17 1.78 2.71 4.3 3.8.6.26 1.07.41 1.43.53.6.19 1.15.16 1.58.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.15-1.18-.06-.1-.23-.17-.48-.3"/>
+            </svg>
+            <span>Compartir por WhatsApp</span>
           </button>
         </div>
       </div>

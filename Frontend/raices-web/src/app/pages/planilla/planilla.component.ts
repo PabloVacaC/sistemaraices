@@ -77,6 +77,21 @@ export class PlanillaComponent implements OnInit {
   };
   advertenciaCierre = signal<string | null>(null);
 
+  // Modal Pago de Quincena (Día 18)
+  showModalPagoQuincena = signal<boolean>(false);
+  selectedFilaQuincena = signal<PlanillaFila | null>(null);
+  pagoQuincenaForm = {
+    monto: null as number | null,
+    tipo_pago: 'PAGO_QUINCENA',
+    metodo_pago: 'EFECTIVO',
+    fecha_pago: new Date().toISOString().substring(0, 10),
+    observaciones: ''
+  };
+
+  // Modal Comprobante Oficial
+  showReceiptModal = signal<boolean>(false);
+  currentReceipt = signal<any | null>(null);
+
   // Filas filtradas de la tabla
   filasFiltradas = computed(() => {
     const pl = this.planilla();
@@ -411,6 +426,116 @@ export class PlanillaComponent implements OnInit {
         this.loading.set(false);
       }
     });
+  }
+
+  // ==========================================
+  // GESTIÓN DE PAGO DE QUINCENA (DÍA 18)
+  // ==========================================
+  abrirModalPagoQuincenaFila(fila: PlanillaFila) {
+    this.selectedFilaQuincena.set(fila);
+    this.pagoQuincenaForm.monto = Number(fila.quincena_sugerida || 0);
+    this.pagoQuincenaForm.tipo_pago = fila.supera_quincena ? 'REVISION_QUINCENA' : 'PAGO_QUINCENA';
+    this.pagoQuincenaForm.fecha_pago = new Date().toISOString().substring(0, 10);
+    this.pagoQuincenaForm.metodo_pago = 'EFECTIVO';
+    this.pagoQuincenaForm.observaciones = fila.supera_quincena
+      ? 'Quincena cubierta en su totalidad por anticipos acumulados'
+      : 'Pago de primera quincena (Día 18)';
+    this.showModalPagoQuincena.set(true);
+  }
+
+  confirmarPagoQuincenaFila() {
+    const fila = this.selectedFilaQuincena();
+    const pid = this.selectedPeriodoId();
+    if (!fila || !pid) return;
+
+    const monto = Number(this.pagoQuincenaForm.monto ?? 0);
+    if (monto < 0) {
+      this.toast.warning('El monto a pagar no puede ser negativo.');
+      return;
+    }
+
+    this.loading.set(true);
+    this.showModalPagoQuincena.set(false);
+
+    const payload = {
+      trabajador_id: fila.trabajador_id,
+      periodo_id: pid,
+      monto: monto,
+      tipo_pago: this.pagoQuincenaForm.tipo_pago,
+      metodo_pago: this.pagoQuincenaForm.metodo_pago,
+      fecha_pago: this.pagoQuincenaForm.fecha_pago,
+      observaciones: this.pagoQuincenaForm.observaciones,
+    };
+
+    this.dataService.registrarPagoParcialDirecto(payload).subscribe({
+      next: (pago) => {
+        this.toast.success(`Pago de quincena registrado: ${pago.numero_comprobante}`);
+        this.loading.set(false);
+        this.cargarPlanilla();
+
+        const periodoDesc = this.periodos().find(p => p.id === pid)?.descripcion || '';
+        this.abrirComprobantePago({
+          tipo: 'PAGO_LIQUIDACION',
+          numero_comprobante: pago.numero_comprobante,
+          trabajador_nombre: fila.nombre_completo,
+          trabajador_ci: fila.ci || '',
+          trabajador_cargo: fila.cargo,
+          trabajador_area: fila.area,
+          periodo_descripcion: periodoDesc,
+          fecha: pago.fecha_pago,
+          importe: pago.monto,
+          metodo_pago: pago.metodo_pago,
+          sueldo_base: fila.haber_basico,
+          anticipos_descontados: fila.pago_anticipos,
+          saldo_restante: Math.max(0, (fila.saldo_pendiente_real || fila.liquido_pagable) - pago.monto),
+          observaciones: `${pago.tipo_pago}: ${pago.observaciones || ''}`,
+          usuario_nombre: pago.usuario_nombre || this.auth.currentUser()?.nombre || 'Administrador',
+          usuario_id: pago.usuario_id || this.auth.currentUser()?.ci || '',
+        });
+      },
+      error: (err: any) => {
+        this.toast.error(err?.error?.detail || 'Error al registrar el pago de quincena');
+        this.loading.set(false);
+      }
+    });
+  }
+
+  // ==========================================
+  // COMPROBANTE OFICIAL Y WHATSAPP
+  // ==========================================
+  abrirComprobantePago(data: any) {
+    this.currentReceipt.set(data);
+    this.showReceiptModal.set(true);
+  }
+
+  imprimirComprobante() {
+    window.print();
+  }
+
+  compartirWhatsApp() {
+    const rc = this.currentReceipt();
+    if (!rc) return;
+
+    let mensaje = `*COMPROBANTE OFICIAL - SISTEMAS RAÍCES*\n`;
+    mensaje += `*${rc.tipo}*: ${rc.numero_comprobante}\n`;
+    mensaje += `*Fecha*: ${rc.fecha}\n`;
+    mensaje += `*Trabajador*: ${rc.trabajador_nombre}\n`;
+    if (rc.trabajador_ci) mensaje += `*CI*: ${rc.trabajador_ci}\n`;
+    mensaje += `*Cargo*: ${rc.trabajador_cargo} (${rc.trabajador_area})\n`;
+    mensaje += `*Período Salarial*: ${rc.periodo_descripcion}\n`;
+    mensaje += `*Importe*: Bs ${Number(rc.importe).toFixed(2)}\n`;
+    mensaje += `*Método*: ${rc.metodo_pago}\n`;
+    if (rc.observaciones) mensaje += `*Observaciones*: ${rc.observaciones}\n`;
+    mensaje += `\n_Emitido oficialmente a través del Sistema Empresarial Raíces._`;
+
+    const encoded = encodeURIComponent(mensaje);
+    window.open(`https://wa.me/?text=${encoded}`, '_blank');
+  }
+
+  getUsuarioDisplay(nombre?: string, id?: string): string {
+    if (nombre && nombre.trim()) return nombre.trim();
+    if (id && id.trim()) return `CI: ${id}`;
+    return 'Administrador';
   }
 
   // ==========================================

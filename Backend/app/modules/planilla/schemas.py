@@ -69,6 +69,9 @@ class PlanillaFilaOut(BaseModel):
     quincena_sugerida: Decimal
     supera_quincena: bool = False
     excedente_quincena: Decimal = Decimal("0.00")
+    quincena_referencia: Decimal = Decimal("1000.00")
+    anticipos_antes_dia_18: Decimal = Decimal("0.00")
+    diferencia_quincena: Decimal = Decimal("0.00")
     # Col 10: Pago de anticipos válidos del período
     pago_anticipos: Decimal
     anticipos_count: int = 0
