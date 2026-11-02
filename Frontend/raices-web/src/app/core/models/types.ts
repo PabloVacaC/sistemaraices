@@ -545,6 +545,35 @@ export interface PlanillaResumenTotales {
   total_saldo_pendiente?: number;
 }
 
+export interface PlanillaCierre {
+  id: number;
+  periodo_id: number;
+  entregado_quincena: number;
+  solicitud_quincena: number;
+  diferencia_quincena: number;
+  entregado_sueldo: number;
+  solicitud_sueldo: number;
+  diferencia_sueldo: number;
+  otros_gastos: number;
+  otros_gastos_detalle?: string | null;
+  total_diferencia: number;
+  observaciones?: string | null;
+  usuario_ci?: string | null;
+  usuario_nombre?: string | null;
+  fecha_cierre: string;
+}
+
+export interface CerrarPlanillaPayload {
+  observaciones?: string;
+  confirmar_pendientes?: boolean;
+  entregado_quincena: number;
+  solicitud_quincena: number;
+  entregado_sueldo: number;
+  solicitud_sueldo: number;
+  otros_gastos: number;
+  otros_gastos_detalle?: string;
+}
+
 export interface PlanillaMensual {
   periodo_id: number;
   periodo_descripcion: string;
@@ -557,6 +586,7 @@ export interface PlanillaMensual {
   estado_periodo: string;
   filas: PlanillaFila[];
   totales: PlanillaResumenTotales;
+  cierre?: PlanillaCierre | null;
 }
 
 export interface ActualizarDiasTrabajadosPayload {

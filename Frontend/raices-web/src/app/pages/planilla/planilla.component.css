@@ -1033,6 +1033,141 @@
 }
 
 /* =========================================================================
+   ESTILOS DE ACTA Y FORMULARIO DE CIERRE (spec.md)
+   ========================================================================= */
+.cierre-grid-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.cierre-card-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+}
+
+.cierre-card-box.quincena-box {
+  border-left: 4px solid #a855f7;
+  background: #faf5ff;
+}
+
+.cierre-card-box.sueldo-box {
+  border-left: 4px solid #10b981;
+  background: #f0fdf4;
+}
+
+.cierre-card-box.gastos-box {
+  border-left: 4px solid #f59e0b;
+  background: #fffbeb;
+}
+
+.box-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.box-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.box-badge.purple {
+  color: #7e22ce;
+}
+
+.box-badge.emerald {
+  color: #047857;
+}
+
+.box-badge.amber {
+  color: #b45309;
+}
+
+.readonly-kpi-badge {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 0.55rem 0.85rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  min-height: 40px;
+}
+
+.diferencia-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  font-size: 0.85rem;
+}
+
+.diferencia-line.diff-positive {
+  background: #ecfdf5;
+  border-color: #86efac;
+  color: #15803d;
+}
+
+.diferencia-line.diff-negative {
+  background: #fef2f2;
+  border-color: #fca5a5;
+  color: #b91c1c;
+}
+
+.diferencia-line.diff-zero {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+  color: #475569;
+}
+
+.diff-tag {
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-left: 0.35rem;
+}
+
+.cierre-summary-banner {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  color: #ffffff;
+  padding: 1rem 1.25rem;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.banner-title {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.banner-formula {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  font-weight: 400;
+}
+
+.banner-val {
+  font-size: 1.45rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+/* =========================================================================
    ESTILOS DE IMPRESIÓN OFICIAL / PDF (RF-71)
    ========================================================================= */
 @media print {

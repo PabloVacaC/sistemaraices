@@ -201,6 +201,7 @@ class PeriodoSalarial(Base):
     liquidaciones = relationship("Liquidacion", back_populates="periodo")
     descuentos = relationship("Descuento", back_populates="periodo")
     detalles_planilla = relationship("PlanillaDetalle", back_populates="periodo", cascade="all, delete-orphan")
+    cierre = relationship("PlanillaCierre", back_populates="periodo", uselist=False, cascade="all, delete-orphan")
 
     @property
     def fecha_limite_pago(self) -> date:
@@ -209,6 +210,34 @@ class PeriodoSalarial(Base):
         anio_sig = self.anio + 1 if self.mes == 12 else self.anio
         ultimo_dia = calendar.monthrange(anio_sig, mes_sig)[1]
         return date(anio_sig, mes_sig, ultimo_dia)
+
+
+class PlanillaCierre(Base):
+    __tablename__ = "planilla_cierre"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    periodo_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("periodo_salarial.id", ondelete="CASCADE"), unique=True, nullable=False, index=True
+    )
+    entregado_quincena: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=Decimal("0.00"), nullable=False)
+    solicitud_quincena: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=Decimal("0.00"), nullable=False)
+    diferencia_quincena: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=Decimal("0.00"), nullable=False)
+
+    entregado_sueldo: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=Decimal("0.00"), nullable=False)
+    solicitud_sueldo: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=Decimal("0.00"), nullable=False)
+    diferencia_sueldo: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=Decimal("0.00"), nullable=False)
+
+    otros_gastos: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=Decimal("0.00"), nullable=False)
+    otros_gastos_detalle: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+
+    total_diferencia: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=Decimal("0.00"), nullable=False)
+    observaciones: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    usuario_ci: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    usuario_nombre: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    fecha_cierre: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+
+    periodo = relationship("PeriodoSalarial", back_populates="cierre")
 
 
 class Anticipo(Base):

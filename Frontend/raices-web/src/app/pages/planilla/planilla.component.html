@@ -39,9 +39,24 @@
         <span>Imprimir / PDF</span>
       </button>
 
-      <!-- Botón Cerrar Planilla -->
+      <!-- Botón Ver Formulario / Acta de Cierre (cuando el período está CERRADO) -->
+      @if (planilla()?.estado_periodo === 'CERRADO') {
+      <button class="btn btn-secondary border-emerald-500 text-emerald-800" (click)="abrirModalCierre(true)"
+        title="Ver formulario y acta de balance de cierre">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+          <polyline points="14 2 14 8 20 8" />
+          <line x1="16" y1="13" x2="8" y2="13" />
+          <line x1="16" y1="17" x2="8" y2="17" />
+          <polyline points="10 9 9 9 8 9" />
+        </svg>
+        <span>Ver Acta de Cierre</span>
+      </button>
+      }
+
+      <!-- Botón Cerrar Planilla (cuando está ABIERTO) -->
       @if (planilla()?.estado_periodo === 'ABIERTO' && auth.hasPermission('PLANILLA_CERRAR')) {
-      <button class="btn btn-danger" (click)="abrirModalCierre()" title="Cerrar formalmente la planilla">
+      <button class="btn btn-danger" (click)="abrirModalCierre(false)" title="Cerrar formalmente la planilla">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
           <path d="M7 11V7a5 5 0 0 1 10 0v4" />
@@ -609,20 +624,31 @@
   }
 
   <!-- ================================================================= -->
-  <!-- MODAL 4: CIERRE FORMAL DE PLANILLA MENSUAL (RF-7, RF-8, RF-76) -->
+  <!-- MODAL 4: FORMULARIO Y ACTA DE CIERRE DE PLANILLA (spec.md) -->
   <!-- ================================================================= -->
   @if (showModalCerrarPlanilla()) {
   <div class="modal-backdrop">
-    <div class="modal-card animate-scale-up">
+    <div class="modal-card modal-card-lg animate-scale-up">
       <div class="modal-header">
-        <h3>Confirmar Cierre de Planilla</h3>
+        <div>
+          <h3>{{ modoVerCierre() ? 'Acta y Formulario de Cierre de Planilla' : 'Formulario de Cierre de Planilla' }}</h3>
+          <p class="text-xs text-slate-500 mt-0.5">
+            Período: <strong>{{ planilla()?.periodo_descripcion }}</strong>
+            @if (modoVerCierre() && cierreExistente()?.fecha_cierre) {
+            • Cerrado el {{ cierreExistente()?.fecha_cierre | date:'dd/MM/yyyy HH:mm' }}
+            por {{ cierreExistente()?.usuario_nombre || cierreExistente()?.usuario_ci || 'Administrador' }}
+            }
+          </p>
+        </div>
         <button class="btn-close" (click)="showModalCerrarPlanilla.set(false)">✕</button>
       </div>
 
+      @if (!modoVerCierre()) {
       <div class="alert-box-warning mt-2">
         <strong>⚠️ Importante:</strong> Al cerrar la planilla, todos los haberes y movimientos quedarán bloqueados para
         modificaciones ordinarias.
       </div>
+      }
 
       @if (advertenciaCierre()) {
       <div class="alert-box-danger mt-3">
@@ -630,18 +656,133 @@
       </div>
       }
 
-      <div class="form-group mt-3">
-        <label>Observaciones de Cierre (Opcional)</label>
-        <input type="text" class="input-clean" placeholder="Ej. Planilla cerrada tras revisión de nómina..."
-          [(ngModel)]="cerrarPlanillaForm.observaciones" />
+      <!-- Formulario de Conciliación Financiera (spec.md) -->
+      <div class="cierre-grid-sections mt-3">
+        <!-- SECCIÓN 1: QUINCENA -->
+        <div class="cierre-card-box quincena-box">
+          <div class="box-header">
+            <span class="box-badge purple">1. Quincena (Corte Día 18)</span>
+          </div>
+
+          <div class="form-row mt-2">
+            <div class="form-group flex-1">
+              <label>Monto Entregado (Bs) *</label>
+              <input type="number" step="0.01" class="input-clean" placeholder="Ej. 6600.00"
+                [(ngModel)]="cerrarPlanillaForm.entregado_quincena" [disabled]="modoVerCierre()" />
+              <span class="text-xs text-slate-400">Efectivo recibido para quincenas</span>
+            </div>
+
+            <div class="form-group flex-1">
+              <label>Solicitud Quincena (Bs)</label>
+              <div class="readonly-kpi-badge text-purple-700">
+                Bs {{ (cerrarPlanillaForm.solicitud_quincena || 0) | number:'1.2-2' }}
+              </div>
+              <span class="text-xs text-slate-400">KPI Solicitud Quincena</span>
+            </div>
+          </div>
+
+          <div class="diferencia-line mt-2" [class.diff-positive]="diferenciaQuincena > 0"
+            [class.diff-negative]="diferenciaQuincena < 0" [class.diff-zero]="diferenciaQuincena === 0">
+            <span>Diferencia Quincena (Entregado - Solicitud):</span>
+            <strong>
+              {{ diferenciaQuincena > 0 ? '+' : '' }}Bs {{ diferenciaQuincena | number:'1.2-2' }}
+              <small class="diff-tag">
+                {{ diferenciaQuincena > 0 ? '(Sobrante)' : (diferenciaQuincena < 0 ? '(Faltante)' : '(Exacto)') }}
+              </small>
+            </strong>
+          </div>
+        </div>
+
+        <!-- SECCIÓN 2: SUELDO -->
+        <div class="cierre-card-box sueldo-box mt-3">
+          <div class="box-header">
+            <span class="box-badge emerald">2. Sueldo (Liquidación Mensual)</span>
+          </div>
+
+          <div class="form-row mt-2">
+            <div class="form-group flex-1">
+              <label>Monto Sueldo Entregado (Bs) *</label>
+              <input type="number" step="0.01" class="input-clean" placeholder="Ej. 37900.00"
+                [(ngModel)]="cerrarPlanillaForm.entregado_sueldo" [disabled]="modoVerCierre()" />
+              <span class="text-xs text-slate-400">Efectivo recibido para sueldos</span>
+            </div>
+
+            <div class="form-group flex-1">
+              <label>Solicitud Sueldo (Bs)</label>
+              <div class="readonly-kpi-badge text-emerald-700">
+                Bs {{ (cerrarPlanillaForm.solicitud_sueldo || 0) | number:'1.2-2' }}
+              </div>
+              <span class="text-xs text-slate-400">KPI Solicitud Sueldo</span>
+            </div>
+          </div>
+
+          <div class="diferencia-line mt-2" [class.diff-positive]="diferenciaSueldo > 0"
+            [class.diff-negative]="diferenciaSueldo < 0" [class.diff-zero]="diferenciaSueldo === 0">
+            <span>Diferencia Sueldo (Monto Entregado - Solicitud):</span>
+            <strong>
+              {{ diferenciaSueldo > 0 ? '+' : '' }}Bs {{ diferenciaSueldo | number:'1.2-2' }}
+              <small class="diff-tag">
+                {{ diferenciaSueldo > 0 ? '(Sobrante)' : (diferenciaSueldo < 0 ? '(Faltante)' : '(Exacto)') }}
+              </small>
+            </strong>
+          </div>
+        </div>
+
+        <!-- SECCIÓN 3: OTROS GASTOS -->
+        <div class="cierre-card-box gastos-box mt-3">
+          <div class="box-header">
+            <span class="box-badge amber">3. Otros Gastos</span>
+          </div>
+
+          <div class="form-row mt-2">
+            <div class="form-group" style="flex: 1.2;">
+              <label>Monto Otros Gastos (Bs)</label>
+              <input type="number" step="0.01" class="input-clean" placeholder="0.00"
+                [(ngModel)]="cerrarPlanillaForm.otros_gastos" [disabled]="modoVerCierre()" />
+              <span class="text-xs text-slate-400">Gastos adicionales del período</span>
+            </div>
+
+            <div class="form-group" style="flex: 2;">
+              <label>Detalle / Motivo de Otros Gastos</label>
+              <input type="text" class="input-clean" placeholder="Ej. Materiales de oficina, compras menores..."
+                [(ngModel)]="cerrarPlanillaForm.otros_gastos_detalle" [disabled]="modoVerCierre()" />
+              <span class="text-xs text-slate-400">Descripción o concepto (Opcional)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- SECCIÓN 4: RESUMEN DE DIFERENCIAS Y BALANCE TOTAL -->
+        <div class="cierre-summary-banner mt-3">
+          <div class="banner-title">
+            <span>Suma de Diferencias y Otros Gastos:</span>
+            <span class="banner-formula">Dif. Quincena + Dif. Sueldo + Otros Gastos</span>
+          </div>
+          <div class="banner-val" [class.text-emerald-400]="totalDiferencia >= 0"
+            [class.text-red-400]="totalDiferencia < 0">
+            {{ totalDiferencia > 0 ? '+' : '' }}Bs {{ totalDiferencia | number:'1.2-2' }}
+          </div>
+        </div>
+
+        <!-- SECCIÓN 5: OBSERVACIONES -->
+        <div class="form-group mt-3">
+          <label>Observaciones de Cierre</label>
+          <input type="text" class="input-clean" placeholder="Ej. Planilla cerrada tras revisión y conciliación..."
+            [(ngModel)]="cerrarPlanillaForm.observaciones" [disabled]="modoVerCierre()" />
+        </div>
       </div>
 
       <div class="modal-actions mt-4">
+        @if (modoVerCierre()) {
+        <button class="btn btn-secondary w-full" (click)="showModalCerrarPlanilla.set(false)">
+          Cerrar Formulario
+        </button>
+        } @else {
         <button class="btn btn-secondary" (click)="showModalCerrarPlanilla.set(false)">Cancelar</button>
         <button class="btn btn-danger" (click)="confirmarCierrePlanilla()" [disabled]="loading()">
           {{ cerrarPlanillaForm.confirmar_pendientes ? 'Confirmar Cierre con Pendientes' : 'Cerrar Planilla Formalmente'
           }}
         </button>
+        }
       </div>
     </div>
   </div>

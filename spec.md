@@ -1,2 +1,7 @@
-antes de empezar analiza la estructura y el codgio de planilla 
-1.- espercificacion.- ahora en la partede3 planilla quiero Control de haberes, cálculo proporcional de días trabajados, quincenas, anticipos, descuentos y líquido pagable. ahi donde nos muestra todo eso ahora. actualmente nos muestra 5 . ahora quiero que se muestren 8 uno sera Planilla mensual , ahi sera el total que debemos de cancelar, luego quiero otra que se llamara reposicion ebert ahi tendra todos los anticipos desde el 5 al 18 de cada mes , luego otro que sera pago de quincena ahi ira el total de pagos de quincens , luego otro que sera solicitud quincena ahi  sera la sumatoria de reposicion ebert y pago quincena , luego otro quesera reposisicon antes del sueldo que sera los anticipos despues de seuldo que sera del 18 al 5 , luego otro que sera liquido sueldo todo lo que se tendria que liquidar el sueldo , luego otro que sera  solicitud sueldo sera la suma de reposicion  antes de sueldo mas liquido de sueldo  
+3. ahora cuando le de el boton de cerrar planilla antes de cerrar me va a salir un formulario que tendra.. Entregado : ahi yo ingresare el monto que recibi el que se me fue entrgado, luego tendra lo que es solicitud quincena, eso vendra el valor del KPIs. de Solicitud Quincena , 
+lulego abra otro que sera diferencia: diferencia tendra entregado - solicitud quincena, 
+luego abra otro que sera monto sueldo entregado ahi yo igual anotare el monto que se me esta ciendo entregado ,
+ luego solicitud sueldo que eso igual biene del KPIs Solicitud Sueldo,
+luego otro que sera diferencia ahi sera monto sueldo entregado - luego solicitud ,
+ luego otros gastos , que ahi vendran otros gastos que iran de otro luegar que aun no defino bien pero poenelo ahi luego de eso quiero la suma de las diferancias y de otros gastos 
+ y recien pueda cerra planilla pero depues de eso pueda ver ese formulario que cerre planilla 

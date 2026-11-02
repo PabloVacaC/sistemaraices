@@ -9,6 +9,8 @@ import {
   Area,
   PlanillaMensual,
   PlanillaFila,
+  PlanillaCierre,
+  CerrarPlanillaPayload,
   ActualizarDiasTrabajadosPayload,
   Descuento,
   DescuentoCreatePayload,
@@ -116,11 +118,37 @@ export class PlanillaComponent implements OnInit {
   };
 
   showModalCerrarPlanilla = signal<boolean>(false);
+  modoVerCierre = signal<boolean>(false);
+  cierreExistente = signal<PlanillaCierre | null>(null);
+
   cerrarPlanillaForm = {
     observaciones: '',
-    confirmar_pendientes: false
+    confirmar_pendientes: false,
+    entregado_quincena: null as number | null,
+    solicitud_quincena: 0,
+    entregado_sueldo: null as number | null,
+    solicitud_sueldo: 0,
+    otros_gastos: null as number | null,
+    otros_gastos_detalle: ''
   };
   advertenciaCierre = signal<string | null>(null);
+
+  get diferenciaQuincena(): number {
+    const ent = Number(this.cerrarPlanillaForm.entregado_quincena) || 0;
+    const sol = Number(this.cerrarPlanillaForm.solicitud_quincena) || 0;
+    return ent - sol;
+  }
+
+  get diferenciaSueldo(): number {
+    const ent = Number(this.cerrarPlanillaForm.entregado_sueldo) || 0;
+    const sol = Number(this.cerrarPlanillaForm.solicitud_sueldo) || 0;
+    return ent - sol;
+  }
+
+  get totalDiferencia(): number {
+    const otros = Number(this.cerrarPlanillaForm.otros_gastos) || 0;
+    return this.diferenciaQuincena + this.diferenciaSueldo + otros;
+  }
 
   // Modal Pago de Quincena (Día 18)
   showModalPagoQuincena = signal<boolean>(false);
@@ -441,20 +469,74 @@ export class PlanillaComponent implements OnInit {
   }
 
   // ==========================================
-  // CIERRE FORMAL DE PLANILLA (RF-7, RF-8, RF-76)
+  // CIERRE FORMAL DE PLANILLA (spec.md)
   // ==========================================
-  abrirModalCierre() {
+  abrirModalCierre(verModo: boolean = false) {
     const pl = this.planilla();
     if (!pl) return;
-    if (pl.estado_periodo === 'CERRADO') {
-      this.toast.info('Esta planilla ya se encuentra CERRADA formalmente.');
+
+    if (pl.estado_periodo === 'CERRADO' || verModo) {
+      this.modoVerCierre.set(true);
+      this.advertenciaCierre.set(null);
+      if (pl.cierre) {
+        this.cierreExistente.set(pl.cierre);
+        this.cerrarPlanillaForm = {
+          observaciones: pl.cierre.observaciones || '',
+          confirmar_pendientes: false,
+          entregado_quincena: Number(pl.cierre.entregado_quincena || 0),
+          solicitud_quincena: Number(pl.cierre.solicitud_quincena || 0),
+          entregado_sueldo: Number(pl.cierre.entregado_sueldo || 0),
+          solicitud_sueldo: Number(pl.cierre.solicitud_sueldo || 0),
+          otros_gastos: Number(pl.cierre.otros_gastos || 0),
+          otros_gastos_detalle: pl.cierre.otros_gastos_detalle || ''
+        };
+        this.showModalCerrarPlanilla.set(true);
+      } else {
+        this.loading.set(true);
+        this.dataService.getCierrePlanilla(pl.periodo_id).subscribe({
+          next: (cierre) => {
+            this.loading.set(false);
+            if (cierre) {
+              this.cierreExistente.set(cierre);
+              this.cerrarPlanillaForm = {
+                observaciones: cierre.observaciones || '',
+                confirmar_pendientes: false,
+                entregado_quincena: Number(cierre.entregado_quincena || 0),
+                solicitud_quincena: Number(cierre.solicitud_quincena || 0),
+                entregado_sueldo: Number(cierre.entregado_sueldo || 0),
+                solicitud_sueldo: Number(cierre.solicitud_sueldo || 0),
+                otros_gastos: Number(cierre.otros_gastos || 0),
+                otros_gastos_detalle: cierre.otros_gastos_detalle || ''
+              };
+            }
+            this.showModalCerrarPlanilla.set(true);
+          },
+          error: () => {
+            this.loading.set(false);
+            this.showModalCerrarPlanilla.set(true);
+          }
+        });
+      }
       return;
     }
 
+    // Período ABIERTO: Formulario activo de cierre
+    this.modoVerCierre.set(false);
+    this.cierreExistente.set(null);
     this.advertenciaCierre.set(null);
+
+    const solQuincena = Number(pl.totales?.solicitud_quincena || 0);
+    const solSueldo = Number(pl.totales?.solicitud_sueldo || 0);
+
     this.cerrarPlanillaForm = {
       observaciones: 'Cierre mensual consolidado de haberes y liquidaciones',
-      confirmar_pendientes: false
+      confirmar_pendientes: false,
+      entregado_quincena: null,
+      solicitud_quincena: solQuincena,
+      entregado_sueldo: null,
+      solicitud_sueldo: solSueldo,
+      otros_gastos: null,
+      otros_gastos_detalle: ''
     };
     this.showModalCerrarPlanilla.set(true);
   }
@@ -463,8 +545,28 @@ export class PlanillaComponent implements OnInit {
     const pid = this.selectedPeriodoId();
     if (!pid) return;
 
+    if (this.cerrarPlanillaForm.entregado_quincena === null || this.cerrarPlanillaForm.entregado_quincena === undefined) {
+      this.toast.warning('Por favor ingresa el monto entregado para la Quincena.');
+      return;
+    }
+    if (this.cerrarPlanillaForm.entregado_sueldo === null || this.cerrarPlanillaForm.entregado_sueldo === undefined) {
+      this.toast.warning('Por favor ingresa el monto entregado para el Sueldo.');
+      return;
+    }
+
+    const payload: CerrarPlanillaPayload = {
+      observaciones: this.cerrarPlanillaForm.observaciones,
+      confirmar_pendientes: this.cerrarPlanillaForm.confirmar_pendientes,
+      entregado_quincena: Number(this.cerrarPlanillaForm.entregado_quincena) || 0,
+      solicitud_quincena: Number(this.cerrarPlanillaForm.solicitud_quincena) || 0,
+      entregado_sueldo: Number(this.cerrarPlanillaForm.entregado_sueldo) || 0,
+      solicitud_sueldo: Number(this.cerrarPlanillaForm.solicitud_sueldo) || 0,
+      otros_gastos: Number(this.cerrarPlanillaForm.otros_gastos) || 0,
+      otros_gastos_detalle: this.cerrarPlanillaForm.otros_gastos_detalle || ''
+    };
+
     this.loading.set(true);
-    this.dataService.cerrarPlanilla(pid, this.cerrarPlanillaForm).subscribe({
+    this.dataService.cerrarPlanilla(pid, payload).subscribe({
       next: (res) => {
         if (res.requiere_confirmacion) {
           this.advertenciaCierre.set(res.mensaje);

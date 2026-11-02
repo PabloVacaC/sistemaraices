@@ -12,6 +12,7 @@ from app.modules.planilla.schemas import (
     DescuentoCreate,
     DescuentoOut,
     CerrarPlanillaRequest,
+    PlanillaCierreOut,
 )
 from app.modules.pagos.schemas import AnulacionRequest
 from app.modules.planilla import service
@@ -51,6 +52,16 @@ def cerrar_planilla(
 ):
     """Cierra formalmente una planilla mensual bloqueando modificaciones ordinarias posteriores."""
     return service.cerrar_planilla_periodo(db, periodo_id, datos, usuario_ci=current_user.ci)
+
+
+@router.get("/cierre/{periodo_id}", response_model=Optional[PlanillaCierreOut])
+def obtener_cierre_planilla_endpoint(
+    periodo_id: int,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+):
+    """Obtiene el acta/formulario de cierre formal de una planilla mensual."""
+    return service.obtener_cierre_planilla(db, periodo_id=periodo_id)
 
 
 # =========================================================================

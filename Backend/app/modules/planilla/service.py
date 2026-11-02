@@ -14,6 +14,7 @@ from app.models.entities import (
     Descuento,
     PlanillaDetalle,
     Usuario,
+    PlanillaCierre,
 )
 from app.modules.pagos.service import (
     generar_numero_comprobante,
@@ -27,6 +28,7 @@ from app.modules.planilla.schemas import (
     PlanillaResumenTotales,
     PlanillaMensualOut,
     CerrarPlanillaRequest,
+    PlanillaCierreOut,
 )
 from app.modules.bitacora.service import registrar_bitacora
 
@@ -396,6 +398,11 @@ def obtener_o_generar_planilla(db: Session, periodo_id: int) -> PlanillaMensualO
         total_saldo_pendiente=tot_saldo_pendiente,
     )
 
+    cierre_obj = db.execute(
+        select(PlanillaCierre).where(PlanillaCierre.periodo_id == periodo.id)
+    ).scalars().first()
+    cierre_out = PlanillaCierreOut.model_validate(cierre_obj) if cierre_obj else None
+
     return PlanillaMensualOut(
         periodo_id=periodo.id,
         periodo_descripcion=periodo.descripcion,
@@ -408,6 +415,7 @@ def obtener_o_generar_planilla(db: Session, periodo_id: int) -> PlanillaMensualO
         estado_periodo=periodo.estado,
         filas=filas_out,
         totales=totales_resumen,
+        cierre=cierre_out,
     )
 
 
@@ -682,10 +690,46 @@ def cerrar_planilla_periodo(
             "periodo_id": periodo_id,
         }
 
-    # Proceder al cierre formal
+    # Proceder al cierre formal con registro de acta financiera (spec.md)
+    sol_quincena = req.solicitud_quincena if req.solicitud_quincena > 0 else resumen.totales.solicitud_quincena
+    dif_quincena = req.entregado_quincena - sol_quincena
+
+    sol_sueldo = req.solicitud_sueldo if req.solicitud_sueldo > 0 else resumen.totales.solicitud_sueldo
+    dif_sueldo = req.entregado_sueldo - sol_sueldo
+
+    tot_diferencia = dif_quincena + dif_sueldo + req.otros_gastos
+
+    usuario_nombre = None
+    if usuario_ci:
+        u = db.execute(select(Usuario).where(Usuario.ci == usuario_ci)).scalars().first()
+        if u:
+            usuario_nombre = f"{u.nombres} {u.apellidos}".strip()
+
+    cierre = db.execute(
+        select(PlanillaCierre).where(PlanillaCierre.periodo_id == periodo_id)
+    ).scalars().first()
+    if not cierre:
+        cierre = PlanillaCierre(periodo_id=periodo_id)
+        db.add(cierre)
+
+    cierre.entregado_quincena = req.entregado_quincena
+    cierre.solicitud_quincena = sol_quincena
+    cierre.diferencia_quincena = dif_quincena
+    cierre.entregado_sueldo = req.entregado_sueldo
+    cierre.solicitud_sueldo = sol_sueldo
+    cierre.diferencia_sueldo = dif_sueldo
+    cierre.otros_gastos = req.otros_gastos
+    cierre.otros_gastos_detalle = req.otros_gastos_detalle
+    cierre.total_diferencia = tot_diferencia
+    cierre.observaciones = req.observaciones
+    cierre.usuario_ci = usuario_ci
+    cierre.usuario_nombre = usuario_nombre
+    cierre.fecha_cierre = datetime.now()
+
     periodo.estado = "CERRADO"
     db.commit()
     db.refresh(periodo)
+    db.refresh(cierre)
 
     registrar_bitacora(
         db=db,
@@ -693,6 +737,9 @@ def cerrar_planilla_periodo(
         accion="CERRAR_PLANILLA",
         descripcion=(
             f"Se cerró formalmente la planilla {periodo.descripcion} (ID: {periodo.id}). "
+            f"Entregado Quincena: Bs {req.entregado_quincena}, Solicitud Quincena: Bs {sol_quincena}, Dif Quincena: Bs {dif_quincena}. "
+            f"Entregado Sueldo: Bs {req.entregado_sueldo}, Solicitud Sueldo: Bs {sol_sueldo}, Dif Sueldo: Bs {dif_sueldo}. "
+            f"Otros Gastos: Bs {req.otros_gastos}. Total Diferencia: Bs {tot_diferencia}. "
             f"Observaciones: {req.observaciones or 'Cierre mensual ordinario'}"
         ),
         usuario_ci=usuario_ci,
@@ -703,4 +750,15 @@ def cerrar_planilla_periodo(
         "mensaje": f"Planilla {periodo.descripcion} cerrada exitosamente. Los registros han quedado bloqueados.",
         "periodo_id": periodo.id,
         "estado": periodo.estado,
+        "cierre": PlanillaCierreOut.model_validate(cierre).model_dump(),
     }
+
+
+def obtener_cierre_planilla(db: Session, periodo_id: int) -> Optional[PlanillaCierreOut]:
+    """Obtiene el acta/formulario de cierre formal de una planilla mensual."""
+    cierre = db.execute(
+        select(PlanillaCierre).where(PlanillaCierre.periodo_id == periodo_id)
+    ).scalars().first()
+    if not cierre:
+        return None
+    return PlanillaCierreOut.model_validate(cierre)

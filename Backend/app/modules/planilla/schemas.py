@@ -123,6 +123,27 @@ class PlanillaResumenTotales(BaseModel):
     total_saldo_pendiente: Decimal = Decimal("0.00")
 
 
+class PlanillaCierreOut(BaseModel):
+    id: int
+    periodo_id: int
+    entregado_quincena: Decimal
+    solicitud_quincena: Decimal
+    diferencia_quincena: Decimal
+    entregado_sueldo: Decimal
+    solicitud_sueldo: Decimal
+    diferencia_sueldo: Decimal
+    otros_gastos: Decimal
+    otros_gastos_detalle: Optional[str] = None
+    total_diferencia: Decimal
+    observaciones: Optional[str] = None
+    usuario_ci: Optional[str] = None
+    usuario_nombre: Optional[str] = None
+    fecha_cierre: datetime
+
+    class Config:
+        from_attributes = True
+
+
 class PlanillaMensualOut(BaseModel):
     periodo_id: int
     periodo_descripcion: str
@@ -135,9 +156,16 @@ class PlanillaMensualOut(BaseModel):
     estado_periodo: str  # ABIERTO, CERRADO
     filas: List[PlanillaFilaOut]
     totales: PlanillaResumenTotales
+    cierre: Optional[PlanillaCierreOut] = None
 
 
 class CerrarPlanillaRequest(BaseModel):
     observaciones: Optional[str] = None
     confirmar_pendientes: bool = False
+    entregado_quincena: Decimal = Decimal("0.00")
+    solicitud_quincena: Decimal = Decimal("0.00")
+    entregado_sueldo: Decimal = Decimal("0.00")
+    solicitud_sueldo: Decimal = Decimal("0.00")
+    otros_gastos: Decimal = Decimal("0.00")
+    otros_gastos_detalle: Optional[str] = None
 

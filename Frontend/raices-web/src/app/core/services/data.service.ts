@@ -30,6 +30,8 @@ import {
   ContabilidadReporteAnual,
   PlanillaMensual,
   PlanillaFila,
+  PlanillaCierre,
+  CerrarPlanillaPayload,
   ActualizarDiasTrabajadosPayload,
   Descuento,
   DescuentoCreatePayload,
@@ -433,8 +435,14 @@ export class DataService {
     });
   }
 
-  cerrarPlanilla(periodoId: number, payload: { observaciones?: string; confirmar_pendientes?: boolean }): Observable<any> {
+  cerrarPlanilla(periodoId: number, payload: CerrarPlanillaPayload): Observable<any> {
     return this.http.post<any>(`${this.API_URL}/planilla/cerrar/${periodoId}`, payload, {
+      headers: this.auth.getHeaders()
+    });
+  }
+
+  getCierrePlanilla(periodoId: number): Observable<PlanillaCierre | null> {
+    return this.http.get<PlanillaCierre | null>(`${this.API_URL}/planilla/cierre/${periodoId}`, {
       headers: this.auth.getHeaders()
     });
   }
