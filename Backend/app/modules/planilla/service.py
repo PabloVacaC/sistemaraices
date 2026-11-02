@@ -175,6 +175,9 @@ def obtener_o_generar_planilla(db: Session, periodo_id: int) -> PlanillaMensualO
     tot_ant_desc = Decimal("0.00")
     tot_ant_sig = Decimal("0.00")
     tot_liquido = Decimal("0.00")
+    tot_reposicion_ebert = Decimal("0.00")
+    tot_reposicion_antes_sueldo = Decimal("0.00")
+    tot_saldo_pendiente = Decimal("0.00")
     count_liquidados = 0
     count_pendientes = 0
 
@@ -226,6 +229,16 @@ def obtener_o_generar_planilla(db: Session, periodo_id: int) -> PlanillaMensualO
         supera_quincena = ants_pre_18 > IMPORTE_REFERENCIA_QUINCENA
         excedente_quincena = (ants_pre_18 - IMPORTE_REFERENCIA_QUINCENA) if supera_quincena else Decimal("0.00")
         diferencia_quincena = max(Decimal("0.00"), IMPORTE_REFERENCIA_QUINCENA - ants_pre_18)
+
+        # Desglose de anticipos según ciclos Ebert y Antes del Sueldo (spec.md)
+        ants_ebert = sum(
+            (a.importe for a in ants_t if 5 <= a.fecha_entrega.day <= 18),
+            Decimal("0.00"),
+        )
+        ants_antes_sueldo = sum(
+            (a.importe for a in ants_t if a.fecha_entrega.day > 18 or a.fecha_entrega.day < 5),
+            Decimal("0.00"),
+        )
 
         # Anticipos para el período siguiente (deprecado / no utilizado)
         monto_anticipos_sig = Decimal("0.00")
@@ -304,6 +317,9 @@ def obtener_o_generar_planilla(db: Session, periodo_id: int) -> PlanillaMensualO
         tot_ant_desc += total_anticipos_descuentos
         tot_ant_sig += monto_anticipos_sig
         tot_liquido += liquido_pagable
+        tot_reposicion_ebert += ants_ebert
+        tot_reposicion_antes_sueldo += ants_antes_sueldo
+        tot_saldo_pendiente += saldo_pendiente_real
 
         nombre_completo = f"{t.nombres} {t.apellidos}".strip()
         area_nombre = t.area.nombre if t.area else "Sin Área"
@@ -330,6 +346,8 @@ def obtener_o_generar_planilla(db: Session, periodo_id: int) -> PlanillaMensualO
             diferencia_quincena=diferencia_quincena,
             pago_anticipos=monto_anticipos,
             anticipos_count=len(ants_t),
+            reposicion_ebert=ants_ebert,
+            reposicion_antes_sueldo=ants_antes_sueldo,
             total_descuentos=monto_descuentos,
             descuentos_count=len(descs_t),
             total_anticipos_descuentos=total_anticipos_descuentos,
@@ -352,6 +370,11 @@ def obtener_o_generar_planilla(db: Session, periodo_id: int) -> PlanillaMensualO
 
     db.commit()
 
+    tot_solicitud_quincena = tot_reposicion_ebert + tot_quincena
+    tot_liquido_sueldo = tot_liquido
+    tot_solicitud_sueldo = tot_reposicion_antes_sueldo + tot_liquido_sueldo
+    tot_solicitud_total = tot_solicitud_quincena + tot_solicitud_sueldo
+
     totales_resumen = PlanillaResumenTotales(
         total_haber_basico=tot_haber,
         total_ganado=tot_ganado,
@@ -364,6 +387,13 @@ def obtener_o_generar_planilla(db: Session, periodo_id: int) -> PlanillaMensualO
         total_trabajadores=len(filas_out),
         trabajadores_liquidados=count_liquidados,
         trabajadores_pendientes=count_pendientes,
+        reposicion_ebert=tot_reposicion_ebert,
+        solicitud_quincena=tot_solicitud_quincena,
+        reposicion_antes_sueldo=tot_reposicion_antes_sueldo,
+        liquido_sueldo=tot_liquido_sueldo,
+        solicitud_sueldo=tot_solicitud_sueldo,
+        solicitud_total_mes=tot_solicitud_total,
+        total_saldo_pendiente=tot_saldo_pendiente,
     )
 
     return PlanillaMensualOut(

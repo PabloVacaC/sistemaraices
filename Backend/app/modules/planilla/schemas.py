@@ -75,6 +75,9 @@ class PlanillaFilaOut(BaseModel):
     # Col 10: Pago de anticipos válidos del período
     pago_anticipos: Decimal
     anticipos_count: int = 0
+    # Desglose de anticipos por ciclo salarial (spec.md)
+    reposicion_ebert: Decimal = Decimal("0.00")
+    reposicion_antes_sueldo: Decimal = Decimal("0.00")
     # Desglose de Descuentos
     total_descuentos: Decimal = Decimal("0.00")
     descuentos_count: int = 0
@@ -110,6 +113,14 @@ class PlanillaResumenTotales(BaseModel):
     total_trabajadores: int
     trabajadores_liquidados: int
     trabajadores_pendientes: int
+    # 8 Indicadores Clave de Ciclo Salarial (spec.md)
+    reposicion_ebert: Decimal = Decimal("0.00")
+    solicitud_quincena: Decimal = Decimal("0.00")
+    reposicion_antes_sueldo: Decimal = Decimal("0.00")
+    liquido_sueldo: Decimal = Decimal("0.00")
+    solicitud_sueldo: Decimal = Decimal("0.00")
+    solicitud_total_mes: Decimal = Decimal("0.00")
+    total_saldo_pendiente: Decimal = Decimal("0.00")
 
 
 class PlanillaMensualOut(BaseModel):

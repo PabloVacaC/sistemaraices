@@ -503,6 +503,8 @@ export interface PlanillaFila {
   diferencia_quincena?: number;
   pago_anticipos: number;
   anticipos_count: number;
+  reposicion_ebert?: number;
+  reposicion_antes_sueldo?: number;
   total_descuentos: number;
   descuentos_count: number;
   total_anticipos_descuentos: number;
@@ -533,6 +535,14 @@ export interface PlanillaResumenTotales {
   total_trabajadores: number;
   trabajadores_liquidados: number;
   trabajadores_pendientes: number;
+  // 8 Indicadores Clave de Ciclo Salarial (spec.md)
+  reposicion_ebert?: number;
+  solicitud_quincena?: number;
+  reposicion_antes_sueldo?: number;
+  liquido_sueldo?: number;
+  solicitud_sueldo?: number;
+  solicitud_total_mes?: number;
+  total_saldo_pendiente?: number;
 }
 
 export interface PlanillaMensual {

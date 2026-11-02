@@ -5,9 +5,9 @@
       <div class="header-title-row">
         <span class="sub-badge">SISTEMAS RAÍCES • GESTIÓN DE PLANILLAS</span>
         @if (planilla()?.estado_periodo === 'CERRADO') {
-          <span class="badge-status-closed">PLANILLA CERRADA</span>
+        <span class="badge-status-closed">PLANILLA CERRADA</span>
         } @else {
-          <span class="badge-status-open">PLANILLA ABIERTA</span>
+        <span class="badge-status-open">PLANILLA ABIERTA</span>
         }
       </div>
       <h1>Planilla Salarial Mensual</h1>
@@ -20,15 +20,11 @@
       <!-- Selector de Período Salarial -->
       <div class="periodo-selector-box">
         <label>Período:</label>
-        <select
-          class="select-clean"
-          [ngModel]="selectedPeriodoId()"
-          (ngModelChange)="onPeriodoChange($event)"
-        >
+        <select class="select-clean" [ngModel]="selectedPeriodoId()" (ngModelChange)="onPeriodoChange($event)">
           @for (p of periodos(); track p.id) {
-            <option [value]="p.id">
-              {{ p.descripcion }} ({{ p.estado }})
-            </option>
+          <option [value]="p.id">
+            {{ p.descripcion }} ({{ p.estado }})
+          </option>
           }
         </select>
       </div>
@@ -36,68 +32,103 @@
       <!-- Botón Imprimir / PDF -->
       <button class="btn btn-secondary" (click)="imprimirPlanilla()" title="Imprimir o exportar PDF">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="6 9 6 2 18 2 18 9"/>
-          <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
-          <rect width="12" height="8" x="6" y="14"/>
+          <polyline points="6 9 6 2 18 2 18 9" />
+          <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+          <rect width="12" height="8" x="6" y="14" />
         </svg>
         <span>Imprimir / PDF</span>
       </button>
 
       <!-- Botón Cerrar Planilla -->
       @if (planilla()?.estado_periodo === 'ABIERTO' && auth.hasPermission('PLANILLA_CERRAR')) {
-        <button class="btn btn-danger" (click)="abrirModalCierre()" title="Cerrar formalmente la planilla">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
-            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-          </svg>
-          <span>Cerrar Planilla</span>
-        </button>
+      <button class="btn btn-danger" (click)="abrirModalCierre()" title="Cerrar formalmente la planilla">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+          <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+        </svg>
+        <span>Cerrar Planilla</span>
+      </button>
       }
     </div>
   </div>
 
-  <!-- Indicadores Clave del Período (KPIs) -->
+  <!-- Indicadores Clave del Período (8 KPIs Ejecutivos de Ciclo Salarial - spec.md) -->
   <div class="kpi-grid">
+    <!-- 1. Planilla Mensual -->
     <div class="kpi-card">
-      <span class="kpi-label">Haber Base Mensual</span>
+      <span class="kpi-label">Planilla Mensual</span>
       <div class="kpi-val text-slate-800">
-        Bs {{ (planilla()?.totales?.total_haber_basico || 0) | number:'1.2-2' }}
-      </div>
-      <span class="kpi-subtext">{{ planilla()?.totales?.total_trabajadores || 0 }} trabajadores</span>
-    </div>
-
-    <div class="kpi-card">
-      <span class="kpi-label">Total Ganado (Días Trab.)</span>
-      <div class="kpi-val text-blue-700">
         Bs {{ (planilla()?.totales?.total_ganado || 0) | number:'1.2-2' }}
       </div>
-      <span class="kpi-subtext">Cálculo proporcional (Base/30 × Días)</span>
+      <span class="kpi-subtext">
+        Total a cancelar • Base: Bs {{ (planilla()?.totales?.total_haber_basico || 0) | number:'1.2-2' }}
+      </span>
     </div>
 
+    <!-- 2. Reposición Ebert -->
+    <div class="kpi-card">
+      <span class="kpi-label">Reposición Ebert</span>
+      <div class="kpi-val text-amber-600">
+        Bs {{ (planilla()?.totales?.reposicion_ebert || 0) | number:'1.2-2' }}
+      </div>
+      <span class="kpi-subtext">Anticipos Días 5 al 18</span>
+    </div>
+
+    <!-- 3. Pago de Quincena -->
     <div class="kpi-card">
       <span class="kpi-label">Pago de Quincena</span>
       <div class="kpi-val text-indigo-700">
         Bs {{ (planilla()?.totales?.total_quincena || 0) | number:'1.2-2' }}
       </div>
-      <span class="kpi-subtext">Corte Día 18</span>
+      <span class="kpi-subtext">Total pagos de quincenas</span>
     </div>
 
+    <!-- 4. Solicitud Quincena -->
+    <div class="kpi-card highlight-quincena">
+      <span class="kpi-label">Solicitud Quincena</span>
+      <div class="kpi-val text-purple-700">
+        Bs {{ (planilla()?.totales?.solicitud_quincena || 0) | number:'1.2-2' }}
+      </div>
+      <span class="kpi-subtext">Reposición Ebert + Pago Quincena</span>
+    </div>
+
+    <!-- 5. Reposición antes del Sueldo -->
     <div class="kpi-card">
-      <span class="kpi-label">Anticipos + Descuentos</span>
-      <div class="kpi-val text-amber-700">
-        Bs {{ (planilla()?.totales?.total_anticipos_descuentos || 0) | number:'1.2-2' }}
+      <span class="kpi-label">Reposición antes del Sueldo</span>
+      <div class="kpi-val text-orange-600">
+        Bs {{ (planilla()?.totales?.reposicion_antes_sueldo || 0) | number:'1.2-2' }}
+      </div>
+      <span class="kpi-subtext">Anticipos Días 18 al 5</span>
+    </div>
+
+    <!-- 6. Líquido Sueldo -->
+    <div class="kpi-card">
+      <span class="kpi-label">Líquido Sueldo</span>
+      <div class="kpi-val" [class.text-blue-700]="(planilla()?.totales?.liquido_sueldo || 0) >= 0"
+        [class.text-red-700]="(planilla()?.totales?.liquido_sueldo || 0) < 0">
+        Bs {{ (planilla()?.totales?.liquido_sueldo || 0) | number:'1.2-2' }}
+      </div>
+      <span class="kpi-subtext">Total a liquidar el sueldo</span>
+    </div>
+
+    <!-- 7. Solicitud Sueldo -->
+    <div class="kpi-card highlight-sueldo">
+      <span class="kpi-label">Solicitud Sueldo</span>
+      <div class="kpi-val text-emerald-700">
+        Bs {{ (planilla()?.totales?.solicitud_sueldo || 0) | number:'1.2-2' }}
+      </div>
+      <span class="kpi-subtext">Reposición + Líquido Sueldo</span>
+    </div>
+
+    <!-- 8. Total Descuentos -->
+    <div class="kpi-card">
+      <span class="kpi-label">Total Descuentos</span>
+      <div class="kpi-val text-rose-700">
+        Bs {{ (planilla()?.totales?.total_descuentos || 0) | number:'1.2-2' }}
       </div>
       <span class="kpi-subtext">
-        Ant: Bs {{ (planilla()?.totales?.total_anticipos || 0) | number:'1.2-2' }} • Desc: Bs {{ (planilla()?.totales?.total_descuentos || 0) | number:'1.2-2' }}
+        Retenciones • Solicitud Total: Bs {{ (planilla()?.totales?.solicitud_total_mes || 0) | number:'1.2-2' }}
       </span>
-    </div>
-
-    <div class="kpi-card highlight-kpi">
-      <span class="kpi-label">Líquido Pagable Consolidado</span>
-      <div class="kpi-val" [class.text-emerald-700]="(planilla()?.totales?.total_liquido_pagable || 0) >= 0" [class.text-red-700]="(planilla()?.totales?.total_liquido_pagable || 0) < 0">
-        Bs {{ (planilla()?.totales?.total_liquido_pagable || 0) | number:'1.2-2' }}
-      </div>
-      <span class="kpi-subtext">Ganado - Anticipos/Desc - Quincena</span>
     </div>
   </div>
 
@@ -105,15 +136,11 @@
   <div class="filter-bar-card">
     <div class="search-box">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="11" cy="11" r="8"/>
-        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        <circle cx="11" cy="11" r="8" />
+        <line x1="21" y1="21" x2="16.65" y2="16.65" />
       </svg>
-      <input
-        type="text"
-        placeholder="Buscar trabajador por nombre, carné de identidad o cargo..."
-        [ngModel]="searchTerm()"
-        (ngModelChange)="searchTerm.set($event)"
-      />
+      <input type="text" placeholder="Buscar trabajador por nombre, carné de identidad o cargo..."
+        [ngModel]="searchTerm()" (ngModelChange)="searchTerm.set($event)" />
     </div>
 
     <div class="area-filter-box">
@@ -121,7 +148,7 @@
       <select [ngModel]="selectedAreaFilter()" (ngModelChange)="selectedAreaFilter.set($event)">
         <option [ngValue]="null">Todas las áreas</option>
         @for (a of areas(); track a.id) {
-          <option [ngValue]="a.id">{{ a.nombre }}</option>
+        <option [ngValue]="a.id">{{ a.nombre }}</option>
         }
       </select>
     </div>
@@ -149,147 +176,154 @@
         </thead>
         <tbody>
           @for (f of filasFiltradas(); track f.trabajador_id) {
-            <tr>
-              <!-- 1. Numeración consecutiva visual (RF-10) -->
-              <td class="col-nro font-bold text-slate-500">{{ f.nro }}</td>
+          <tr>
+            <!-- 1. Numeración consecutiva visual (RF-10) -->
+            <td class="col-nro font-bold text-slate-500">{{ f.nro }}</td>
 
-              <!-- 2. Nombre completo y CI (RF-11) -->
-              <td class="col-nombre">
-                <div class="worker-cell">
-                  <span class="font-bold text-slate-900">{{ f.nombre_completo }}</span>
-                  <span class="text-xs text-slate-500">CI: {{ f.ci || 'S/N' }}</span>
-                </div>
-              </td>
+            <!-- 2. Nombre completo y CI (RF-11) -->
+            <td class="col-nombre">
+              <div class="worker-cell">
+                <span class="font-bold text-slate-900">{{ f.nombre_completo }}</span>
+                <span class="text-xs text-slate-500">CI: {{ f.ci || 'S/N' }}</span>
+              </div>
+            </td>
 
-              <!-- 3. Cargo -->
-              <td class="col-cargo text-slate-700">{{ f.cargo }}</td>
+            <!-- 3. Cargo -->
+            <td class="col-cargo text-slate-700">{{ f.cargo }}</td>
 
-              <!-- 4. Área -->
-              <td class="col-area">
-                <span class="badge-area">{{ f.area }}</span>
-              </td>
+            <!-- 4. Área -->
+            <td class="col-area">
+              <span class="badge-area">{{ f.area }}</span>
+            </td>
 
-              <!-- 5. Fecha de ingreso -->
-              <td class="col-ingreso text-slate-600 font-mono text-xs">{{ f.fecha_ingreso }}</td>
+            <!-- 5. Fecha de ingreso -->
+            <td class="col-ingreso text-slate-600 font-mono text-xs">{{ f.fecha_ingreso }}</td>
 
-              <!-- 6. Haber básico (RF-6, RF-21) -->
-              <td class="col-haber font-semibold text-slate-800">
-                Bs {{ f.haber_basico | number:'1.2-2' }}
-              </td>
+            <!-- 6. Haber básico (RF-6, RF-21) -->
+            <td class="col-haber font-semibold text-slate-800">
+              Bs {{ f.haber_basico | number:'1.2-2' }}
+            </td>
 
-              <!-- 7. Días trabajados del período (RF-15, RF-16) -->
-              <td class="col-dias">
-                <div class="dias-badge-group">
-                  <span class="badge-dias" [class.badge-manual]="f.dias_manual" [title]="f.dias_manual ? 'Ajustado manualmente' : 'Calculado automáticamente'">
-                    {{ f.dias_trabajados }} días
-                  </span>
-                  @if (planilla()?.estado_periodo === 'ABIERTO') {
-                    <button class="btn-icon-mini" (click)="abrirModalDias(f)" title="Editar días trabajados">
-                      ✎
-                    </button>
-                  }
-                </div>
-              </td>
+            <!-- 7. Días trabajados del período (RF-15, RF-16) -->
+            <td class="col-dias">
+              <div class="dias-badge-group">
+                <span class="badge-dias" [class.badge-manual]="f.dias_manual"
+                  [title]="f.dias_manual ? 'Ajustado manualmente' : 'Calculado automáticamente'">
+                  {{ f.dias_trabajados }} días
+                </span>
+                @if (planilla()?.estado_periodo === 'ABIERTO') {
+                <button class="btn-icon-mini" (click)="abrirModalDias(f)" title="Editar días trabajados">
+                  ✎
+                </button>
+                }
+              </div>
+            </td>
 
-              <!-- 8. Total ganado = (Haber básico / 30) × Días trabajados (RF-17) -->
-              <td class="col-ganado font-bold text-blue-800">
-                Bs {{ f.total_ganado | number:'1.2-2' }}
-              </td>
+            <!-- 8. Total ganado = (Haber básico / 30) × Días trabajados (RF-17) -->
+            <td class="col-ganado font-bold text-blue-800">
+              Bs {{ f.total_ganado | number:'1.2-2' }}
+            </td>
 
-              <!-- 9. Pago de quincena (RF-33 a RF-39) -->
-              <td class="col-quincena">
-                <div class="action-amount-cell">
-                  <div class="stacked-totals">
-                    <span class="font-semibold text-indigo-900">Bs {{ f.pago_quincena | number:'1.2-2' }}</span>
-                    @if (f.estado_quincena === 'LIQUIDADA') {
-                      <span class="badge-quincena-pagada">LIQUIDADA</span>
-                    } @else {
-                      <span class="badge-quincena-pendiente">PENDIENTE</span>
-                    }
-                  </div>
+            <!-- 9. Pago de quincena (RF-33 a RF-39) -->
+            <td class="col-quincena">
+              <div class="action-amount-cell">
+                <div class="stacked-totals">
+                  <span class="font-semibold text-indigo-900">Bs {{ f.pago_quincena | number:'1.2-2' }}</span>
                   @if (f.estado_quincena === 'LIQUIDADA') {
-                    <button class="btn btn-xs btn-outline-emerald" (click)="abrirModalPagoQuincenaFila(f)" title="Quincena pagada. Clic para registrar pago extraordinario o ver">
-                      <span>Pagada</span>
-                      <span>✓</span>
-                    </button>
+                  <span class="badge-quincena-pagada">LIQUIDADA</span>
                   } @else {
-                    <button class="btn btn-xs btn-outline-indigo" (click)="abrirModalPagoQuincenaFila(f)" title="Pagar Quincena (Día 18)">
-                      <span>Pagar</span>
-                      <span>+</span>
-                    </button>
+                  <span class="badge-quincena-pendiente">PENDIENTE</span>
                   }
                 </div>
-              </td>
+                @if (f.estado_quincena === 'LIQUIDADA') {
+                <button class="btn btn-xs btn-outline-emerald" (click)="abrirModalPagoQuincenaFila(f)"
+                  title="Quincena pagada. Clic para registrar pago extraordinario o ver">
+                  <span>Pagada</span>
+                  <span>✓</span>
+                </button>
+                } @else {
+                <button class="btn btn-xs btn-outline-indigo" (click)="abrirModalPagoQuincenaFila(f)"
+                  title="Pagar Quincena (Día 18)">
+                  <span>Pagar</span>
+                  <span>+</span>
+                </button>
+                }
+              </div>
+            </td>
 
-              <!-- 10. Pago de anticipos (RF-22 a RF-28) -->
-              <td class="col-anticipos">
-                <div class="action-amount-cell">
-                  <span class="font-semibold text-amber-900">Bs {{ f.pago_anticipos | number:'1.2-2' }}</span>
-                  <button class="btn btn-xs btn-outline-amber" (click)="abrirModalAnticiposFila(f)" title="Ver o registrar anticipos de este trabajador">
-                    <span>{{ f.anticipos_count }} vales</span>
-                    <span>+</span>
-                  </button>
+            <!-- 10. Pago de anticipos (RF-22 a RF-28) -->
+            <td class="col-anticipos">
+              <div class="action-amount-cell">
+                <span class="font-semibold text-amber-900">Bs {{ f.pago_anticipos | number:'1.2-2' }}</span>
+                <button class="btn btn-xs btn-outline-amber" (click)="abrirModalAnticiposFila(f)"
+                  title="Ver o registrar anticipos de este trabajador">
+                  <span>{{ f.anticipos_count }} vales</span>
+                  <span>+</span>
+                </button>
+              </div>
+            </td>
+
+            <!-- 11. Total de anticipos y descuentos (RF-29 a RF-32) -->
+            <td class="col-ant-desc">
+              <div class="action-amount-cell">
+                <div class="stacked-totals">
+                  <span class="font-bold text-red-900">Bs {{ f.total_anticipos_descuentos | number:'1.2-2' }}</span>
+                  @if (f.total_descuentos > 0) {
+                  <span class="text-xs text-slate-500">(Desc: Bs {{ f.total_descuentos | number:'1.2-2' }})</span>
+                  }
                 </div>
-              </td>
+                <button class="btn btn-xs btn-outline-red" (click)="abrirModalDescuentos(f)"
+                  title="Gestionar descuentos independientes">
+                  <span>{{ f.descuentos_count }} desc.</span>
+                  <span>+</span>
+                </button>
+              </div>
+            </td>
 
-              <!-- 11. Total de anticipos y descuentos (RF-29 a RF-32) -->
-              <td class="col-ant-desc">
-                <div class="action-amount-cell">
-                  <div class="stacked-totals">
-                    <span class="font-bold text-red-900">Bs {{ f.total_anticipos_descuentos | number:'1.2-2' }}</span>
-                    @if (f.total_descuentos > 0) {
-                      <span class="text-xs text-slate-500">(Desc: Bs {{ f.total_descuentos | number:'1.2-2' }})</span>
-                    }
-                  </div>
-                  <button class="btn btn-xs btn-outline-red" (click)="abrirModalDescuentos(f)" title="Gestionar descuentos independientes">
-                    <span>{{ f.descuentos_count }} desc.</span>
-                    <span>+</span>
-                  </button>
-                </div>
-              </td>
-
-              <!-- 12. Líquido pagable = Total ganado − Total ant/desc − Pago quincena (RF-46 a RF-50) -->
-              <td class="col-liquido">
-                <div class="action-amount-cell">
-                  <div class="stacked-totals">
-                    @if (f.liquido_pagable >= 0) {
-                      <span class="liquido-val text-emerald-700 font-bold">
-                        Bs {{ f.liquido_pagable | number:'1.2-2' }}
-                      </span>
-                    } @else {
-                      <!-- Saldo negativo exacto con advertencia (RF-48) -->
-                      <span class="liquido-val text-red-600 font-bold" title="Saldo negativo salarial (excede ingresos)">
-                        - Bs {{ (f.liquido_pagable * -1) | number:'1.2-2' }}
-                      </span>
-                    }
-                    @if (f.estado_liquidacion === 'LIQUIDADO') {
-                      <span class="badge-quincena-pagada">LIQUIDADO</span>
-                    } @else if (f.estado_liquidacion === 'PARCIAL') {
-                      <span class="badge-sig-per">PARCIAL</span>
-                    } @else {
-                      <span class="badge-quincena-pendiente">PENDIENTE</span>
-                    }
-                  </div>
+            <!-- 12. Líquido pagable = Total ganado − Total ant/desc − Pago quincena (RF-46 a RF-50) -->
+            <td class="col-liquido">
+              <div class="action-amount-cell">
+                <div class="stacked-totals">
+                  @if (f.liquido_pagable >= 0) {
+                  <span class="liquido-val text-emerald-700 font-bold">
+                    Bs {{ f.liquido_pagable | number:'1.2-2' }}
+                  </span>
+                  } @else {
+                  <!-- Saldo negativo exacto con advertencia (RF-48) -->
+                  <span class="liquido-val text-red-600 font-bold" title="Saldo negativo salarial (excede ingresos)">
+                    - Bs {{ (f.liquido_pagable * -1) | number:'1.2-2' }}
+                  </span>
+                  }
                   @if (f.estado_liquidacion === 'LIQUIDADO') {
-                    <button class="btn btn-xs btn-outline-emerald" (click)="abrirModalLiquidarFila(f)" title="Sueldo liquidado completamente. Clic para ver comprobante o detalle">
-                      <span>Liquidado</span>
-                      <span>✓</span>
-                    </button>
+                  <span class="badge-quincena-pagada">LIQUIDADO</span>
+                  } @else if (f.estado_liquidacion === 'PARCIAL') {
+                  <span class="badge-sig-per">PARCIAL</span>
                   } @else {
-                    <button class="btn btn-xs btn-outline-emerald" (click)="abrirModalLiquidarFila(f)" title="Liquidar sueldo restante (Día 5)">
-                      <span>Liquidar</span>
-                      <span>+</span>
-                    </button>
+                  <span class="badge-quincena-pendiente">PENDIENTE</span>
                   }
                 </div>
-              </td>
-            </tr>
+                @if (f.estado_liquidacion === 'LIQUIDADO') {
+                <button class="btn btn-xs btn-outline-emerald" (click)="abrirModalLiquidarFila(f)"
+                  title="Sueldo liquidado completamente. Clic para ver comprobante o detalle">
+                  <span>Liquidado</span>
+                  <span>✓</span>
+                </button>
+                } @else {
+                <button class="btn btn-xs btn-outline-emerald" (click)="abrirModalLiquidarFila(f)"
+                  title="Liquidar sueldo restante (Día 5)">
+                  <span>Liquidar</span>
+                  <span>+</span>
+                </button>
+                }
+              </div>
+            </td>
+          </tr>
           } @empty {
-            <tr>
-              <td colspan="12" class="empty-row">
-                No se encontraron trabajadores en este período salarial.
-              </td>
-            </tr>
+          <tr>
+            <td colspan="12" class="empty-row">
+              No se encontraron trabajadores en este período salarial.
+            </td>
+          </tr>
           }
         </tbody>
         <tfoot>
@@ -298,10 +332,14 @@
             <td class="font-bold">Bs {{ (planilla()?.totales?.total_haber_basico || 0) | number:'1.2-2' }}</td>
             <td>—</td>
             <td class="font-bold text-blue-900">Bs {{ (planilla()?.totales?.total_ganado || 0) | number:'1.2-2' }}</td>
-            <td class="font-bold text-indigo-900">Bs {{ (planilla()?.totales?.total_quincena || 0) | number:'1.2-2' }}</td>
-            <td class="font-bold text-amber-900">Bs {{ (planilla()?.totales?.total_anticipos || 0) | number:'1.2-2' }}</td>
-            <td class="font-bold text-red-900">Bs {{ (planilla()?.totales?.total_anticipos_descuentos || 0) | number:'1.2-2' }}</td>
-            <td class="font-bold" [class.text-emerald-800]="(planilla()?.totales?.total_liquido_pagable || 0) >= 0" [class.text-red-700]="(planilla()?.totales?.total_liquido_pagable || 0) < 0">
+            <td class="font-bold text-indigo-900">Bs {{ (planilla()?.totales?.total_quincena || 0) | number:'1.2-2' }}
+            </td>
+            <td class="font-bold text-amber-900">Bs {{ (planilla()?.totales?.total_anticipos || 0) | number:'1.2-2' }}
+            </td>
+            <td class="font-bold text-red-900">Bs {{ (planilla()?.totales?.total_anticipos_descuentos || 0) |
+              number:'1.2-2' }}</td>
+            <td class="font-bold" [class.text-emerald-800]="(planilla()?.totales?.total_liquido_pagable || 0) >= 0"
+              [class.text-red-700]="(planilla()?.totales?.total_liquido_pagable || 0) < 0">
               Bs {{ (planilla()?.totales?.total_liquido_pagable || 0) | number:'1.2-2' }}
             </td>
           </tr>
@@ -314,427 +352,198 @@
   <!-- MODAL 1: AJUSTE MANUAL DE DÍAS TRABAJADOS (RF-16) -->
   <!-- ================================================================= -->
   @if (showModalDias()) {
-    <div class="modal-backdrop">
-      <div class="modal-card animate-scale-up">
-        <div class="modal-header">
-          <h3>Modificar Días Trabajados</h3>
-          <button class="btn-close" (click)="showModalDias.set(false)">✕</button>
-        </div>
-        <p class="modal-desc">
-          Trabajador: <strong>{{ selectedFilaDias()?.nombre_completo }}</strong><br/>
-          Haber Básico Mensual: <strong>Bs {{ (selectedFilaDias()?.haber_basico || 0) | number:'1.2-2' }}</strong>
-        </p>
+  <div class="modal-backdrop">
+    <div class="modal-card animate-scale-up">
+      <div class="modal-header">
+        <h3>Modificar Días Trabajados</h3>
+        <button class="btn-close" (click)="showModalDias.set(false)">✕</button>
+      </div>
+      <p class="modal-desc">
+        Trabajador: <strong>{{ selectedFilaDias()?.nombre_completo }}</strong><br />
+        Haber Básico Mensual: <strong>Bs {{ (selectedFilaDias()?.haber_basico || 0) | number:'1.2-2' }}</strong>
+      </p>
 
-        <div class="form-group mt-3">
-          <label>Días Computables del Período (0 a 30) *</label>
-          <input
-            type="number"
-            min="0"
-            max="30"
-            class="input-clean font-bold text-lg"
-            [(ngModel)]="diasForm.dias_trabajados"
-          />
-        </div>
+      <div class="form-group mt-3">
+        <label>Días Computables del Período (0 a 30) *</label>
+        <input type="number" min="0" max="30" class="input-clean font-bold text-lg"
+          [(ngModel)]="diasForm.dias_trabajados" />
+      </div>
 
-        <div class="simulation-box mt-3">
-          <div class="sim-line">
-            <span>Fórmula:</span>
-            <code>(Bs {{ selectedFilaDias()?.haber_basico }} / 30) × {{ diasForm.dias_trabajados || 0 }}</code>
-          </div>
-          <div class="sim-line">
-            <span>Nuevo Total Ganado:</span>
-            <strong class="text-blue-700 text-lg">Bs {{ calcularSimulacionGanado() | number:'1.2-2' }}</strong>
-          </div>
+      <div class="simulation-box mt-3">
+        <div class="sim-line">
+          <span>Fórmula:</span>
+          <code>(Bs {{ selectedFilaDias()?.haber_basico }} / 30) × {{ diasForm.dias_trabajados || 0 }}</code>
         </div>
-
-        <div class="form-group mt-3">
-          <label>Motivo del ajuste / Observaciones</label>
-          <input
-            type="text"
-            placeholder="Ej. Ingreso a mitad de mes, permiso no remunerado..."
-            class="input-clean"
-            [(ngModel)]="diasForm.observaciones"
-          />
-        </div>
-
-        <div class="modal-actions mt-4">
-          <button class="btn btn-secondary" (click)="showModalDias.set(false)">Cancelar</button>
-          <button class="btn btn-primary" (click)="guardarDiasTrabajados()" [disabled]="loading()">
-            Guardar y Recalcular
-          </button>
+        <div class="sim-line">
+          <span>Nuevo Total Ganado:</span>
+          <strong class="text-blue-700 text-lg">Bs {{ calcularSimulacionGanado() | number:'1.2-2' }}</strong>
         </div>
       </div>
+
+      <div class="form-group mt-3">
+        <label>Motivo del ajuste / Observaciones</label>
+        <input type="text" placeholder="Ej. Ingreso a mitad de mes, permiso no remunerado..." class="input-clean"
+          [(ngModel)]="diasForm.observaciones" />
+      </div>
+
+      <div class="modal-actions mt-4">
+        <button class="btn btn-secondary" (click)="showModalDias.set(false)">Cancelar</button>
+        <button class="btn btn-primary" (click)="guardarDiasTrabajados()" [disabled]="loading()">
+          Guardar y Recalcular
+        </button>
+      </div>
     </div>
+  </div>
   }
 
   <!-- ================================================================= -->
   <!-- MODAL 2: GESTIÓN DE DESCUENTOS INDEPENDIENTES (RF-29 A RF-32) -->
   <!-- ================================================================= -->
   @if (showModalDescuentos()) {
-    <div class="modal-backdrop">
-      <div class="modal-card modal-card-lg animate-scale-up">
-        <div class="modal-header">
-          <div>
-            <h3>Gestión de Descuentos Salariales</h3>
-            <span class="text-xs text-slate-500">
-              Trabajador: <strong>{{ selectedFilaDescuentos()?.nombre_completo }}</strong>
-            </span>
+  <div class="modal-backdrop">
+    <div class="modal-card modal-card-lg animate-scale-up">
+      <div class="modal-header">
+        <div>
+          <h3>Gestión de Descuentos Salariales</h3>
+          <span class="text-xs text-slate-500">
+            Trabajador: <strong>{{ selectedFilaDescuentos()?.nombre_completo }}</strong>
+          </span>
+        </div>
+        <button class="btn-close" (click)="showModalDescuentos.set(false)">✕</button>
+      </div>
+
+      <!-- Botón para alternar formulario de nuevo descuento -->
+      @if (planilla()?.estado_periodo === 'ABIERTO') {
+      <div class="modal-sub-actions mt-2 mb-3">
+        <button class="btn btn-sm btn-primary" (click)="showFormNuevoDescuento.set(!showFormNuevoDescuento())">
+          {{ showFormNuevoDescuento() ? '✕ Ocultar Formulario' : '+ Agregar Descuento' }}
+        </button>
+      </div>
+      }
+
+      <!-- Formulario para agregar descuento dinámico -->
+      @if (showFormNuevoDescuento()) {
+      <div class="inner-form-card mb-4 animate-in">
+        <h4>Registrar Nueva Deducción Salarial</h4>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Importe del Descuento (Bs) *</label>
+            <input type="number" min="1" step="0.50" class="input-clean font-bold" placeholder="0.00"
+              [(ngModel)]="descuentoForm.importe" />
           </div>
-          <button class="btn-close" (click)="showModalDescuentos.set(false)">✕</button>
+
+          <div class="form-group">
+            <label>Fecha *</label>
+            <input type="date" class="input-clean" [min]="periodoActual()?.fecha_inicio"
+              [max]="periodoActual()?.fecha_fin" [(ngModel)]="descuentoForm.fecha" />
+          </div>
+
+          <div class="form-group col-span-2">
+            <label>Concepto / Motivo *</label>
+            <input type="text" placeholder="Ej. Daño de herramienta, falta injustificada, reposición..."
+              class="input-clean" [(ngModel)]="descuentoForm.concepto" />
+          </div>
+
+          <div class="form-group col-span-2">
+            <label>Observaciones (Opcional)</label>
+            <input type="text" placeholder="Detalles adicionales de la deducción..." class="input-clean"
+              [(ngModel)]="descuentoForm.observaciones" />
+          </div>
         </div>
 
-        <!-- Botón para alternar formulario de nuevo descuento -->
-        @if (planilla()?.estado_periodo === 'ABIERTO') {
-          <div class="modal-sub-actions mt-2 mb-3">
-            <button class="btn btn-sm btn-primary" (click)="showFormNuevoDescuento.set(!showFormNuevoDescuento())">
-              {{ showFormNuevoDescuento() ? '✕ Ocultar Formulario' : '+ Agregar Descuento' }}
-            </button>
-          </div>
-        }
-
-        <!-- Formulario para agregar descuento dinámico -->
-        @if (showFormNuevoDescuento()) {
-          <div class="inner-form-card mb-4 animate-in">
-            <h4>Registrar Nueva Deducción Salarial</h4>
-            <div class="form-grid">
-              <div class="form-group">
-                <label>Importe del Descuento (Bs) *</label>
-                <input
-                  type="number"
-                  min="1"
-                  step="0.50"
-                  class="input-clean font-bold"
-                  placeholder="0.00"
-                  [(ngModel)]="descuentoForm.importe"
-                />
-              </div>
-
-              <div class="form-group">
-                <label>Fecha *</label>
-                <input
-                  type="date"
-                  class="input-clean"
-                  [min]="periodoActual()?.fecha_inicio"
-                  [max]="periodoActual()?.fecha_fin"
-                  [(ngModel)]="descuentoForm.fecha"
-                />
-              </div>
-
-              <div class="form-group col-span-2">
-                <label>Concepto / Motivo *</label>
-                <input
-                  type="text"
-                  placeholder="Ej. Daño de herramienta, falta injustificada, reposición..."
-                  class="input-clean"
-                  [(ngModel)]="descuentoForm.concepto"
-                />
-              </div>
-
-              <div class="form-group col-span-2">
-                <label>Observaciones (Opcional)</label>
-                <input
-                  type="text"
-                  placeholder="Detalles adicionales de la deducción..."
-                  class="input-clean"
-                  [(ngModel)]="descuentoForm.observaciones"
-                />
-              </div>
-            </div>
-
-            <div class="inner-actions mt-3">
-              <button class="btn btn-sm btn-secondary" (click)="showFormNuevoDescuento.set(false)">Cancelar</button>
-              <button class="btn btn-sm btn-primary" (click)="guardarNuevoDescuento()" [disabled]="loading()">
-                Confirmar Descuento
-              </button>
-            </div>
-          </div>
-        }
-
-        <!-- Tabla de descuentos registrados -->
-        <div class="table-responsive">
-          <table class="clean-table">
-            <thead>
-              <tr>
-                <th>N° Vale</th>
-                <th>Fecha</th>
-                <th>Concepto / Motivo</th>
-                <th>Importe</th>
-                <th>Registrado por</th>
-                <th>Acción</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (d of descuentosList(); track d.id) {
-                <tr>
-                  <td><span class="mono-badge">{{ d.numero_comprobante }}</span></td>
-                  <td>{{ d.fecha }}</td>
-                  <td class="font-medium text-slate-800">{{ d.concepto }}</td>
-                  <td class="font-bold text-red-700">Bs {{ d.importe | number:'1.2-2' }}</td>
-                  <td class="text-xs text-slate-500">{{ d.usuario_nombre || 'Sistema' }}</td>
-                  <td>
-                    @if (planilla()?.estado_periodo === 'ABIERTO' && auth.hasPermission('DESCUENTOS_ANULAR')) {
-                      <button class="btn btn-xs btn-outline-danger" (click)="anularDescuento(d)" title="Anular descuento">
-                        Anular
-                      </button>
-                    } @else {
-                      <span class="text-xs text-slate-400">—</span>
-                    }
-                  </td>
-                </tr>
-              } @empty {
-                <tr>
-                  <td colspan="6" class="empty-row">No hay descuentos registrados para este trabajador en este período.</td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
-
-        <div class="modal-actions mt-4">
-          <button class="btn btn-secondary" (click)="showModalDescuentos.set(false)">Cerrar</button>
+        <div class="inner-actions mt-3">
+          <button class="btn btn-sm btn-secondary" (click)="showFormNuevoDescuento.set(false)">Cancelar</button>
+          <button class="btn btn-sm btn-primary" (click)="guardarNuevoDescuento()" [disabled]="loading()">
+            Confirmar Descuento
+          </button>
         </div>
       </div>
+      }
+
+      <!-- Tabla de descuentos registrados -->
+      <div class="table-responsive">
+        <table class="clean-table">
+          <thead>
+            <tr>
+              <th>N° Vale</th>
+              <th>Fecha</th>
+              <th>Concepto / Motivo</th>
+              <th>Importe</th>
+              <th>Registrado por</th>
+              <th>Acción</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (d of descuentosList(); track d.id) {
+            <tr>
+              <td><span class="mono-badge">{{ d.numero_comprobante }}</span></td>
+              <td>{{ d.fecha }}</td>
+              <td class="font-medium text-slate-800">{{ d.concepto }}</td>
+              <td class="font-bold text-red-700">Bs {{ d.importe | number:'1.2-2' }}</td>
+              <td class="text-xs text-slate-500">{{ d.usuario_nombre || 'Sistema' }}</td>
+              <td>
+                @if (planilla()?.estado_periodo === 'ABIERTO' && auth.hasPermission('DESCUENTOS_ANULAR')) {
+                <button class="btn btn-xs btn-outline-danger" (click)="anularDescuento(d)" title="Anular descuento">
+                  Anular
+                </button>
+                } @else {
+                <span class="text-xs text-slate-400">—</span>
+                }
+              </td>
+            </tr>
+            } @empty {
+            <tr>
+              <td colspan="6" class="empty-row">No hay descuentos registrados para este trabajador en este período.</td>
+            </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="modal-actions mt-4">
+        <button class="btn btn-secondary" (click)="showModalDescuentos.set(false)">Cerrar</button>
+      </div>
     </div>
+  </div>
   }
 
   <!-- ================================================================= -->
   <!-- MODAL 3: GESTIÓN DE ANTICIPOS DE LA FILA (RF-22 A RF-28) -->
   <!-- ================================================================= -->
   @if (showModalAnticiposFila()) {
-    <div class="modal-backdrop">
-      <div class="modal-card modal-card-lg animate-scale-up">
-        <div class="modal-header">
-          <div>
-            <h3>Vales de Anticipo del Período</h3>
-            <span class="text-xs text-slate-500">
-              Trabajador: <strong>{{ selectedFilaAnticipos()?.nombre_completo }}</strong>
-            </span>
-          </div>
-          <button class="btn-close" (click)="showModalAnticiposFila.set(false)">✕</button>
+  <div class="modal-backdrop">
+    <div class="modal-card modal-card-lg animate-scale-up">
+      <div class="modal-header">
+        <div>
+          <h3>Vales de Anticipo del Período</h3>
+          <span class="text-xs text-slate-500">
+            Trabajador: <strong>{{ selectedFilaAnticipos()?.nombre_completo }}</strong>
+          </span>
         </div>
-
-        @if (planilla()?.estado_periodo === 'ABIERTO') {
-          <div class="modal-sub-actions mt-2 mb-3">
-            <button class="btn btn-sm btn-primary" (click)="showFormNuevoAnticipoFila.set(!showFormNuevoAnticipoFila())">
-              {{ showFormNuevoAnticipoFila() ? '✕ Ocultar Formulario' : '+ Registrar Anticipo' }}
-            </button>
-          </div>
-        }
-
-        @if (showFormNuevoAnticipoFila()) {
-          <div class="inner-form-card mb-4 animate-in">
-            <h4>Registrar Entrega de Anticipo</h4>
-            <div class="form-grid">
-              <div class="form-group">
-                <label>Importe Solicitado (Bs) *</label>
-                <input
-                  type="number"
-                  min="1"
-                  class="input-clean font-bold text-lg"
-                  placeholder="0.00"
-                  [(ngModel)]="anticipoFilaForm.importe"
-                />
-              </div>
-
-              <div class="form-group">
-                <label>Método de Pago *</label>
-                <select class="select-clean" [(ngModel)]="anticipoFilaForm.metodo_pago">
-                  <option value="EFECTIVO">Efectivo</option>
-                  <option value="TRANSFERENCIA">Transferencia Bancaria</option>
-                  <option value="CHEQUE">Cheque</option>
-                </select>
-              </div>
-
-              <div class="form-group">
-                <label>Fecha de Entrega *</label>
-                <input
-                  type="date"
-                  class="input-clean"
-                  [min]="periodoActual()?.fecha_inicio"
-                  [max]="periodoActual()?.fecha_fin"
-                  [(ngModel)]="anticipoFilaForm.fecha_entrega"
-                />
-              </div>
-
-              <div class="form-group col-span-2">
-                <label>Motivo / Observaciones</label>
-                <input
-                  type="text"
-                  placeholder="Ej. Anticipo para víveres, salud..."
-                  class="input-clean"
-                  [(ngModel)]="anticipoFilaForm.observaciones"
-                />
-              </div>
-            </div>
-
-            <div class="inner-actions mt-3">
-              <button class="btn btn-sm btn-secondary" (click)="showFormNuevoAnticipoFila.set(false)">Cancelar</button>
-              <button class="btn btn-sm btn-primary" (click)="guardarNuevoAnticipoFila()" [disabled]="loading()">
-                Confirmar y Generar Vale
-              </button>
-            </div>
-          </div>
-        }
-
-        <div class="table-responsive">
-          <table class="clean-table">
-            <thead>
-              <tr>
-                <th>N° Comprobante</th>
-                <th>Fecha Entrega</th>
-                <th>Método</th>
-                <th>Importe</th>
-                <th>Observaciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (a of anticiposFilaList(); track a.id) {
-                <tr>
-                  <td><span class="mono-badge">{{ a.numero_comprobante }}</span></td>
-                  <td>{{ a.fecha_entrega }}</td>
-                  <td><span class="pill-mini">{{ a.metodo_pago }}</span></td>
-                  <td class="font-bold text-amber-800">Bs {{ a.importe | number:'1.2-2' }}</td>
-                  <td class="text-xs text-slate-600">{{ a.observaciones || '—' }}</td>
-                </tr>
-              } @empty {
-                <tr>
-                  <td colspan="5" class="empty-row">No hay anticipos registrados para este trabajador.</td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
-
-        <div class="modal-actions mt-4">
-          <button class="btn btn-secondary" (click)="showModalAnticiposFila.set(false)">Cerrar</button>
-        </div>
+        <button class="btn-close" (click)="showModalAnticiposFila.set(false)">✕</button>
       </div>
-    </div>
-  }
 
-  <!-- ================================================================= -->
-  <!-- MODAL 4: CIERRE FORMAL DE PLANILLA MENSUAL (RF-7, RF-8, RF-76) -->
-  <!-- ================================================================= -->
-  @if (showModalCerrarPlanilla()) {
-    <div class="modal-backdrop">
-      <div class="modal-card animate-scale-up">
-        <div class="modal-header">
-          <h3>Confirmar Cierre de Planilla</h3>
-          <button class="btn-close" (click)="showModalCerrarPlanilla.set(false)">✕</button>
-        </div>
-
-        <div class="alert-box-warning mt-2">
-          <strong>⚠️ Importante:</strong> Al cerrar la planilla, todos los haberes y movimientos quedarán bloqueados para modificaciones ordinarias.
-        </div>
-
-        @if (advertenciaCierre()) {
-          <div class="alert-box-danger mt-3">
-            {{ advertenciaCierre() }}
-          </div>
-        }
-
-        <div class="form-group mt-3">
-          <label>Observaciones de Cierre (Opcional)</label>
-          <input
-            type="text"
-            class="input-clean"
-            placeholder="Ej. Planilla cerrada tras revisión de nómina..."
-            [(ngModel)]="cerrarPlanillaForm.observaciones"
-          />
-        </div>
-
-        <div class="modal-actions mt-4">
-          <button class="btn btn-secondary" (click)="showModalCerrarPlanilla.set(false)">Cancelar</button>
-          <button class="btn btn-danger" (click)="confirmarCierrePlanilla()" [disabled]="loading()">
-            {{ cerrarPlanillaForm.confirmar_pendientes ? 'Confirmar Cierre con Pendientes' : 'Cerrar Planilla Formalmente' }}
-          </button>
-        </div>
+      @if (planilla()?.estado_periodo === 'ABIERTO') {
+      <div class="modal-sub-actions mt-2 mb-3">
+        <button class="btn btn-sm btn-primary" (click)="showFormNuevoAnticipoFila.set(!showFormNuevoAnticipoFila())">
+          {{ showFormNuevoAnticipoFila() ? '✕ Ocultar Formulario' : '+ Registrar Anticipo' }}
+        </button>
       </div>
-    </div>
-  }
+      }
 
-  <!-- ================================================================= -->
-  <!-- MODAL 5: GESTIÓN DE PAGO DE QUINCENA (DÍA 18) -->
-  <!-- ================================================================= -->
-  @if (showModalPagoQuincena()) {
-    <div class="modal-backdrop">
-      <div class="modal-card modal-card-lg animate-scale-up">
-        <div class="modal-icon-badge blue">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect width="20" height="14" x="2" y="5" rx="2"/>
-            <line x1="2" x2="22" y1="10" y2="10"/>
-          </svg>
-        </div>
-        <h3>Gestión de Pago de Quincena (Día 18)</h3>
-        <p class="modal-desc">
-          Trabajador: <strong>{{ selectedFilaQuincena()?.nombre_completo }}</strong>
-          (Sueldo Base: <strong>Bs {{ (selectedFilaQuincena()?.haber_basico || 0) | number:'1.2-2' }}</strong>)
-        </p>
-
-        <!-- Resumen Financiero de Quincena -->
-        <div class="confirmation-summary-box mb-4">
-          <div class="summary-line">
-            <span>Quincena de Referencia:</span>
-            <strong>Bs {{ (selectedFilaQuincena()?.quincena_referencia || 1000) | number:'1.2-2' }}</strong>
-          </div>
-          <div class="summary-line">
-            <span>Anticipos recibidos &le; Día 18:</span>
-            <strong class="text-amber">Bs {{ (selectedFilaQuincena()?.anticipos_antes_dia_18 || 0) | number:'1.2-2' }}</strong>
-          </div>
-          <div class="summary-line">
-            <span>Diferencia de Quincena:</span>
-            @if (selectedFilaQuincena()?.supera_quincena) {
-              <strong class="text-red">Superó en Bs {{ (selectedFilaQuincena()?.excedente_quincena || 0) | number:'1.2-2' }}</strong>
-            } @else {
-              <strong class="text-emerald">Faltan Bs {{ (selectedFilaQuincena()?.diferencia_quincena || 0) | number:'1.2-2' }}</strong>
-            }
-          </div>
-          <div class="summary-line">
-            <span>Monto sugerido para quincena:</span>
-            <strong class="text-blue font-bold">Bs {{ (selectedFilaQuincena()?.quincena_sugerida || 0) | number:'1.2-2' }}</strong>
-          </div>
-        </div>
-
-        @if (selectedFilaQuincena()?.supera_quincena) {
-          <div class="quincena-alert-box warning mb-4">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"/>
-              <line x1="12" y1="8" x2="12" y2="12"/>
-              <line x1="12" y1="16" x2="12.01" y2="16"/>
-            </svg>
-            <span>
-              La quincena referencial ya fue cubierta o superada por anticipos previos. Puede registrar con importe <strong>Bs 0.00</strong> para dejar constancia de revisión, o ingresar otro monto si cuenta con autorización expresa.
-            </span>
-          </div>
-        }
-
-        <div class="form-grid text-left">
+      @if (showFormNuevoAnticipoFila()) {
+      <div class="inner-form-card mb-4 animate-in">
+        <h4>Registrar Entrega de Anticipo</h4>
+        <div class="form-grid">
           <div class="form-group">
-            <label>Importe a Pagar (Bs) *</label>
-            <div class="input-currency-wrapper">
-              <span class="currency-prefix">Bs</span>
-              <input
-                type="number"
-                min="0"
-                class="input-clean font-bold text-lg"
-                [(ngModel)]="pagoQuincenaForm.monto"
-              />
-            </div>
-            <span class="text-xs text-slate-500 mt-1">Sugerido automáticamente: Bs {{ (selectedFilaQuincena()?.quincena_sugerida || 0) | number:'1.2-2' }}</span>
-          </div>
-
-          <div class="form-group">
-            <label>Tipo de Registro *</label>
-            <select class="select-clean" [(ngModel)]="pagoQuincenaForm.tipo_pago">
-              <option value="PAGO_QUINCENA">Pago Efectivo de Quincena</option>
-              <option value="REVISION_QUINCENA">Revisión / Constancia de Quincena (Bs 0.00)</option>
-              <option value="PAGO_PARCIAL">Pago Parcial Extraordinario</option>
-            </select>
+            <label>Importe Solicitado (Bs) *</label>
+            <input type="number" min="1" class="input-clean font-bold text-lg" placeholder="0.00"
+              [(ngModel)]="anticipoFilaForm.importe" />
           </div>
 
           <div class="form-group">
             <label>Método de Pago *</label>
-            <select class="select-clean" [(ngModel)]="pagoQuincenaForm.metodo_pago">
+            <select class="select-clean" [(ngModel)]="anticipoFilaForm.metodo_pago">
               <option value="EFECTIVO">Efectivo</option>
               <option value="TRANSFERENCIA">Transferencia Bancaria</option>
               <option value="CHEQUE">Cheque</option>
@@ -742,299 +551,476 @@
           </div>
 
           <div class="form-group">
-            <label>Fecha de Pago *</label>
-            <input
-              type="date"
-              class="input-clean"
-              [min]="periodoActual()?.fecha_inicio"
-              [max]="periodoActual()?.fecha_fin"
-              [(ngModel)]="pagoQuincenaForm.fecha_pago"
-            />
+            <label>Fecha de Entrega *</label>
+            <input type="date" class="input-clean" [min]="periodoActual()?.fecha_inicio"
+              [max]="periodoActual()?.fecha_fin" [(ngModel)]="anticipoFilaForm.fecha_entrega" />
           </div>
 
           <div class="form-group col-span-2">
-            <label>Observaciones (Opcional)</label>
-            <input type="text" placeholder="Ej. Quincena mes en curso cancelada..." class="input-clean" [(ngModel)]="pagoQuincenaForm.observaciones" />
+            <label>Motivo / Observaciones</label>
+            <input type="text" placeholder="Ej. Anticipo para víveres, salud..." class="input-clean"
+              [(ngModel)]="anticipoFilaForm.observaciones" />
           </div>
         </div>
 
-        <div class="modal-actions mt-6">
-          <button class="btn btn-secondary" (click)="showModalPagoQuincena.set(false)">
-            Cancelar
-          </button>
-          <button class="btn btn-primary" (click)="confirmarPagoQuincenaFila()" [disabled]="loading()">
-            Confirmar Pago y Generar Comprobante
+        <div class="inner-actions mt-3">
+          <button class="btn btn-sm btn-secondary" (click)="showFormNuevoAnticipoFila.set(false)">Cancelar</button>
+          <button class="btn btn-sm btn-primary" (click)="guardarNuevoAnticipoFila()" [disabled]="loading()">
+            Confirmar y Generar Vale
           </button>
         </div>
       </div>
+      }
+
+      <div class="table-responsive">
+        <table class="clean-table">
+          <thead>
+            <tr>
+              <th>N° Comprobante</th>
+              <th>Fecha Entrega</th>
+              <th>Método</th>
+              <th>Importe</th>
+              <th>Observaciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (a of anticiposFilaList(); track a.id) {
+            <tr>
+              <td><span class="mono-badge">{{ a.numero_comprobante }}</span></td>
+              <td>{{ a.fecha_entrega }}</td>
+              <td><span class="pill-mini">{{ a.metodo_pago }}</span></td>
+              <td class="font-bold text-amber-800">Bs {{ a.importe | number:'1.2-2' }}</td>
+              <td class="text-xs text-slate-600">{{ a.observaciones || '—' }}</td>
+            </tr>
+            } @empty {
+            <tr>
+              <td colspan="5" class="empty-row">No hay anticipos registrados para este trabajador.</td>
+            </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="modal-actions mt-4">
+        <button class="btn btn-secondary" (click)="showModalAnticiposFila.set(false)">Cerrar</button>
+      </div>
     </div>
+  </div>
+  }
+
+  <!-- ================================================================= -->
+  <!-- MODAL 4: CIERRE FORMAL DE PLANILLA MENSUAL (RF-7, RF-8, RF-76) -->
+  <!-- ================================================================= -->
+  @if (showModalCerrarPlanilla()) {
+  <div class="modal-backdrop">
+    <div class="modal-card animate-scale-up">
+      <div class="modal-header">
+        <h3>Confirmar Cierre de Planilla</h3>
+        <button class="btn-close" (click)="showModalCerrarPlanilla.set(false)">✕</button>
+      </div>
+
+      <div class="alert-box-warning mt-2">
+        <strong>⚠️ Importante:</strong> Al cerrar la planilla, todos los haberes y movimientos quedarán bloqueados para
+        modificaciones ordinarias.
+      </div>
+
+      @if (advertenciaCierre()) {
+      <div class="alert-box-danger mt-3">
+        {{ advertenciaCierre() }}
+      </div>
+      }
+
+      <div class="form-group mt-3">
+        <label>Observaciones de Cierre (Opcional)</label>
+        <input type="text" class="input-clean" placeholder="Ej. Planilla cerrada tras revisión de nómina..."
+          [(ngModel)]="cerrarPlanillaForm.observaciones" />
+      </div>
+
+      <div class="modal-actions mt-4">
+        <button class="btn btn-secondary" (click)="showModalCerrarPlanilla.set(false)">Cancelar</button>
+        <button class="btn btn-danger" (click)="confirmarCierrePlanilla()" [disabled]="loading()">
+          {{ cerrarPlanillaForm.confirmar_pendientes ? 'Confirmar Cierre con Pendientes' : 'Cerrar Planilla Formalmente'
+          }}
+        </button>
+      </div>
+    </div>
+  </div>
+  }
+
+  <!-- ================================================================= -->
+  <!-- MODAL 5: GESTIÓN DE PAGO DE QUINCENA (DÍA 18) -->
+  <!-- ================================================================= -->
+  @if (showModalPagoQuincena()) {
+  <div class="modal-backdrop">
+    <div class="modal-card modal-card-lg animate-scale-up">
+      <div class="modal-icon-badge blue">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect width="20" height="14" x="2" y="5" rx="2" />
+          <line x1="2" x2="22" y1="10" y2="10" />
+        </svg>
+      </div>
+      <h3>Gestión de Pago de Quincena (Día 18)</h3>
+      <p class="modal-desc">
+        Trabajador: <strong>{{ selectedFilaQuincena()?.nombre_completo }}</strong>
+        (Sueldo Base: <strong>Bs {{ (selectedFilaQuincena()?.haber_basico || 0) | number:'1.2-2' }}</strong>)
+      </p>
+
+      <!-- Resumen Financiero de Quincena -->
+      <div class="confirmation-summary-box mb-4">
+        <div class="summary-line">
+          <span>Quincena de Referencia:</span>
+          <strong>Bs {{ (selectedFilaQuincena()?.quincena_referencia || 1000) | number:'1.2-2' }}</strong>
+        </div>
+        <div class="summary-line">
+          <span>Anticipos recibidos &le; Día 18:</span>
+          <strong class="text-amber">Bs {{ (selectedFilaQuincena()?.anticipos_antes_dia_18 || 0) | number:'1.2-2'
+            }}</strong>
+        </div>
+        <div class="summary-line">
+          <span>Diferencia de Quincena:</span>
+          @if (selectedFilaQuincena()?.supera_quincena) {
+          <strong class="text-red">Superó en Bs {{ (selectedFilaQuincena()?.excedente_quincena || 0) | number:'1.2-2'
+            }}</strong>
+          } @else {
+          <strong class="text-emerald">Faltan Bs {{ (selectedFilaQuincena()?.diferencia_quincena || 0) | number:'1.2-2'
+            }}</strong>
+          }
+        </div>
+        <div class="summary-line">
+          <span>Monto sugerido para quincena:</span>
+          <strong class="text-blue font-bold">Bs {{ (selectedFilaQuincena()?.quincena_sugerida || 0) | number:'1.2-2'
+            }}</strong>
+        </div>
+      </div>
+
+      @if (selectedFilaQuincena()?.supera_quincena) {
+      <div class="quincena-alert-box warning mb-4">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10" />
+          <line x1="12" y1="8" x2="12" y2="12" />
+          <line x1="12" y1="16" x2="12.01" y2="16" />
+        </svg>
+        <span>
+          La quincena referencial ya fue cubierta o superada por anticipos previos. Puede registrar con importe
+          <strong>Bs 0.00</strong> para dejar constancia de revisión, o ingresar otro monto si cuenta con autorización
+          expresa.
+        </span>
+      </div>
+      }
+
+      <div class="form-grid text-left">
+        <div class="form-group">
+          <label>Importe a Pagar (Bs) *</label>
+          <div class="input-currency-wrapper">
+            <span class="currency-prefix">Bs</span>
+            <input type="number" min="0" class="input-clean font-bold text-lg" [(ngModel)]="pagoQuincenaForm.monto" />
+          </div>
+          <span class="text-xs text-slate-500 mt-1">Sugerido automáticamente: Bs {{
+            (selectedFilaQuincena()?.quincena_sugerida || 0) | number:'1.2-2' }}</span>
+        </div>
+
+        <div class="form-group">
+          <label>Tipo de Registro *</label>
+          <select class="select-clean" [(ngModel)]="pagoQuincenaForm.tipo_pago">
+            <option value="PAGO_QUINCENA">Pago Efectivo de Quincena</option>
+            <option value="REVISION_QUINCENA">Revisión / Constancia de Quincena (Bs 0.00)</option>
+            <option value="PAGO_PARCIAL">Pago Parcial Extraordinario</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Método de Pago *</label>
+          <select class="select-clean" [(ngModel)]="pagoQuincenaForm.metodo_pago">
+            <option value="EFECTIVO">Efectivo</option>
+            <option value="TRANSFERENCIA">Transferencia Bancaria</option>
+            <option value="CHEQUE">Cheque</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Fecha de Pago *</label>
+          <input type="date" class="input-clean" [min]="periodoActual()?.fecha_inicio"
+            [max]="periodoActual()?.fecha_fin" [(ngModel)]="pagoQuincenaForm.fecha_pago" />
+        </div>
+
+        <div class="form-group col-span-2">
+          <label>Observaciones (Opcional)</label>
+          <input type="text" placeholder="Ej. Quincena mes en curso cancelada..." class="input-clean"
+            [(ngModel)]="pagoQuincenaForm.observaciones" />
+        </div>
+      </div>
+
+      <div class="modal-actions mt-6">
+        <button class="btn btn-secondary" (click)="showModalPagoQuincena.set(false)">
+          Cancelar
+        </button>
+        <button class="btn btn-primary" (click)="confirmarPagoQuincenaFila()" [disabled]="loading()">
+          Confirmar Pago y Generar Comprobante
+        </button>
+      </div>
+    </div>
+  </div>
   }
 
   <!-- ================================================================= -->
   <!-- MODAL 6: VISTA DE COMPROBANTE OFICIAL (IMPRIMIR & WHATSAPP) -->
   <!-- ================================================================= -->
   @if (showReceiptModal()) {
-    <div class="modal-backdrop" (click)="showReceiptModal.set(false)">
-      <div class="receipt-modal-card animate-scale-up" (click)="$event.stopPropagation()">
-        <!-- Botón de Cerrar Superior Rápido -->
-        <button class="btn-close-receipt" (click)="showReceiptModal.set(false)" type="button" aria-label="Cerrar comprobante" title="Cerrar">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-            <path d="M18 6L6 18M6 6l12 12"/>
-          </svg>
-        </button>
+  <div class="modal-backdrop" (click)="showReceiptModal.set(false)">
+    <div class="receipt-modal-card animate-scale-up" (click)="$event.stopPropagation()">
+      <!-- Botón de Cerrar Superior Rápido -->
+      <button class="btn-close-receipt" (click)="showReceiptModal.set(false)" type="button"
+        aria-label="Cerrar comprobante" title="Cerrar">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M18 6L6 18M6 6l12 12" />
+        </svg>
+      </button>
 
-        <!-- Encabezado del Comprobante -->
-        <div class="receipt-paper" id="printable-receipt">
-          <div class="receipt-header">
-            <div class="receipt-brand">
-              <div class="brand-badge">SISTEMAS RAÍCES</div>
-              <span class="company-sub">Gestión Empresarial y Recursos</span>
-            </div>
-            <div class="receipt-id-box">
-              <span class="receipt-type">{{ currentReceipt()?.tipo }}</span>
-              <div class="receipt-number">{{ currentReceipt()?.numero_comprobante }}</div>
-              <span class="receipt-date">{{ currentReceipt()?.fecha }}</span>
-            </div>
+      <!-- Encabezado del Comprobante -->
+      <div class="receipt-paper" id="printable-receipt">
+        <div class="receipt-header">
+          <div class="receipt-brand">
+            <div class="brand-badge">SISTEMAS RAÍCES</div>
+            <span class="company-sub">Gestión Empresarial y Recursos</span>
           </div>
-
-          <div class="receipt-divider"></div>
-
-          <!-- Datos del Beneficiario -->
-          <div class="receipt-grid">
-            <div class="receipt-col">
-              <span class="label">Trabajador:</span>
-              <span class="val font-bold">{{ currentReceipt()?.trabajador_nombre }}</span>
-            </div>
-            <div class="receipt-col">
-              <span class="label">Carné de Identidad:</span>
-              <span class="val">{{ currentReceipt()?.trabajador_ci || 'No especificado' }}</span>
-            </div>
-            <div class="receipt-col">
-              <span class="label">Área / Cargo:</span>
-              <span class="val">{{ currentReceipt()?.trabajador_area }} • {{ currentReceipt()?.trabajador_cargo }}</span>
-            </div>
-            <div class="receipt-col">
-              <span class="label">Período Salarial:</span>
-              <span class="val font-semibold">{{ currentReceipt()?.periodo_descripcion }}</span>
-            </div>
-          </div>
-
-          <div class="receipt-divider"></div>
-
-          <!-- Monto Principal -->
-          <div class="receipt-amount-box">
-            <span class="amount-label">IMPORTE ENTREGADO</span>
-            <div class="amount-val">
-              Bs {{ (currentReceipt()?.importe || 0) | number:'1.2-2' }}
-            </div>
-            <span class="amount-method">Método de entrega: {{ currentReceipt()?.metodo_pago }}</span>
-          </div>
-
-          @if (currentReceipt()?.sueldo_base) {
-            <div class="receipt-breakdown">
-              <div class="rb-title font-bold text-slate-800 mb-2">Estado y Desglose Salarial del Pago</div>
-              <div class="rb-row">
-                <span>Sueldo Base Mensual:</span>
-                <span class="font-bold text-slate-900">Bs {{ (currentReceipt()?.sueldo_base || 0) | number:'1.2-2' }}</span>
-              </div>
-              @if ((currentReceipt()?.anticipos_descontados || 0) > 0) {
-                <div class="rb-row text-slate-700">
-                  <span>(-) Total Anticipos Descontados:</span>
-                  <span class="text-amber-700 font-medium">- Bs {{ (currentReceipt()?.anticipos_descontados || 0) | number:'1.2-2' }}</span>
-                </div>
-              }
-              @if ((currentReceipt()?.descuentos_salariales || 0) > 0) {
-                <div class="rb-row text-slate-700">
-                  <span>(-) Otros Descuentos / Sanciones:</span>
-                  <span class="text-rose-700 font-medium">- Bs {{ (currentReceipt()?.descuentos_salariales || 0) | number:'1.2-2' }}</span>
-                </div>
-              }
-              @if ((currentReceipt()?.quincena_descontada || 0) > 0) {
-                <div class="rb-row text-slate-700">
-                  <span>(-) Quincena Pagada:</span>
-                  <span class="text-blue-700 font-medium">- Bs {{ (currentReceipt()?.quincena_descontada || 0) | number:'1.2-2' }}</span>
-                </div>
-              }
-              @if ((currentReceipt()?.ajustes || 0) !== 0) {
-                <div class="rb-row text-slate-700">
-                  <span>(+/-) Otros Ajustes / Bonos:</span>
-                  <span class="text-purple-700 font-medium">{{ (currentReceipt()?.ajustes || 0) > 0 ? '+' : '' }} Bs {{ (currentReceipt()?.ajustes || 0) | number:'1.2-2' }}</span>
-                </div>
-              }
-              <div class="rb-row font-bold text-slate-900 border-t pt-1.5 mt-1">
-                <span>(=) Monto Entregado:</span>
-                <span class="text-emerald-700 font-bold">Bs {{ (currentReceipt()?.importe || 0) | number:'1.2-2' }}</span>
-              </div>
-              <div class="rb-row items-center py-1 border-t mt-1">
-                <span>Saldo Salarial Estimado Restante:</span>
-                <span class="font-bold text-slate-800">Bs {{ (currentReceipt()?.saldo_restante || 0) | number:'1.2-2' }}</span>
-              </div>
-            </div>
-          }
-
-          <div class="receipt-footer-notes">
-            <p>Observaciones: {{ currentReceipt()?.observaciones || 'Sin observaciones registradas.' }}</p>
-            <div class="signatures-box">
-              <div class="sig-line">
-                <div class="line"></div>
-                <span>Entregado por ({{ getUsuarioDisplay(currentReceipt()?.usuario_nombre, currentReceipt()?.usuario_id) }})</span>
-              </div>
-              <div class="sig-line">
-                <div class="line"></div>
-                <span>Recibí Conforme (Trabajador)</span>
-              </div>
-            </div>
+          <div class="receipt-id-box">
+            <span class="receipt-type">{{ currentReceipt()?.tipo }}</span>
+            <div class="receipt-number">{{ currentReceipt()?.numero_comprobante }}</div>
+            <span class="receipt-date">{{ currentReceipt()?.fecha }}</span>
           </div>
         </div>
 
-        <!-- Acciones del Comprobante -->
-        <div class="receipt-actions-bar">
-          <button class="btn btn-secondary" (click)="showReceiptModal.set(false)">
-            Cerrar
-          </button>
-          <button class="btn btn-secondary" (click)="imprimirComprobante()">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="6 9 6 2 18 2 18 9"/>
-              <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
-              <rect width="12" height="8" x="6" y="14"/>
-            </svg>
-            <span>Imprimir / PDF</span>
-          </button>
-          <button class="btn btn-whatsapp" (click)="compartirWhatsApp()">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2m.01 1.67c2.2 0 4.26.86 5.82 2.41a8.17 8.17 0 0 1 2.41 5.83c0 4.54-3.7 8.24-8.24 8.24-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.17 8.17 0 0 1-1.25-4.36c0-4.54 3.7-8.24 8.24-8.24m4.52 11.66c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.13-1.06-.39-2.01-1.24-.74-.66-1.24-1.48-1.39-1.73-.14-.25-.02-.39.11-.51.11-.11.25-.29.37-.43.13-.15.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.13-.56-1.34-.76-1.84-.2-.49-.4-.42-.56-.43h-.48c-.17 0-.44.06-.67.31-.23.25-.88.86-.88 2.1 0 1.24.9 2.44 1.03 2.61.13.17 1.78 2.71 4.3 3.8.6.26 1.07.41 1.43.53.6.19 1.15.16 1.58.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.15-1.18-.06-.1-.23-.17-.48-.3"/>
-            </svg>
-            <span>Compartir por WhatsApp</span>
-          </button>
+        <div class="receipt-divider"></div>
+
+        <!-- Datos del Beneficiario -->
+        <div class="receipt-grid">
+          <div class="receipt-col">
+            <span class="label">Trabajador:</span>
+            <span class="val font-bold">{{ currentReceipt()?.trabajador_nombre }}</span>
+          </div>
+          <div class="receipt-col">
+            <span class="label">Carné de Identidad:</span>
+            <span class="val">{{ currentReceipt()?.trabajador_ci || 'No especificado' }}</span>
+          </div>
+          <div class="receipt-col">
+            <span class="label">Área / Cargo:</span>
+            <span class="val">{{ currentReceipt()?.trabajador_area }} • {{ currentReceipt()?.trabajador_cargo }}</span>
+          </div>
+          <div class="receipt-col">
+            <span class="label">Período Salarial:</span>
+            <span class="val font-semibold">{{ currentReceipt()?.periodo_descripcion }}</span>
+          </div>
+        </div>
+
+        <div class="receipt-divider"></div>
+
+        <!-- Monto Principal -->
+        <div class="receipt-amount-box">
+          <span class="amount-label">IMPORTE ENTREGADO</span>
+          <div class="amount-val">
+            Bs {{ (currentReceipt()?.importe || 0) | number:'1.2-2' }}
+          </div>
+          <span class="amount-method">Método de entrega: {{ currentReceipt()?.metodo_pago }}</span>
+        </div>
+
+        @if (currentReceipt()?.sueldo_base) {
+        <div class="receipt-breakdown">
+          <div class="rb-title font-bold text-slate-800 mb-2">Estado y Desglose Salarial del Pago</div>
+          <div class="rb-row">
+            <span>Sueldo Base Mensual:</span>
+            <span class="font-bold text-slate-900">Bs {{ (currentReceipt()?.sueldo_base || 0) | number:'1.2-2' }}</span>
+          </div>
+          @if ((currentReceipt()?.anticipos_descontados || 0) > 0) {
+          <div class="rb-row text-slate-700">
+            <span>(-) Total Anticipos Descontados:</span>
+            <span class="text-amber-700 font-medium">- Bs {{ (currentReceipt()?.anticipos_descontados || 0) |
+              number:'1.2-2' }}</span>
+          </div>
+          }
+          @if ((currentReceipt()?.descuentos_salariales || 0) > 0) {
+          <div class="rb-row text-slate-700">
+            <span>(-) Otros Descuentos / Sanciones:</span>
+            <span class="text-rose-700 font-medium">- Bs {{ (currentReceipt()?.descuentos_salariales || 0) |
+              number:'1.2-2' }}</span>
+          </div>
+          }
+          @if ((currentReceipt()?.quincena_descontada || 0) > 0) {
+          <div class="rb-row text-slate-700">
+            <span>(-) Quincena Pagada:</span>
+            <span class="text-blue-700 font-medium">- Bs {{ (currentReceipt()?.quincena_descontada || 0) |
+              number:'1.2-2' }}</span>
+          </div>
+          }
+          @if ((currentReceipt()?.ajustes || 0) !== 0) {
+          <div class="rb-row text-slate-700">
+            <span>(+/-) Otros Ajustes / Bonos:</span>
+            <span class="text-purple-700 font-medium">{{ (currentReceipt()?.ajustes || 0) > 0 ? '+' : '' }} Bs {{
+              (currentReceipt()?.ajustes || 0) | number:'1.2-2' }}</span>
+          </div>
+          }
+          <div class="rb-row font-bold text-slate-900 border-t pt-1.5 mt-1">
+            <span>(=) Monto Entregado:</span>
+            <span class="text-emerald-700 font-bold">Bs {{ (currentReceipt()?.importe || 0) | number:'1.2-2' }}</span>
+          </div>
+          <div class="rb-row items-center py-1 border-t mt-1">
+            <span>Saldo Salarial Estimado Restante:</span>
+            <span class="font-bold text-slate-800">Bs {{ (currentReceipt()?.saldo_restante || 0) | number:'1.2-2'
+              }}</span>
+          </div>
+        </div>
+        }
+
+        <div class="receipt-footer-notes">
+          <p>Observaciones: {{ currentReceipt()?.observaciones || 'Sin observaciones registradas.' }}</p>
+          <div class="signatures-box">
+            <div class="sig-line">
+              <div class="line"></div>
+              <span>Entregado por ({{ getUsuarioDisplay(currentReceipt()?.usuario_nombre, currentReceipt()?.usuario_id)
+                }})</span>
+            </div>
+            <div class="sig-line">
+              <div class="line"></div>
+              <span>Recibí Conforme (Trabajador)</span>
+            </div>
+          </div>
         </div>
       </div>
+
+      <!-- Acciones del Comprobante -->
+      <div class="receipt-actions-bar">
+        <button class="btn btn-secondary" (click)="showReceiptModal.set(false)">
+          Cerrar
+        </button>
+        <button class="btn btn-secondary" (click)="imprimirComprobante()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 6 2 18 2 18 9" />
+            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+            <rect width="12" height="8" x="6" y="14" />
+          </svg>
+          <span>Imprimir / PDF</span>
+        </button>
+        <button class="btn btn-whatsapp" (click)="compartirWhatsApp()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2m.01 1.67c2.2 0 4.26.86 5.82 2.41a8.17 8.17 0 0 1 2.41 5.83c0 4.54-3.7 8.24-8.24 8.24-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.17 8.17 0 0 1-1.25-4.36c0-4.54 3.7-8.24 8.24-8.24m4.52 11.66c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.13-1.06-.39-2.01-1.24-.74-.66-1.24-1.48-1.39-1.73-.14-.25-.02-.39.11-.51.11-.11.25-.29.37-.43.13-.15.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.13-.56-1.34-.76-1.84-.2-.49-.4-.42-.56-.43h-.48c-.17 0-.44.06-.67.31-.23.25-.88.86-.88 2.1 0 1.24.9 2.44 1.03 2.61.13.17 1.78 2.71 4.3 3.8.6.26 1.07.41 1.43.53.6.19 1.15.16 1.58.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.15-1.18-.06-.1-.23-.17-.48-.3" />
+          </svg>
+          <span>Compartir por WhatsApp</span>
+        </button>
+      </div>
     </div>
+  </div>
   }
 
   <!-- ================================================================= -->
   <!-- MODAL 7: REGISTRAR LIQUIDACIÓN FINAL DE SUELDO (DÍA 5) -->
   <!-- ================================================================= -->
   @if (showModalLiquidarFila()) {
-    <div class="modal-backdrop">
-      <div class="modal-card modal-card-lg animate-scale-up">
-        <div class="modal-icon-badge emerald">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-            <polyline points="14 2 14 8 20 8"/>
-            <line x1="16" x2="8" y1="13" y2="13"/>
-            <line x1="16" x2="8" y1="17" y2="17"/>
-            <polyline points="10 9 9 9 8 9"/>
-          </svg>
+  <div class="modal-backdrop">
+    <div class="modal-card modal-card-lg animate-scale-up">
+      <div class="modal-icon-badge emerald">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+          <polyline points="14 2 14 8 20 8" />
+          <line x1="16" x2="8" y1="13" y2="13" />
+          <line x1="16" x2="8" y1="17" y2="17" />
+          <polyline points="10 9 9 9 8 9" />
+        </svg>
+      </div>
+      <h3>Liquidar Sueldo Restante (Día 5)</h3>
+      <p class="modal-desc">
+        Trabajador: <strong>{{ selectedFilaLiquidacion()?.nombre_completo }}</strong>
+        (CI: <strong>{{ selectedFilaLiquidacion()?.ci || 'S/N' }}</strong> — {{ selectedFilaLiquidacion()?.cargo }})
+      </p>
+
+      <!-- Desglose de Cálculo Salarial Transparente -->
+      <div class="confirmation-summary-box mb-4">
+        <div class="summary-line">
+          <span>(+) Total Ganado (Días Trab.):</span>
+          <strong>Bs {{ (selectedFilaLiquidacion()?.total_ganado || 0) | number:'1.2-2' }}</strong>
         </div>
-        <h3>Liquidar Sueldo Restante (Día 5)</h3>
-        <p class="modal-desc">
-          Trabajador: <strong>{{ selectedFilaLiquidacion()?.nombre_completo }}</strong>
-          (CI: <strong>{{ selectedFilaLiquidacion()?.ci || 'S/N' }}</strong> — {{ selectedFilaLiquidacion()?.cargo }})
-        </p>
-
-        <!-- Desglose de Cálculo Salarial Transparente -->
-        <div class="confirmation-summary-box mb-4">
-          <div class="summary-line">
-            <span>(+) Total Ganado (Días Trab.):</span>
-            <strong>Bs {{ (selectedFilaLiquidacion()?.total_ganado || 0) | number:'1.2-2' }}</strong>
-          </div>
-          <div class="summary-line">
-            <span>(-) Total Anticipos del Período:</span>
-            <strong class="text-amber">- Bs {{ (selectedFilaLiquidacion()?.pago_anticipos || 0) | number:'1.2-2' }}</strong>
-          </div>
-          @if ((selectedFilaLiquidacion()?.total_descuentos || 0) > 0) {
-            <div class="summary-line">
-              <span>(-) Total Descuentos:</span>
-              <strong class="text-red">- Bs {{ (selectedFilaLiquidacion()?.total_descuentos || 0) | number:'1.2-2' }}</strong>
-            </div>
-          }
-          <div class="summary-line">
-            <span>(-) Pagos de Quincena & Parciales:</span>
-            <strong class="text-emerald">- Bs {{ (selectedFilaLiquidacion()?.pago_quincena || 0) | number:'1.2-2' }}</strong>
-          </div>
-          <div class="summary-line highlight-line">
-            <span>(=) Saldo Restante a Liquidar:</span>
-            <strong class="text-blue font-bold text-lg">Bs {{ calcularSaldoLiquidacionFila() | number:'1.2-2' }}</strong>
-          </div>
+        <div class="summary-line">
+          <span>(-) Total Anticipos del Período:</span>
+          <strong class="text-amber">- Bs {{ (selectedFilaLiquidacion()?.pago_anticipos || 0) | number:'1.2-2'
+            }}</strong>
         </div>
-
-        <div class="form-grid text-left">
-          <div class="form-group">
-            <label>(+) Otros Ajustes / Bonos (Bs)</label>
-            <input
-              type="number"
-              step="50"
-              class="input-clean"
-              placeholder="0.00"
-              [(ngModel)]="liquidacionFilaForm.ajustes"
-            />
-          </div>
-
-          <div class="form-group">
-            <label>Fecha de Liquidación *</label>
-            <input
-              type="date"
-              class="input-clean"
-              [min]="periodoActual()?.fecha_inicio"
-              [max]="periodoActual()?.fecha_limite_pago || periodoActual()?.fecha_fin"
-              [(ngModel)]="liquidacionFilaForm.fecha_liquidacion"
-            />
-            <span class="text-xs text-slate-400 mt-1 block">Tolerancia de pago hasta el fin del mes siguiente</span>
-          </div>
-
-          <div class="form-group col-span-2">
-            <label class="checkbox-clean">
-              <input type="checkbox" [(ngModel)]="liquidacionFilaForm.pago_inmediato" />
-              <span class="font-semibold">Realizar entrega / pago del saldo inmediatamente al liquidar</span>
-            </label>
-          </div>
-
-          @if (liquidacionFilaForm.pago_inmediato) {
-            <div class="form-group">
-              <label>Monto a entregar ahora (Bs) *</label>
-              <div class="input-currency-wrapper">
-                <span class="currency-prefix">Bs</span>
-                <input
-                  type="number"
-                  min="0"
-                  class="input-clean font-bold text-lg"
-                  [(ngModel)]="liquidacionFilaForm.monto_pago_inmediato"
-                />
-              </div>
-              <span class="text-xs text-slate-500 mt-1">Saldo restante estimado: Bs {{ calcularSaldoLiquidacionFila() | number:'1.2-2' }}</span>
-            </div>
-
-            <div class="form-group">
-              <label>Método de Pago *</label>
-              <select class="select-clean" [(ngModel)]="liquidacionFilaForm.metodo_pago_inmediato">
-                <option value="EFECTIVO">Efectivo</option>
-                <option value="TRANSFERENCIA">Transferencia Bancaria</option>
-                <option value="CHEQUE">Cheque</option>
-              </select>
-            </div>
-          }
-
-          <div class="form-group col-span-2">
-            <label>Observaciones de Liquidación</label>
-            <input
-              type="text"
-              placeholder="Detalles sobre el cierre o liquidación salarial..."
-              class="input-clean"
-              [(ngModel)]="liquidacionFilaForm.observaciones"
-            />
-          </div>
+        @if ((selectedFilaLiquidacion()?.total_descuentos || 0) > 0) {
+        <div class="summary-line">
+          <span>(-) Total Descuentos:</span>
+          <strong class="text-red">- Bs {{ (selectedFilaLiquidacion()?.total_descuentos || 0) | number:'1.2-2'
+            }}</strong>
         </div>
-
-        <div class="modal-actions mt-6">
-          <button class="btn btn-secondary" (click)="showModalLiquidarFila.set(false)">
-            Cancelar
-          </button>
-          <button class="btn btn-success" (click)="confirmarLiquidacionFila()" [disabled]="loading()">
-            Confirmar Liquidación y Generar Comprobante
-          </button>
+        }
+        <div class="summary-line">
+          <span>(-) Pagos de Quincena & Parciales:</span>
+          <strong class="text-emerald">- Bs {{ (selectedFilaLiquidacion()?.pago_quincena || 0) | number:'1.2-2'
+            }}</strong>
+        </div>
+        <div class="summary-line highlight-line">
+          <span>(=) Saldo Restante a Liquidar:</span>
+          <strong class="text-blue font-bold text-lg">Bs {{ calcularSaldoLiquidacionFila() | number:'1.2-2' }}</strong>
         </div>
       </div>
+
+      <div class="form-grid text-left">
+        <div class="form-group">
+          <label>(+) Otros Ajustes / Bonos (Bs)</label>
+          <input type="number" step="50" class="input-clean" placeholder="0.00"
+            [(ngModel)]="liquidacionFilaForm.ajustes" />
+        </div>
+
+        <div class="form-group">
+          <label>Fecha de Liquidación *</label>
+          <input type="date" class="input-clean" [min]="periodoActual()?.fecha_inicio"
+            [max]="periodoActual()?.fecha_limite_pago || periodoActual()?.fecha_fin"
+            [(ngModel)]="liquidacionFilaForm.fecha_liquidacion" />
+          <span class="text-xs text-slate-400 mt-1 block">Tolerancia de pago hasta el fin del mes siguiente</span>
+        </div>
+
+        <div class="form-group col-span-2">
+          <label class="checkbox-clean">
+            <input type="checkbox" [(ngModel)]="liquidacionFilaForm.pago_inmediato" />
+            <span class="font-semibold">Realizar entrega / pago del saldo inmediatamente al liquidar</span>
+          </label>
+        </div>
+
+        @if (liquidacionFilaForm.pago_inmediato) {
+        <div class="form-group">
+          <label>Monto a entregar ahora (Bs) *</label>
+          <div class="input-currency-wrapper">
+            <span class="currency-prefix">Bs</span>
+            <input type="number" min="0" class="input-clean font-bold text-lg"
+              [(ngModel)]="liquidacionFilaForm.monto_pago_inmediato" />
+          </div>
+          <span class="text-xs text-slate-500 mt-1">Saldo restante estimado: Bs {{ calcularSaldoLiquidacionFila() |
+            number:'1.2-2' }}</span>
+        </div>
+
+        <div class="form-group">
+          <label>Método de Pago *</label>
+          <select class="select-clean" [(ngModel)]="liquidacionFilaForm.metodo_pago_inmediato">
+            <option value="EFECTIVO">Efectivo</option>
+            <option value="TRANSFERENCIA">Transferencia Bancaria</option>
+            <option value="CHEQUE">Cheque</option>
+          </select>
+        </div>
+        }
+
+        <div class="form-group col-span-2">
+          <label>Observaciones de Liquidación</label>
+          <input type="text" placeholder="Detalles sobre el cierre o liquidación salarial..." class="input-clean"
+            [(ngModel)]="liquidacionFilaForm.observaciones" />
+        </div>
+      </div>
+
+      <div class="modal-actions mt-6">
+        <button class="btn btn-secondary" (click)="showModalLiquidarFila.set(false)">
+          Cancelar
+        </button>
+        <button class="btn btn-success" (click)="confirmarLiquidacionFila()" [disabled]="loading()">
+          Confirmar Liquidación y Generar Comprobante
+        </button>
+      </div>
     </div>
+  </div>
   }
 </div>
-
