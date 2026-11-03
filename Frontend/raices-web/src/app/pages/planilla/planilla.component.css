@@ -1277,3 +1277,25 @@
   }
 }
 
+
+
+/* Anticipos Rider y Otros Anticipos (spec.md) */
+.btn-outline-purple {
+  background: #faf5ff;
+  color: #6b21a8;
+  border: 1px solid #e9d5ff;
+}
+
+.btn-outline-purple:hover {
+  background: #f3e8ff;
+}
+
+.btn-purple {
+  background: #7c3aed;
+  color: #ffffff;
+  border: 1px solid #6d28d9;
+}
+
+.btn-purple:hover {
+  background: #6d28d9;
+}

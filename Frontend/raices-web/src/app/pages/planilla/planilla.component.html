@@ -184,6 +184,7 @@
             <th class="col-dias">Días Trab.</th>
             <th class="col-ganado">Total Ganado</th>
             <th class="col-quincena">Pago Quincena</th>
+            <th class="col-anticipos-rider">Anticipo Rider y Otros Anticipos</th>
             <th class="col-anticipos">Pago Anticipos</th>
             <th class="col-ant-desc">Total Ant. y Desc.</th>
             <th class="col-liquido">Líquido Pagable</th>
@@ -266,6 +267,18 @@
               </div>
             </td>
 
+            <!-- Columna spec.md: Anticipo Rider y Otros Anticipos -->
+            <td class="col-anticipos-rider">
+              <div class="action-amount-cell">
+                <span class="font-semibold text-purple-900">Bs {{ (f.pago_anticipos_rider || 0) | number:'1.2-2' }}</span>
+                <button class="btn btn-xs btn-outline-purple" (click)="abrirModalAnticiposRiderFila(f)"
+                  title="Ver o registrar anticipos rider de este trabajador">
+                  <span>{{ f.anticipos_rider_count || 0 }} vales</span>
+                  <span>+</span>
+                </button>
+              </div>
+            </td>
+
             <!-- 10. Pago de anticipos (RF-22 a RF-28) -->
             <td class="col-anticipos">
               <div class="action-amount-cell">
@@ -335,7 +348,7 @@
           </tr>
           } @empty {
           <tr>
-            <td colspan="12" class="empty-row">
+            <td colspan="13" class="empty-row">
               No se encontraron trabajadores en este período salarial.
             </td>
           </tr>
@@ -348,6 +361,8 @@
             <td>—</td>
             <td class="font-bold text-blue-900">Bs {{ (planilla()?.totales?.total_ganado || 0) | number:'1.2-2' }}</td>
             <td class="font-bold text-indigo-900">Bs {{ (planilla()?.totales?.total_quincena || 0) | number:'1.2-2' }}
+            </td>
+            <td class="font-bold text-purple-900">Bs {{ (planilla()?.totales?.total_anticipos_rider || 0) | number:'1.2-2' }}
             </td>
             <td class="font-bold text-amber-900">Bs {{ (planilla()?.totales?.total_anticipos || 0) | number:'1.2-2' }}
             </td>
@@ -517,6 +532,118 @@
 
       <div class="modal-actions mt-4">
         <button class="btn btn-secondary" (click)="showModalDescuentos.set(false)">Cerrar</button>
+      </div>
+    </div>
+  </div>
+  }
+
+
+  <!-- ================================================================= -->
+  <!-- MODAL: GESTIÓN DE ANTICIPOS RIDER Y OTROS (spec.md) -->
+  <!-- ================================================================= -->
+  @if (showModalAnticiposRiderFila()) {
+  <div class="modal-backdrop">
+    <div class="modal-card modal-card-lg animate-scale-up">
+      <div class="modal-header">
+        <div>
+          <h3>Anticipo Rider y Otros Anticipos</h3>
+          <span class="text-xs text-slate-500">
+            Trabajador: <strong>{{ selectedFilaAnticiposRider()?.nombre_completo }}</strong>
+          </span>
+        </div>
+        <button class="btn-close" (click)="showModalAnticiposRiderFila.set(false)">✕</button>
+      </div>
+
+      @if (planilla()?.estado_periodo === 'ABIERTO') {
+      <div class="modal-sub-actions mt-2 mb-3">
+        <button class="btn btn-sm btn-purple" (click)="showFormNuevoAnticipoRiderFila.set(!showFormNuevoAnticipoRiderFila())">
+          {{ showFormNuevoAnticipoRiderFila() ? '✕ Ocultar Formulario' : '+ Registrar Anticipo Rider' }}
+        </button>
+      </div>
+      }
+
+      @if (showFormNuevoAnticipoRiderFila()) {
+      <div class="inner-form-card mb-4 animate-in">
+        <h4>Registrar Entrega de Anticipo Rider / Otros</h4>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Importe (Bs) *</label>
+            <input type="number" min="1" class="input-clean font-bold text-lg" placeholder="0.00"
+              [(ngModel)]="anticipoRiderFilaForm.importe" />
+          </div>
+
+          <div class="form-group">
+            <label>Método de Pago *</label>
+            <select class="select-clean" [(ngModel)]="anticipoRiderFilaForm.metodo_pago">
+              <option value="EFECTIVO">Efectivo</option>
+              <option value="TRANSFERENCIA">Transferencia Bancaria</option>
+              <option value="CHEQUE">Cheque</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Fecha de Entrega *</label>
+            <input type="date" class="input-clean" [min]="periodoActual()?.fecha_inicio"
+              [max]="periodoActual()?.fecha_fin" [(ngModel)]="anticipoRiderFilaForm.fecha_entrega" />
+          </div>
+
+          <div class="form-group col-span-2">
+            <label>Observaciones / Motivo</label>
+            <input type="text" placeholder="Ej. Anticipo rider fin de semana, comisión especial..." class="input-clean"
+              [(ngModel)]="anticipoRiderFilaForm.observaciones" />
+          </div>
+        </div>
+
+        <div class="inner-actions mt-3">
+          <button class="btn btn-sm btn-secondary" (click)="showFormNuevoAnticipoRiderFila.set(false)">Cancelar</button>
+          <button class="btn btn-sm btn-purple" (click)="guardarNuevoAnticipoRiderFila()" [disabled]="loading()">
+            Confirmar y Generar Vale Rider
+          </button>
+        </div>
+      </div>
+      }
+
+      <div class="table-responsive">
+        <table class="clean-table">
+          <thead>
+            <tr>
+              <th>N° Comprobante</th>
+              <th>Fecha Entrega</th>
+              <th>Método</th>
+              <th>Importe</th>
+              <th>Observaciones</th>
+              <th class="text-right">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (ar of anticiposRiderFilaList(); track ar.id) {
+            <tr>
+              <td><span class="mono-badge">{{ ar.numero_comprobante }}</span></td>
+              <td>{{ ar.fecha_entrega }}</td>
+              <td><span class="pill-mini">{{ ar.metodo_pago }}</span></td>
+              <td class="font-bold text-purple-800">Bs {{ ar.importe | number:'1.2-2' }}</td>
+              <td class="text-xs text-slate-600">{{ ar.observaciones || '—' }}</td>
+              <td class="text-right">
+                @if (planilla()?.estado_periodo === 'ABIERTO') {
+                <button class="btn btn-xs btn-outline-danger" (click)="anularAnticipoRider(ar)" title="Anular anticipo rider">
+                  Anular
+                </button>
+                } @else {
+                <span class="text-xs text-slate-400">—</span>
+                }
+              </td>
+            </tr>
+            } @empty {
+            <tr>
+              <td colspan="6" class="empty-row">No hay anticipos rider registrados para este trabajador.</td>
+            </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="modal-actions mt-4">
+        <button class="btn btn-secondary" (click)="showModalAnticiposRiderFila.set(false)">Cerrar</button>
       </div>
     </div>
   </div>

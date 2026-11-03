@@ -35,6 +35,8 @@ import {
   ActualizarDiasTrabajadosPayload,
   Descuento,
   DescuentoCreatePayload,
+  AnticipoRider,
+  AnticipoRiderCreatePayload,
 } from '../models/types';
 
 @Injectable({
@@ -467,6 +469,31 @@ export class DataService {
   anularDescuento(descuentoId: number, motivo: string): Observable<Descuento> {
     return this.http.post<Descuento>(
       `${this.API_URL}/planilla/descuentos/${descuentoId}/anular`,
+      { motivo },
+      { headers: this.auth.getHeaders() }
+    );
+  }
+
+  getAnticiposRider(periodoId: number, trabajadorId?: number): Observable<AnticipoRider[]> {
+    let params: any = { periodo_id: periodoId };
+    if (trabajadorId) {
+      params.trabajador_id = trabajadorId;
+    }
+    return this.http.get<AnticipoRider[]>(`${this.API_URL}/planilla/anticipos-rider`, {
+      headers: this.auth.getHeaders(),
+      params
+    });
+  }
+
+  crearAnticipoRider(payload: AnticipoRiderCreatePayload): Observable<AnticipoRider> {
+    return this.http.post<AnticipoRider>(`${this.API_URL}/planilla/anticipos-rider`, payload, {
+      headers: this.auth.getHeaders()
+    });
+  }
+
+  anularAnticipoRider(anticipoRiderId: number, motivo: string): Observable<AnticipoRider> {
+    return this.http.post<AnticipoRider>(
+      `${this.API_URL}/planilla/anticipos-rider/${anticipoRiderId}/anular`,
       { motivo },
       { headers: this.auth.getHeaders() }
     );

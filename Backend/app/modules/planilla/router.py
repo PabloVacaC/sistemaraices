@@ -11,6 +11,8 @@ from app.modules.planilla.schemas import (
     ActualizarDiasTrabajadosIn,
     DescuentoCreate,
     DescuentoOut,
+    AnticipoRiderCreate,
+    AnticipoRiderOut,
     CerrarPlanillaRequest,
     PlanillaCierreOut,
 )
@@ -100,3 +102,40 @@ def anular_descuento(
         db, descuento_id=descuento_id, motivo=datos.motivo, usuario_ci=current_user.ci
     )
 
+
+
+# =========================================================================
+# ANTICIPOS RIDER Y OTROS ANTICIPOS (spec.md)
+# =========================================================================
+@router.get("/anticipos-rider", response_model=List[AnticipoRiderOut])
+def listar_anticipos_rider(
+    periodo_id: int = Query(...),
+    trabajador_id: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+):
+    """Consulta la lista de anticipos rider del período con filtro opcional por trabajador."""
+    return service.listar_anticipos_rider(db, periodo_id=periodo_id, trabajador_id=trabajador_id)
+
+
+@router.post("/anticipos-rider", response_model=AnticipoRiderOut, status_code=status.HTTP_201_CREATED)
+def registrar_anticipo_rider(
+    datos: AnticipoRiderCreate,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+):
+    """Registra un anticipo rider u otros anticipos con comprobante correlativo RID-YYYYMM-XXXX."""
+    return service.registrar_anticipo_rider(db, datos, usuario_ci=current_user.ci)
+
+
+@router.post("/anticipos-rider/{anticipo_rider_id}/anular", response_model=AnticipoRiderOut)
+def anular_anticipo_rider(
+    anticipo_rider_id: int,
+    datos: AnulacionRequest,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+):
+    """Anula de forma justificada un anticipo rider conservando el registro histórico."""
+    return service.anular_anticipo_rider(
+        db, anticipo_rider_id=anticipo_rider_id, motivo=datos.motivo, usuario_ci=current_user.ci
+    )

@@ -501,6 +501,8 @@ export interface PlanillaFila {
   quincena_referencia?: number;
   anticipos_antes_dia_18?: number;
   diferencia_quincena?: number;
+  pago_anticipos_rider?: number;
+  anticipos_rider_count?: number;
   pago_anticipos: number;
   anticipos_count: number;
   reposicion_ebert?: number;
@@ -527,6 +529,7 @@ export interface PlanillaResumenTotales {
   total_haber_basico: number;
   total_ganado: number;
   total_quincena: number;
+  total_anticipos_rider?: number;
   total_anticipos: number;
   total_descuentos: number;
   total_anticipos_descuentos: number;
@@ -621,3 +624,30 @@ export interface DescuentoCreatePayload {
   observaciones?: string;
 }
 
+
+
+export interface AnticipoRider {
+  id: number;
+  numero_comprobante: string;
+  trabajador_id: number;
+  trabajador_nombre?: string;
+  periodo_id: number;
+  fecha_solicitud: string;
+  fecha_entrega: string;
+  importe: number;
+  metodo_pago: string;
+  estado: string;
+  observaciones?: string;
+  motivo_anulacion?: string;
+  usuario_id?: string;
+  usuario_nombre?: string;
+}
+
+export interface AnticipoRiderCreatePayload {
+  trabajador_id: number;
+  periodo_id: number;
+  fecha_entrega: string;
+  importe: number;
+  metodo_pago: string;
+  observaciones?: string;
+}

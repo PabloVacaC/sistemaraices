@@ -15,6 +15,8 @@ import {
   Descuento,
   DescuentoCreatePayload,
   Anticipo,
+  AnticipoRider,
+  AnticipoRiderCreatePayload,
 } from '../../core/models/types';
 
 @Component({
@@ -102,6 +104,18 @@ export class PlanillaComponent implements OnInit {
     fecha: new Date().toISOString().substring(0, 10),
     importe: null as number | null,
     concepto: '',
+    observaciones: ''
+  };
+
+  // Anticipos Rider y Otros Anticipos (spec.md)
+  showModalAnticiposRiderFila = signal<boolean>(false);
+  selectedFilaAnticiposRider = signal<PlanillaFila | null>(null);
+  anticiposRiderFilaList = signal<AnticipoRider[]>([]);
+  showFormNuevoAnticipoRiderFila = signal<boolean>(false);
+  anticipoRiderFilaForm = {
+    importe: null as number | null,
+    metodo_pago: 'EFECTIVO',
+    fecha_entrega: new Date().toISOString().substring(0, 10),
     observaciones: ''
   };
 
@@ -386,6 +400,94 @@ export class PlanillaComponent implements OnInit {
       },
       error: (err) => {
         this.toast.error(err?.error?.detail || 'Error al anular descuento');
+        this.loading.set(false);
+      }
+    });
+  }
+
+  // ==========================================
+  // GESTIÓN DE ANTICIPOS RIDER Y OTROS (spec.md)
+  // ==========================================
+  abrirModalAnticiposRiderFila(fila: PlanillaFila) {
+    this.selectedFilaAnticiposRider.set(fila);
+    this.showFormNuevoAnticipoRiderFila.set(false);
+    this.anticipoRiderFilaForm = {
+      importe: null,
+      metodo_pago: 'EFECTIVO',
+      fecha_entrega: this.getFechaValidaEnPeriodo(),
+      observaciones: ''
+    };
+    this.cargarAnticiposRiderDeFila(fila.trabajador_id);
+    this.showModalAnticiposRiderFila.set(true);
+  }
+
+  cargarAnticiposRiderDeFila(trabajadorId: number) {
+    const pid = this.selectedPeriodoId();
+    if (!pid) return;
+
+    this.dataService.getAnticiposRider(pid, trabajadorId).subscribe({
+      next: (list) => {
+        this.anticiposRiderFilaList.set(list);
+      },
+      error: () => this.toast.error('Error al cargar lista de anticipos rider')
+    });
+  }
+
+  guardarNuevoAnticipoRiderFila() {
+    const fila = this.selectedFilaAnticiposRider();
+    const pid = this.selectedPeriodoId();
+    if (!fila || !pid) return;
+
+    const monto = Number(this.anticipoRiderFilaForm.importe || 0);
+    if (monto <= 0) {
+      this.toast.warning('El importe del anticipo rider debe ser mayor a Bs 0.');
+      return;
+    }
+
+    this.loading.set(true);
+    const payload: AnticipoRiderCreatePayload = {
+      trabajador_id: fila.trabajador_id,
+      periodo_id: pid,
+      importe: monto,
+      metodo_pago: this.anticipoRiderFilaForm.metodo_pago,
+      fecha_entrega: this.anticipoRiderFilaForm.fecha_entrega,
+      observaciones: this.anticipoRiderFilaForm.observaciones
+    };
+
+    this.dataService.crearAnticipoRider(payload).subscribe({
+      next: (ar: AnticipoRider) => {
+        this.toast.success(`Anticipo Rider registrado: ${ar.numero_comprobante}`);
+        this.showFormNuevoAnticipoRiderFila.set(false);
+        this.cargarAnticiposRiderDeFila(fila.trabajador_id);
+        this.cargarPlanilla();
+        this.loading.set(false);
+      },
+      error: (err: any) => {
+        const msg = err?.error?.detail || 'Error al registrar anticipo rider';
+        this.toast.error(msg);
+        this.loading.set(false);
+      }
+    });
+  }
+
+  anularAnticipoRider(ar: AnticipoRider) {
+    const motivo = prompt(`¿Estás seguro de anular el anticipo rider ${ar.numero_comprobante} por Bs ${ar.importe}?\nIngresa el motivo de anulación:`);
+    if (!motivo || !motivo.trim()) return;
+
+    this.loading.set(true);
+    this.dataService.anularAnticipoRider(ar.id, motivo.trim()).subscribe({
+      next: () => {
+        this.toast.success(`Anticipo rider ${ar.numero_comprobante} anulado.`);
+        const fila = this.selectedFilaAnticiposRider();
+        if (fila) {
+          this.cargarAnticiposRiderDeFila(fila.trabajador_id);
+        }
+        this.cargarPlanilla();
+        this.loading.set(false);
+      },
+      error: (err: any) => {
+        const msg = err?.error?.detail || 'Error al anular anticipo rider';
+        this.toast.error(msg);
         this.loading.set(false);
       }
     });

@@ -1,7 +1,5 @@
-3. ahora cuando le de el boton de cerrar planilla antes de cerrar me va a salir un formulario que tendra.. Entregado : ahi yo ingresare el monto que recibi el que se me fue entrgado, luego tendra lo que es solicitud quincena, eso vendra el valor del KPIs. de Solicitud Quincena , 
-lulego abra otro que sera diferencia: diferencia tendra entregado - solicitud quincena, 
-luego abra otro que sera monto sueldo entregado ahi yo igual anotare el monto que se me esta ciendo entregado ,
- luego solicitud sueldo que eso igual biene del KPIs Solicitud Sueldo,
-luego otro que sera diferencia ahi sera monto sueldo entregado - luego solicitud ,
- luego otros gastos , que ahi vendran otros gastos que iran de otro luegar que aun no defino bien pero poenelo ahi luego de eso quiero la suma de las diferancias y de otros gastos 
- y recien pueda cerra planilla pero depues de eso pueda ver ese formulario que cerre planilla 
+ahora quiero crear una columna llamada anticipo rider y otros anticipos , lo ideal seria que creemos una nueva tabla llamada anticipos rider, debera tener todos los atributos que tiene la clase anticpo, ya que hara exactamente lo mismo que anticpo.
+esta nuevA COLUMNA anticipo rider y otros anticipos , quiero que este en medio de Pago Quincena	y Pago Anticipos, 
+anticipo rider y otros anticipos sera exactamente igual a Pago Anticipos tiene que tener tambien para agregar item exactamente igual que 
+ahora hay que modificar algunas columnas Total Ant. y Desc. esta columna ahora sera = a Pago Anticipos + nticipo rider y otros anticipos + Pago Quincena + el descuento que se le puede agregar 
+Líquido Pagable ahora esta columna deberia de ser = Total Ganado-Total Ant. y Desc. 

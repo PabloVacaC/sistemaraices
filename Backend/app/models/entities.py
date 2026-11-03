@@ -134,6 +134,11 @@ class Trabajador(Base):
         back_populates="trabajador",
         cascade="all, delete-orphan",
     )
+    anticipos_rider = relationship(
+        "AnticipoRider",
+        back_populates="trabajador",
+        cascade="all, delete-orphan",
+    )
     liquidaciones = relationship(
         "Liquidacion",
         back_populates="trabajador",
@@ -198,6 +203,7 @@ class PeriodoSalarial(Base):
 
     # Relaciones
     anticipos = relationship("Anticipo", back_populates="periodo")
+    anticipos_rider = relationship("AnticipoRider", back_populates="periodo")
     liquidaciones = relationship("Liquidacion", back_populates="periodo")
     descuentos = relationship("Descuento", back_populates="periodo")
     detalles_planilla = relationship("PlanillaDetalle", back_populates="periodo", cascade="all, delete-orphan")
@@ -270,6 +276,45 @@ class Anticipo(Base):
     # Relaciones
     trabajador = relationship("Trabajador", back_populates="anticipos", lazy="joined")
     periodo = relationship("PeriodoSalarial", back_populates="anticipos", lazy="joined")
+    usuario = relationship("Usuario", lazy="joined")
+
+    @property
+    def usuario_nombre(self) -> Optional[str]:
+        if self.usuario:
+            return f"{self.usuario.nombre} {self.usuario.apellido}".strip()
+        return None
+
+
+class AnticipoRider(Base):
+    __tablename__ = "anticipo_rider"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    numero_comprobante: Mapped[str] = mapped_column(
+        String(50), unique=True, nullable=False, index=True
+    )
+    trabajador_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("trabajador.id", ondelete="RESTRICT"), nullable=False, index=True
+    )
+    periodo_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("periodo_salarial.id", ondelete="RESTRICT"), nullable=False, index=True
+    )
+    fecha_solicitud: Mapped[date] = mapped_column(Date, default=date.today, nullable=False)
+    fecha_entrega: Mapped[date] = mapped_column(Date, default=date.today, nullable=False, index=True)
+    importe: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    metodo_pago: Mapped[str] = mapped_column(String(50), default="EFECTIVO", nullable=False)
+    es_periodo_siguiente: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    estado: Mapped[str] = mapped_column(
+        String(30), default="PAGADO", nullable=False, index=True
+    )  # PAGADO, ANULADO
+    observaciones: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    motivo_anulacion: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    usuario_id: Mapped[Optional[str]] = mapped_column(
+        String(30), ForeignKey("usuario.ci", ondelete="SET NULL"), nullable=True, index=True
+    )
+
+    # Relaciones
+    trabajador = relationship("Trabajador", back_populates="anticipos_rider", lazy="joined")
+    periodo = relationship("PeriodoSalarial", back_populates="anticipos_rider", lazy="joined")
     usuario = relationship("Usuario", lazy="joined")
 
     @property

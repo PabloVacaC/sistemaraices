@@ -9,6 +9,7 @@ from app.models.entities import (
     Trabajador,
     PeriodoSalarial,
     Anticipo,
+    AnticipoRider,
     Liquidacion,
     PagoLiquidacion,
     Descuento,
@@ -23,6 +24,8 @@ from app.modules.pagos.service import (
 from app.modules.planilla.schemas import (
     DescuentoCreate,
     DescuentoOut,
+    AnticipoRiderCreate,
+    AnticipoRiderOut,
     ActualizarDiasTrabajadosIn,
     PlanillaFilaOut,
     PlanillaResumenTotales,
@@ -143,6 +146,17 @@ def obtener_o_generar_planilla(db: Session, periodo_id: int) -> PlanillaMensualO
     for a in anticipos_todos:
         anticipos_por_trab.setdefault(a.trabajador_id, []).append(a)
 
+    # 3.1 Cargar anticipos rider del período (spec.md)
+    stmt_riders = select(AnticipoRider).where(
+        AnticipoRider.periodo_id == periodo_id,
+        AnticipoRider.estado == "PAGADO",
+    ).order_by(AnticipoRider.fecha_entrega)
+    anticipos_rider_todos = list(db.execute(stmt_riders).scalars().unique().all())
+
+    anticipos_rider_por_trab = {}
+    for ar in anticipos_rider_todos:
+        anticipos_rider_por_trab.setdefault(ar.trabajador_id, []).append(ar)
+
     # 4. Cargar descuentos del período
     stmt_desc = select(Descuento).where(
         Descuento.periodo_id == periodo_id,
@@ -172,6 +186,7 @@ def obtener_o_generar_planilla(db: Session, periodo_id: int) -> PlanillaMensualO
     tot_haber = Decimal("0.00")
     tot_ganado = Decimal("0.00")
     tot_quincena = Decimal("0.00")
+    tot_anticipos_rider = Decimal("0.00")
     tot_anticipos = Decimal("0.00")
     tot_descuentos = Decimal("0.00")
     tot_ant_desc = Decimal("0.00")
@@ -222,6 +237,10 @@ def obtener_o_generar_planilla(db: Session, periodo_id: int) -> PlanillaMensualO
         ants_t = anticipos_por_trab.get(t.id, [])
         monto_anticipos = sum((a.importe for a in ants_t), Decimal("0.00"))
 
+        # Anticipos rider y otros anticipos (spec.md)
+        riders_t = anticipos_rider_por_trab.get(t.id, [])
+        monto_anticipos_rider = sum((ar.importe for ar in riders_t), Decimal("0.00"))
+
         # Anticipos antes del corte de quincena (Día 18)
         ants_pre_18 = sum(
             (a.importe for a in ants_t if a.fecha_entrega <= dia_18),
@@ -249,9 +268,6 @@ def obtener_o_generar_planilla(db: Session, periodo_id: int) -> PlanillaMensualO
         descs_t = descuentos_por_trab.get(t.id, [])
         monto_descuentos = sum((d.importe for d in descs_t), Decimal("0.00"))
 
-        # Col 11: Total anticipos y descuentos
-        total_anticipos_descuentos = monto_anticipos + monto_descuentos
-
         # Liquidación y Pagos
         liq = liquidaciones_por_trab.get(t.id)
         pagos_confirmados = [p for p in liq.pagos if p.estado == "CONFIRMADO"] if liq else []
@@ -277,24 +293,30 @@ def obtener_o_generar_planilla(db: Session, periodo_id: int) -> PlanillaMensualO
         ajustes_liq = liq.ajustes if liq else Decimal("0.00")
         usuario_id_liq = ultimo_pago_liq.usuario_id if (ultimo_pago_liq and ultimo_pago_liq.usuario_id) else (liq.usuario_id if liq else None)
 
-        # Col 13: Líquido Pagable (RF-46)
-        # Líquido pagable = total ganado − total de anticipos y descuentos − pago de quincena
-        liquido_pagable = total_ganado - total_anticipos_descuentos - monto_quincena
+        # Col 11: Total anticipos y descuentos (spec.md)
+        # Total Ant. y Desc. = Pago Anticipos + Anticipo Rider y Otros Anticipos + Pago Quincena + Total Descuentos
+        total_anticipos_descuentos = (
+            monto_anticipos + monto_anticipos_rider + monto_quincena + monto_descuentos
+        )
 
-        # Saldo pendiente real de liquidar
+        # Col 12: Líquido Pagable (spec.md)
+        # Líquido pagable = Total Ganado − Total Ant. y Desc.
+        liquido_pagable = total_ganado - total_anticipos_descuentos
+
+        # Saldo pendiente real de liquidar sueldo restante
         saldo_pendiente_real = max(
             Decimal("0.00"),
-            total_ganado + (liq.ajustes if liq else Decimal("0.00")) - total_anticipos_descuentos - total_pagado,
+            liquido_pagable + (liq.ajustes if liq else Decimal("0.00")) - monto_pago_liquidacion,
         ) if liquido_pagable > 0 else Decimal("0.00")
 
         if liq:
-            neto_real = total_ganado + (liq.ajustes or Decimal("0.00")) - total_anticipos_descuentos
-            saldo_real = max(Decimal("0.00"), neto_real - total_pagado)
+            neto_real = liquido_pagable + (liq.ajustes or Decimal("0.00"))
+            saldo_real = max(Decimal("0.00"), neto_real - monto_pago_liquidacion)
             liq.monto_neto = neto_real
-            liq.total_anticipos = monto_anticipos
+            liq.total_anticipos = monto_anticipos + monto_anticipos_rider
             liq.monto_pagado = total_pagado
             liq.saldo_pendiente = saldo_real
-            if saldo_real <= 0 and (total_pagado > 0 or neto_real <= 0):
+            if saldo_real <= 0 and (monto_pago_liquidacion > 0 or neto_real <= 0):
                 liq.estado = "LIQUIDADO"
             elif total_pagado > 0:
                 liq.estado = "PARCIAL"
@@ -303,7 +325,7 @@ def obtener_o_generar_planilla(db: Session, periodo_id: int) -> PlanillaMensualO
             estado_liq = liq.estado
             saldo_pendiente_real = saldo_real
         else:
-            estado_liq = "LIQUIDADO" if (total_pagado >= total_ganado and total_ganado > 0) else "PENDIENTE"
+            estado_liq = "LIQUIDADO" if (monto_pago_liquidacion >= liquido_pagable and liquido_pagable > 0) else "PENDIENTE"
 
         if estado_liq == "LIQUIDADO":
             count_liquidados += 1
@@ -314,6 +336,7 @@ def obtener_o_generar_planilla(db: Session, periodo_id: int) -> PlanillaMensualO
         tot_haber += haber_basico
         tot_ganado += total_ganado
         tot_quincena += monto_quincena
+        tot_anticipos_rider += monto_anticipos_rider
         tot_anticipos += monto_anticipos
         tot_descuentos += monto_descuentos
         tot_ant_desc += total_anticipos_descuentos
@@ -346,6 +369,8 @@ def obtener_o_generar_planilla(db: Session, periodo_id: int) -> PlanillaMensualO
             quincena_referencia=IMPORTE_REFERENCIA_QUINCENA,
             anticipos_antes_dia_18=ants_pre_18,
             diferencia_quincena=diferencia_quincena,
+            pago_anticipos_rider=monto_anticipos_rider,
+            anticipos_rider_count=len(riders_t),
             pago_anticipos=monto_anticipos,
             anticipos_count=len(ants_t),
             reposicion_ebert=ants_ebert,
@@ -381,6 +406,7 @@ def obtener_o_generar_planilla(db: Session, periodo_id: int) -> PlanillaMensualO
         total_haber_basico=tot_haber,
         total_ganado=tot_ganado,
         total_quincena=tot_quincena,
+        total_anticipos_rider=tot_anticipos_rider,
         total_anticipos=tot_anticipos,
         total_descuentos=tot_descuentos,
         total_anticipos_descuentos=tot_ant_desc,
@@ -762,3 +788,169 @@ def obtener_cierre_planilla(db: Session, periodo_id: int) -> Optional[PlanillaCi
     if not cierre:
         return None
     return PlanillaCierreOut.model_validate(cierre)
+
+
+# =========================================================================
+# GESTIÓN DE ANTICIPOS RIDER Y OTROS ANTICIPOS (spec.md)
+# =========================================================================
+def listar_anticipos_rider(
+    db: Session, periodo_id: int, trabajador_id: Optional[int] = None
+) -> List[AnticipoRiderOut]:
+    """Lista los anticipos rider del período con filtro opcional por trabajador."""
+    stmt = select(AnticipoRider).where(
+        AnticipoRider.periodo_id == periodo_id,
+        AnticipoRider.estado == "PAGADO",
+    )
+    if trabajador_id:
+        stmt = stmt.where(AnticipoRider.trabajador_id == trabajador_id)
+    stmt = stmt.order_by(desc(AnticipoRider.fecha_entrega), desc(AnticipoRider.id))
+
+    riders = list(db.execute(stmt).scalars().unique().all())
+    return [
+        AnticipoRiderOut(
+            id=r.id,
+            numero_comprobante=r.numero_comprobante,
+            trabajador_id=r.trabajador_id,
+            trabajador_nombre=f"{r.trabajador.nombres} {r.trabajador.apellidos}" if r.trabajador else None,
+            periodo_id=r.periodo_id,
+            fecha_solicitud=r.fecha_solicitud,
+            fecha_entrega=r.fecha_entrega,
+            importe=r.importe,
+            metodo_pago=r.metodo_pago,
+            estado=r.estado,
+            observaciones=r.observaciones,
+            usuario_id=r.usuario_id,
+            usuario_nombre=r.usuario_nombre,
+        )
+        for r in riders
+    ]
+
+
+def registrar_anticipo_rider(
+    db: Session, datos: AnticipoRiderCreate, usuario_ci: Optional[str] = None
+) -> AnticipoRiderOut:
+    """Registra un anticipo rider u otros anticipos con comprobante correlativo RID-YYYYMM-XXXX."""
+    periodo = db.execute(
+        select(PeriodoSalarial).where(PeriodoSalarial.id == datos.periodo_id)
+    ).scalars().first()
+    if not periodo:
+        raise HTTPException(status_code=404, detail="Período no encontrado.")
+    if periodo.estado == "CERRADO":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="La planilla de este período se encuentra CERRADA. No se admiten nuevos anticipos rider.",
+        )
+
+    if not (periodo.fecha_inicio <= datos.fecha_entrega <= periodo.fecha_fin):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"La fecha del anticipo rider ({datos.fecha_entrega}) no corresponde al período {periodo.descripcion}. "
+                f"Debe estar entre {periodo.fecha_inicio} y {periodo.fecha_fin}."
+            ),
+        )
+
+    trabajador = db.execute(
+        select(Trabajador).where(Trabajador.id == datos.trabajador_id)
+    ).scalars().first()
+    if not trabajador:
+        raise HTTPException(status_code=404, detail="Trabajador no encontrado.")
+
+    nro_comprobante = generar_numero_comprobante(db, "RID")
+
+    nuevo_rider = AnticipoRider(
+        numero_comprobante=nro_comprobante,
+        trabajador_id=datos.trabajador_id,
+        periodo_id=datos.periodo_id,
+        fecha_solicitud=date.today(),
+        fecha_entrega=datos.fecha_entrega,
+        importe=datos.importe,
+        metodo_pago=datos.metodo_pago.upper() if datos.metodo_pago else "EFECTIVO",
+        es_periodo_siguiente=False,
+        estado="PAGADO",
+        observaciones=datos.observaciones,
+        usuario_id=usuario_ci,
+    )
+    db.add(nuevo_rider)
+    db.commit()
+    db.refresh(nuevo_rider)
+
+    registrar_bitacora(
+        db=db,
+        modulo="ANTICIPOS_RIDER",
+        accion="REGISTRAR",
+        descripcion=(
+            f"Se registró anticipo rider {nro_comprobante} por Bs {datos.importe} "
+            f"para {trabajador.nombres} {trabajador.apellidos}"
+        ),
+        usuario_ci=usuario_ci,
+    )
+
+    return AnticipoRiderOut(
+        id=nuevo_rider.id,
+        numero_comprobante=nuevo_rider.numero_comprobante,
+        trabajador_id=nuevo_rider.trabajador_id,
+        trabajador_nombre=f"{trabajador.nombres} {trabajador.apellidos}",
+        periodo_id=nuevo_rider.periodo_id,
+        fecha_solicitud=nuevo_rider.fecha_solicitud,
+        fecha_entrega=nuevo_rider.fecha_entrega,
+        importe=nuevo_rider.importe,
+        metodo_pago=nuevo_rider.metodo_pago,
+        estado=nuevo_rider.estado,
+        observaciones=nuevo_rider.observaciones,
+        usuario_id=nuevo_rider.usuario_id,
+        usuario_nombre=nuevo_rider.usuario_nombre,
+    )
+
+
+def anular_anticipo_rider(
+    db: Session, anticipo_rider_id: int, motivo: str, usuario_ci: Optional[str] = None
+) -> AnticipoRiderOut:
+    """Anula un anticipo rider justificadamente."""
+    rider_obj = db.execute(
+        select(AnticipoRider).where(AnticipoRider.id == anticipo_rider_id)
+    ).scalars().first()
+    if not rider_obj:
+        raise HTTPException(status_code=404, detail="Anticipo rider no encontrado.")
+
+    periodo = rider_obj.periodo
+    if periodo and periodo.estado == "CERRADO":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No se pueden anular movimientos de una planilla CERRADA.",
+        )
+
+    if rider_obj.estado == "ANULADO":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Este anticipo rider ya se encuentra anulado.",
+        )
+
+    rider_obj.estado = "ANULADO"
+    rider_obj.motivo_anulacion = motivo.strip()
+    db.commit()
+    db.refresh(rider_obj)
+
+    registrar_bitacora(
+        db=db,
+        modulo="ANTICIPOS_RIDER",
+        accion="ANULAR",
+        descripcion=f"Se anuló el anticipo rider {rider_obj.numero_comprobante}. Motivo: {motivo}",
+        usuario_ci=usuario_ci,
+    )
+
+    return AnticipoRiderOut(
+        id=rider_obj.id,
+        numero_comprobante=rider_obj.numero_comprobante,
+        trabajador_id=rider_obj.trabajador_id,
+        trabajador_nombre=f"{rider_obj.trabajador.nombres} {rider_obj.trabajador.apellidos}" if rider_obj.trabajador else None,
+        periodo_id=rider_obj.periodo_id,
+        fecha_solicitud=rider_obj.fecha_solicitud,
+        fecha_entrega=rider_obj.fecha_entrega,
+        importe=rider_obj.importe,
+        metodo_pago=rider_obj.metodo_pago,
+        estado=rider_obj.estado,
+        observaciones=rider_obj.observaciones,
+        usuario_id=rider_obj.usuario_id,
+        usuario_nombre=rider_obj.usuario_nombre,
+    )

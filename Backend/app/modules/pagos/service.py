@@ -11,6 +11,7 @@ from app.models.entities import (
     Trabajador,
     PeriodoSalarial,
     Anticipo,
+    AnticipoRider,
     Liquidacion,
     PagoLiquidacion,
     Descuento,
@@ -86,6 +87,12 @@ def generar_numero_comprobante(db: Session, prefijo: str) -> str:
                 Descuento.numero_comprobante.like(f"{prefix_ym}%")
             )
         )
+    elif prefijo in ("RID", "ARID"):
+        max_code = db.scalar(
+            select(func.max(AnticipoRider.numero_comprobante)).where(
+                AnticipoRider.numero_comprobante.like(f"{prefix_ym}%")
+            )
+        )
 
     correlativo = 1
     if max_code and len(max_code) >= len(prefix_ym):
@@ -107,6 +114,8 @@ def generar_numero_comprobante(db: Session, prefijo: str) -> str:
             existe = db.scalar(select(PagoLiquidacion.id).where(PagoLiquidacion.numero_comprobante == candidato)) is not None
         elif prefijo == "DESC":
             existe = db.scalar(select(Descuento.id).where(Descuento.numero_comprobante == candidato)) is not None
+        elif prefijo in ("RID", "ARID"):
+            existe = db.scalar(select(AnticipoRider.id).where(AnticipoRider.numero_comprobante == candidato)) is not None
 
         if not existe:
             return candidato
@@ -301,6 +310,15 @@ def calcular_metricas_trabajador_periodo(
 
     total_anticipos = sum((a.importe for a in anticipos), Decimal("0.00"))
 
+    # 1.1 Anticipos rider pagados en el período (spec.md)
+    stmt_rider = select(AnticipoRider).where(
+        AnticipoRider.trabajador_id == trabajador.id,
+        AnticipoRider.periodo_id == periodo.id,
+        AnticipoRider.estado == "PAGADO",
+    ).order_by(AnticipoRider.fecha_entrega, AnticipoRider.id)
+    anticipos_rider = list(db.execute(stmt_rider).scalars().unique().all())
+    total_anticipos_rider = sum((ar.importe for ar in anticipos_rider), Decimal("0.00"))
+
     # Corte de primera quincena: día 18 del mes del período
     dia_18_limite = date(periodo.anio, periodo.mes, 18)
     anticipos_antes_18 = sum(
@@ -351,12 +369,12 @@ def calcular_metricas_trabajador_periodo(
         )
         quincena_pagada = any(getattr(p, "tipo_pago", "") in ("PAGO_QUINCENA", "REVISION_QUINCENA") for p in pagos) or (liquidacion.estado == "LIQUIDADO")
         total_pagos_parciales = sum((p.monto for p in pagos), Decimal("0.00"))
-        # SALDO = SUELDO_PROPORCIONAL + AJUSTES - TOTAL_ANTICIPOS - TOTAL_DESCUENTOS - TOTAL_PAGOS_PARCIALES
-        saldo_salarial_pendiente = sueldo_base_efectivo + liquidacion.ajustes - total_anticipos - total_descuentos - total_pagos_parciales
+        # SALDO = SUELDO_PROPORCIONAL + AJUSTES - TOTAL_ANTICIPOS - TOTAL_ANTICIPOS_RIDER - TOTAL_DESCUENTOS - TOTAL_PAGOS_PARCIALES
+        saldo_salarial_pendiente = sueldo_base_efectivo + liquidacion.ajustes - total_anticipos - total_anticipos_rider - total_descuentos - total_pagos_parciales
         estado_periodo = liquidacion.estado
     else:
         total_pagos_parciales = Decimal("0.00")
-        saldo_salarial_pendiente = sueldo_base_efectivo - total_anticipos - total_descuentos
+        saldo_salarial_pendiente = sueldo_base_efectivo - total_anticipos - total_anticipos_rider - total_descuentos
         if total_anticipos > 0:
             estado_periodo = "ANTICIPOS_PENDIENTES"
         else:
@@ -370,6 +388,8 @@ def calcular_metricas_trabajador_periodo(
         "total_descuentos": total_descuentos,
         "anticipos": anticipos,
         "total_anticipos": total_anticipos,
+        "anticipos_rider": anticipos_rider,
+        "total_anticipos_rider": total_anticipos_rider,
         "anticipos_antes_18": anticipos_antes_18,
         "anticipos_post_18": anticipos_post_18,
         "fecha_ultimo_anticipo": fecha_ultimo_anticipo,
@@ -1049,11 +1069,12 @@ def registrar_liquidacion(
     sueldo_base = m["sueldo_base_efectivo"]
     ajustes = datos.ajustes or Decimal("0.00")
     total_anticipos = m["total_anticipos"]
+    total_anticipos_rider = m.get("total_anticipos_rider", Decimal("0.00"))
     total_descuentos = m["total_descuentos"]
     total_pagos_previos = m["total_pagos_parciales"]
 
-    # Monto neto restando anticipos y descuentos
-    monto_neto = sueldo_base + ajustes - total_anticipos - total_descuentos
+    # Monto neto restando anticipos, anticipos rider y descuentos
+    monto_neto = sueldo_base + ajustes - total_anticipos - total_anticipos_rider - total_descuentos
     saldo_final_restante = monto_neto - total_pagos_previos
 
     if existente:

@@ -33,6 +33,35 @@ class DescuentoOut(BaseModel):
         from_attributes = True
 
 
+# --- ANTICIPOS RIDER Y OTROS ANTICIPOS (spec.md) ---
+class AnticipoRiderCreate(BaseModel):
+    trabajador_id: int
+    periodo_id: int
+    fecha_entrega: date = Field(default_factory=date.today)
+    importe: Decimal = Field(..., gt=0, description="Monto en bolivianos del anticipo rider")
+    metodo_pago: str = Field(default="EFECTIVO")
+    observaciones: Optional[str] = None
+
+
+class AnticipoRiderOut(BaseModel):
+    id: int
+    numero_comprobante: str
+    trabajador_id: int
+    trabajador_nombre: Optional[str] = None
+    periodo_id: int
+    fecha_solicitud: date
+    fecha_entrega: date
+    importe: Decimal
+    metodo_pago: str
+    estado: str
+    observaciones: Optional[str] = None
+    usuario_id: Optional[str] = None
+    usuario_nombre: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
 # --- AJUSTE MANUAL DE DÍAS TRABAJADOS ---
 class ActualizarDiasTrabajadosIn(BaseModel):
     trabajador_id: int
@@ -72,6 +101,9 @@ class PlanillaFilaOut(BaseModel):
     quincena_referencia: Decimal = Decimal("1000.00")
     anticipos_antes_dia_18: Decimal = Decimal("0.00")
     diferencia_quincena: Decimal = Decimal("0.00")
+    # Columna: Anticipo Rider y Otros Anticipos (spec.md)
+    pago_anticipos_rider: Decimal = Decimal("0.00")
+    anticipos_rider_count: int = 0
     # Col 10: Pago de anticipos válidos del período
     pago_anticipos: Decimal
     anticipos_count: int = 0
@@ -105,6 +137,7 @@ class PlanillaResumenTotales(BaseModel):
     total_haber_basico: Decimal
     total_ganado: Decimal
     total_quincena: Decimal
+    total_anticipos_rider: Decimal = Decimal("0.00")
     total_anticipos: Decimal
     total_descuentos: Decimal
     total_anticipos_descuentos: Decimal
