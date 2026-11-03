@@ -438,6 +438,11 @@ export class PlanillaComponent implements OnInit {
     const pid = this.selectedPeriodoId();
     if (!fila || !pid) return;
 
+    if (fila.estado_liquidacion === 'LIQUIDADO') {
+      this.toast.warning('El sueldo de este trabajador ya fue LIQUIDADO. No se pueden registrar más anticipos rider.');
+      return;
+    }
+
     const monto = Number(this.anticipoRiderFilaForm.importe || 0);
     if (monto <= 0) {
       this.toast.warning('El importe del anticipo rider debe ser mayor a Bs 0.');
@@ -527,6 +532,11 @@ export class PlanillaComponent implements OnInit {
     const fila = this.selectedFilaAnticipos();
     const pid = this.selectedPeriodoId();
     if (!fila || !pid) return;
+
+    if (fila.estado_liquidacion === 'LIQUIDADO') {
+      this.toast.warning('El sueldo de este trabajador ya fue LIQUIDADO. No se pueden registrar más anticipos.');
+      return;
+    }
 
     const monto = Number(this.anticipoFilaForm.importe || 0);
     if (monto <= 0) {

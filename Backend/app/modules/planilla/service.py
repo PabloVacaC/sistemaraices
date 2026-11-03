@@ -470,6 +470,20 @@ def actualizar_dias_trabajados(
     if not trabajador:
         raise HTTPException(status_code=404, detail="Trabajador no encontrado.")
 
+    # Verificar si el trabajador ya fue completamente liquidado en este período
+    liq_desc = db.execute(
+        select(Liquidacion).where(
+            Liquidacion.trabajador_id == datos.trabajador_id,
+            Liquidacion.periodo_id == datos.periodo_id,
+            Liquidacion.estado == "LIQUIDADO",
+        )
+    ).scalars().first()
+    if liq_desc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="El período ya ha sido completamente LIQUIDADO para este trabajador. No se admiten modificaciones salariales en períodos liquidados.",
+        )
+
     det = db.execute(
         select(PlanillaDetalle).where(
             PlanillaDetalle.periodo_id == datos.periodo_id,
@@ -586,6 +600,20 @@ def registrar_descuento(
     ).scalars().first()
     if not trabajador:
         raise HTTPException(status_code=404, detail="Trabajador no encontrado.")
+
+    # Verificar si el trabajador ya fue completamente liquidado en este período
+    liq_desc = db.execute(
+        select(Liquidacion).where(
+            Liquidacion.trabajador_id == datos.trabajador_id,
+            Liquidacion.periodo_id == datos.periodo_id,
+            Liquidacion.estado == "LIQUIDADO",
+        )
+    ).scalars().first()
+    if liq_desc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="El período ya ha sido completamente LIQUIDADO para este trabajador. No se admiten nuevos descuentos.",
+        )
 
     nro_comprobante = generar_numero_comprobante(db, "DESC")
 
@@ -855,6 +883,20 @@ def registrar_anticipo_rider(
     ).scalars().first()
     if not trabajador:
         raise HTTPException(status_code=404, detail="Trabajador no encontrado.")
+
+    # Verificar si el trabajador ya fue completamente liquidado en este período
+    liq_desc = db.execute(
+        select(Liquidacion).where(
+            Liquidacion.trabajador_id == datos.trabajador_id,
+            Liquidacion.periodo_id == datos.periodo_id,
+            Liquidacion.estado == "LIQUIDADO",
+        )
+    ).scalars().first()
+    if liq_desc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="El período ya ha sido completamente LIQUIDADO para este trabajador. No se pueden registrar más anticipos rider porque el sueldo ya ha sido completamente LIQUIDADO.",
+        )
 
     nro_comprobante = generar_numero_comprobante(db, "RID")
 

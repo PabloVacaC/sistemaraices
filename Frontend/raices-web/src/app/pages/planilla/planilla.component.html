@@ -555,11 +555,17 @@
       </div>
 
       @if (planilla()?.estado_periodo === 'ABIERTO') {
-      <div class="modal-sub-actions mt-2 mb-3">
-        <button class="btn btn-sm btn-purple" (click)="showFormNuevoAnticipoRiderFila.set(!showFormNuevoAnticipoRiderFila())">
-          {{ showFormNuevoAnticipoRiderFila() ? '✕ Ocultar Formulario' : '+ Registrar Anticipo Rider' }}
-        </button>
-      </div>
+        @if (selectedFilaAnticiposRider()?.estado_liquidacion === 'LIQUIDADO') {
+        <div class="alert-box-warning mt-2 mb-3">
+          <span>El sueldo de este trabajador ya se encuentra <strong>LIQUIDADO</strong> en este período. No se permite registrar nuevos anticipos rider.</span>
+        </div>
+        } @else {
+        <div class="modal-sub-actions mt-2 mb-3">
+          <button class="btn btn-sm btn-purple" (click)="showFormNuevoAnticipoRiderFila.set(!showFormNuevoAnticipoRiderFila())">
+            {{ showFormNuevoAnticipoRiderFila() ? '✕ Ocultar Formulario' : '+ Registrar Anticipo Rider' }}
+          </button>
+        </div>
+        }
       }
 
       @if (showFormNuevoAnticipoRiderFila()) {
@@ -666,11 +672,17 @@
       </div>
 
       @if (planilla()?.estado_periodo === 'ABIERTO') {
-      <div class="modal-sub-actions mt-2 mb-3">
-        <button class="btn btn-sm btn-primary" (click)="showFormNuevoAnticipoFila.set(!showFormNuevoAnticipoFila())">
-          {{ showFormNuevoAnticipoFila() ? '✕ Ocultar Formulario' : '+ Registrar Anticipo' }}
-        </button>
-      </div>
+        @if (selectedFilaAnticipos()?.estado_liquidacion === 'LIQUIDADO') {
+        <div class="alert-box-warning mt-2 mb-3">
+          <span>El sueldo de este trabajador ya se encuentra <strong>LIQUIDADO</strong> en este período. No se permite registrar nuevos anticipos.</span>
+        </div>
+        } @else {
+        <div class="modal-sub-actions mt-2 mb-3">
+          <button class="btn btn-sm btn-primary" (click)="showFormNuevoAnticipoFila.set(!showFormNuevoAnticipoFila())">
+            {{ showFormNuevoAnticipoFila() ? '✕ Ocultar Formulario' : '+ Registrar Anticipo' }}
+          </button>
+        </div>
+        }
       }
 
       @if (showFormNuevoAnticipoFila()) {
