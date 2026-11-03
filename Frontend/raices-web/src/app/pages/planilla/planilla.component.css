@@ -1299,3 +1299,39 @@
 .btn-purple:hover {
   background: #6d28d9;
 }
+
+/* Anticipo para el Siguiente Mes (spec.md) */
+.col-anticipo-sig {
+  text-align: center;
+  min-width: 140px;
+}
+
+.badge-anticipo-sig {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #6b21a8;
+  background: #f3e8ff;
+  padding: 0.12rem 0.45rem;
+  border-radius: 6px;
+  border: 1px solid #d8b4fe;
+  display: inline-block;
+}
+
+.subnote-anticipo-sig {
+  font-size: 0.72rem;
+  color: #7e22ce;
+  font-weight: 600;
+  display: block;
+  margin-top: 2px;
+}
+
+.alert-box-info {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1e40af;
+  padding: 0.75rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+

@@ -639,6 +639,7 @@ export class PlanillaComponent implements OnInit {
 
     const solQuincena = Number(pl.totales?.solicitud_quincena || 0);
     const solSueldo = Number(pl.totales?.solicitud_sueldo || 0);
+    const anticiposSig = Number(pl.totales?.total_anticipos_periodo_siguiente || 0);
 
     this.cerrarPlanillaForm = {
       observaciones: 'Cierre mensual consolidado de haberes y liquidaciones',
@@ -647,8 +648,8 @@ export class PlanillaComponent implements OnInit {
       solicitud_quincena: solQuincena,
       entregado_sueldo: null,
       solicitud_sueldo: solSueldo,
-      otros_gastos: null,
-      otros_gastos_detalle: ''
+      otros_gastos: anticiposSig > 0 ? anticiposSig : null,
+      otros_gastos_detalle: anticiposSig > 0 ? 'Anticipos para el siguiente mes (Excedentes de sueldo)' : ''
     };
     this.showModalCerrarPlanilla.set(true);
   }
@@ -795,6 +796,9 @@ export class PlanillaComponent implements OnInit {
               ? Number(fila.monto_pagado_total) - Number(fila.pago_quincena || 0)
               : Math.max(0, Number(fila.liquido_pagable || 0)));
 
+        const excedente = Number(fila.anticipos_periodo_siguiente || 0);
+        const sueldoLiquidoPeriodo = Math.max(0, montoLiquidado - excedente);
+
         this.abrirComprobantePago({
           tipo: 'LIQUIDACION',
           numero_comprobante: fila.liquidacion_comprobante,
@@ -805,13 +809,16 @@ export class PlanillaComponent implements OnInit {
           periodo_descripcion: periodoDesc,
           fecha: fila.fecha_liquidacion || new Date().toISOString().substring(0, 10),
           importe: montoLiquidado > 0 ? montoLiquidado : (Number(fila.liquido_pagable) || Number(fila.total_ganado)),
+          sueldo_liquido_periodo: sueldoLiquidoPeriodo,
+          excedente_siguiente_mes: excedente,
           metodo_pago: fila.liquidacion_metodo_pago || 'EFECTIVO',
           sueldo_base: fila.total_ganado || fila.haber_basico,
           anticipos_descontados: fila.pago_anticipos,
+          anticipos_rider_descontados: fila.pago_anticipos_rider || 0,
           descuentos_salariales: fila.total_descuentos,
           quincena_descontada: fila.pago_quincena,
           ajustes: fila.liquidacion_ajustes || 0,
-          saldo_restante: fila.saldo_pendiente_real || 0,
+          saldo_restante: 0,
           observaciones: fila.liquidacion_observaciones || 'Liquidación salarial completada',
           usuario_nombre: this.auth.currentUser()?.nombre || 'Administrador',
           usuario_id: fila.liquidacion_usuario_id || this.auth.currentUser()?.ci || '',
@@ -845,10 +852,6 @@ export class PlanillaComponent implements OnInit {
         this.toast.warning('El monto a pagar no puede ser negativo.');
         return;
       }
-      if (monto > saldoCalculado && saldoCalculado > 0) {
-        this.toast.warning(`El monto a pagar supera el saldo de Bs ${saldoCalculado}.`);
-        return;
-      }
     }
 
     this.loading.set(true);
@@ -876,6 +879,10 @@ export class PlanillaComponent implements OnInit {
           ? Number(liq.pago_inmediato_monto)
           : (this.liquidacionFilaForm.pago_inmediato ? Number(this.liquidacionFilaForm.monto_pago_inmediato || 0) : 0);
 
+        const excedente = (liq.excedente_siguiente_mes !== undefined && liq.excedente_siguiente_mes !== null)
+          ? Number(liq.excedente_siguiente_mes)
+          : Math.max(0, montoEntregado - saldoCalculado);
+
         this.abrirComprobantePago({
           tipo: 'LIQUIDACION',
           numero_comprobante: liq.numero_comprobante,
@@ -886,9 +893,12 @@ export class PlanillaComponent implements OnInit {
           periodo_descripcion: periodoDesc,
           fecha: liq.fecha_liquidacion,
           importe: montoEntregado,
+          sueldo_liquido_periodo: saldoCalculado,
+          excedente_siguiente_mes: excedente,
           metodo_pago: this.liquidacionFilaForm.pago_inmediato ? this.liquidacionFilaForm.metodo_pago_inmediato : 'POR PAGAR',
           sueldo_base: liq.sueldo_base || fila.haber_basico,
-          anticipos_descontados: liq.total_anticipos || fila.pago_anticipos,
+          anticipos_descontados: fila.pago_anticipos,
+          anticipos_rider_descontados: fila.pago_anticipos_rider || 0,
           descuentos_salariales: fila.total_descuentos,
           quincena_descontada: liq.pago_quincena_previo ?? fila.pago_quincena,
           ajustes: liq.ajustes,
@@ -929,6 +939,10 @@ export class PlanillaComponent implements OnInit {
     mensaje += `*Cargo*: ${rc.trabajador_cargo} (${rc.trabajador_area})\n`;
     mensaje += `*Período Salarial*: ${rc.periodo_descripcion}\n`;
     mensaje += `*Importe*: Bs ${Number(rc.importe).toFixed(2)}\n`;
+    if (rc.excedente_siguiente_mes && Number(rc.excedente_siguiente_mes) > 0) {
+      mensaje += `  - Sueldo Líquido del Período: Bs ${Number(rc.sueldo_liquido_periodo || 0).toFixed(2)}\n`;
+      mensaje += `  - Anticipo para Siguiente Mes: +Bs ${Number(rc.excedente_siguiente_mes).toFixed(2)}\n`;
+    }
     mensaje += `*Método*: ${rc.metodo_pago}\n`;
     if (rc.observaciones) mensaje += `*Observaciones*: ${rc.observaciones}\n`;
     mensaje += `\n_Emitido oficialmente a través del Sistema Empresarial Raíces._`;

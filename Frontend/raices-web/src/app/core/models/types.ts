@@ -104,11 +104,11 @@ export interface Anticipo {
   importe: number;
   metodo_pago: string;
   estado: string;
+  es_periodo_siguiente?: boolean;
   observaciones?: string;
   motivo_anulacion?: string;
   usuario_id?: string;
   usuario_nombre?: string;
-  es_periodo_siguiente?: boolean;
 }
 
 export interface PagoLiquidacion {
@@ -124,7 +124,6 @@ export interface PagoLiquidacion {
   motivo_anulacion?: string;
   usuario_id?: string;
   usuario_nombre?: string;
-  es_periodo_siguiente?: boolean;
 }
 
 export interface Liquidacion {
@@ -140,6 +139,7 @@ export interface Liquidacion {
   monto_pagado: number;
   saldo_pendiente: number;
   estado: string;
+  es_periodo_siguiente?: boolean;
   observaciones?: string;
   motivo_anulacion?: string;
   usuario_id?: string;
@@ -148,6 +148,7 @@ export interface Liquidacion {
   pago_inmediato_comprobante?: string;
   total_pagos_previos?: number;
   pago_quincena_previo?: number;
+  excedente_siguiente_mes?: number;
   pagos: PagoLiquidacion[];
 }
 
@@ -273,6 +274,7 @@ export interface MovimientoHistorial {
   monto: number;
   metodo_pago: string;
   estado: string;
+  es_periodo_siguiente?: boolean;
   observaciones?: string;
   usuario_id?: string;
   usuario_nombre?: string;
@@ -637,6 +639,7 @@ export interface AnticipoRider {
   importe: number;
   metodo_pago: string;
   estado: string;
+  es_periodo_siguiente?: boolean;
   observaciones?: string;
   motivo_anulacion?: string;
   usuario_id?: string;

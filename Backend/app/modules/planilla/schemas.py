@@ -54,6 +54,7 @@ class AnticipoRiderOut(BaseModel):
     importe: Decimal
     metodo_pago: str
     estado: str
+    es_periodo_siguiente: Optional[bool] = False
     observaciones: Optional[str] = None
     usuario_id: Optional[str] = None
     usuario_nombre: Optional[str] = None

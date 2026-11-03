@@ -251,6 +251,41 @@ def asegurar_periodos_automaticos(db: Session):
             db.rollback()
 
 
+def obtener_o_crear_periodo_siguiente(db: Session, periodo: PeriodoSalarial) -> Optional[PeriodoSalarial]:
+    """Obtiene el período salarial del mes calendario siguiente, creándolo automáticamente si no existe."""
+    sig_anio, sig_mes = calcular_mes_siguiente(periodo.anio, periodo.mes)
+    periodo_sig = db.execute(
+        select(PeriodoSalarial).where(
+            PeriodoSalarial.anio == sig_anio,
+            PeriodoSalarial.mes == sig_mes,
+        )
+    ).scalars().first()
+    if not periodo_sig:
+        asegurar_periodos_automaticos(db)
+        periodo_sig = db.execute(
+            select(PeriodoSalarial).where(
+                PeriodoSalarial.anio == sig_anio,
+                PeriodoSalarial.mes == sig_mes,
+            )
+        ).scalars().first()
+    if not periodo_sig:
+        _, ultimo_dia = calendar.monthrange(sig_anio, sig_mes)
+        p_anio, p_mes = calcular_mes_siguiente(sig_anio, sig_mes)
+        periodo_sig = PeriodoSalarial(
+            mes=sig_mes,
+            anio=sig_anio,
+            fecha_inicio=date(sig_anio, sig_mes, 1),
+            fecha_fin=date(sig_anio, sig_mes, ultimo_dia),
+            fecha_pago_estimada=date(p_anio, p_mes, 5),
+            estado="ABIERTO",
+            descripcion=f"{MESES_ES[sig_mes]} {sig_anio}",
+        )
+        db.add(periodo_sig)
+        db.commit()
+        db.refresh(periodo_sig)
+    return periodo_sig
+
+
 def listar_periodos(db: Session) -> List[PeriodoSalarial]:
     asegurar_periodos_automaticos(db)
     stmt = select(PeriodoSalarial).order_by(
@@ -1107,6 +1142,7 @@ def registrar_liquidacion(
 
     # Procesar pago inmediato si se solicitó (Liquidación final)
     pago_creado = None
+    excedente_sig = Decimal("0.00")
     if datos.pago_inmediato:
         monto_a_pagar = datos.monto_pago_inmediato if datos.monto_pago_inmediato is not None else saldo_final_restante
         if monto_a_pagar < 0:
@@ -1114,14 +1150,18 @@ def registrar_liquidacion(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="El monto de pago no puede ser negativo.",
             )
-        if monto_a_pagar > saldo_final_restante and saldo_final_restante > 0:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"El pago inmediato (Bs {monto_a_pagar}) supera el saldo pendiente (Bs {saldo_final_restante}).",
-            )
+
+        # Si el monto a entregar supera el saldo de liquidación, se cubre el saldo actual
+        # y el excedente se transfiere automáticamente al mes siguiente como Anticipo Rider (spec.md)
+        if monto_a_pagar > saldo_final_restante:
+            excedente_sig = monto_a_pagar - max(Decimal("0.00"), saldo_final_restante)
 
         if monto_a_pagar > 0:
             nro_pag = generar_numero_comprobante(db, "PAG")
+            obs_pago = "Liquidación final de sueldo"
+            if excedente_sig > 0:
+                obs_pago += f" (Incluye Bs {excedente_sig} como anticipo para el siguiente mes)"
+
             pago_obj = PagoLiquidacion(
                 numero_comprobante=nro_pag,
                 liquidacion_id=liq.id,
@@ -1129,7 +1169,7 @@ def registrar_liquidacion(
                 monto=monto_a_pagar,
                 tipo_pago="LIQUIDACION_FINAL",
                 metodo_pago=datos.metodo_pago_inmediato.upper(),
-                observaciones="Liquidación final de sueldo",
+                observaciones=obs_pago,
                 estado="CONFIRMADO",
                 usuario_id=usuario_ci,
             )
@@ -1137,8 +1177,54 @@ def registrar_liquidacion(
             liq.monto_pagado += monto_a_pagar
             pago_creado = pago_obj
 
-    liq.saldo_pendiente = liq.monto_neto - liq.monto_pagado
-    if liq.saldo_pendiente <= 0:
+            # Transferencia automática al siguiente mes como Anticipo Rider (spec.md)
+            if excedente_sig > 0:
+                periodo_sig = obtener_o_crear_periodo_siguiente(db, periodo)
+                if periodo_sig:
+                    ar_sig = db.execute(
+                        select(AnticipoRider).where(
+                            AnticipoRider.periodo_id == periodo_sig.id,
+                            AnticipoRider.trabajador_id == datos.trabajador_id,
+                            AnticipoRider.es_periodo_siguiente.is_(True),
+                            AnticipoRider.estado == "PAGADO",
+                        )
+                    ).scalars().first()
+                    if ar_sig:
+                        ar_sig.importe = excedente_sig
+                        ar_sig.fecha_entrega = datos.fecha_liquidacion
+                        ar_sig.observaciones = (
+                            f"Anticipo que se le pagó el día del sueldo (Excedente liquidación {periodo.descripcion})"
+                        )
+                    else:
+                        nro_rid = generar_numero_comprobante(db, "RID")
+                        nuevo_rider_sig = AnticipoRider(
+                            numero_comprobante=nro_rid,
+                            trabajador_id=datos.trabajador_id,
+                            periodo_id=periodo_sig.id,
+                            fecha_solicitud=date.today(),
+                            fecha_entrega=datos.fecha_liquidacion,
+                            importe=excedente_sig,
+                            metodo_pago=datos.metodo_pago_inmediato.upper() if datos.metodo_pago_inmediato else "EFECTIVO",
+                            es_periodo_siguiente=True,
+                            estado="PAGADO",
+                            observaciones=f"Anticipo que se le pagó el día del sueldo (Excedente liquidación {periodo.descripcion})",
+                            usuario_id=usuario_ci,
+                        )
+                        db.add(nuevo_rider_sig)
+
+                    registrar_bitacora(
+                        db=db,
+                        modulo="ANTICIPOS_RIDER",
+                        accion="REGISTRAR",
+                        descripcion=(
+                            f"Se generó anticipo rider por Bs {excedente_sig} en {periodo_sig.descripcion} "
+                            f"por excedente de liquidación de {periodo.descripcion} para {trabajador.nombres} {trabajador.apellidos}"
+                        ),
+                        usuario_ci=usuario_ci,
+                    )
+
+    liq.saldo_pendiente = max(Decimal("0.00"), liq.monto_neto - liq.monto_pagado)
+    if liq.monto_pagado >= liq.monto_neto:
         liq.estado = "LIQUIDADO"
     elif liq.monto_pagado > 0:
         liq.estado = "PARCIAL"
@@ -1152,6 +1238,7 @@ def registrar_liquidacion(
     setattr(liq, "pago_inmediato_comprobante", pago_creado.numero_comprobante if pago_creado else None)
     setattr(liq, "total_pagos_previos", total_pagos_previos)
     setattr(liq, "pago_quincena_previo", m.get("pago_quincena_realizado", Decimal("0.00")))
+    setattr(liq, "excedente_siguiente_mes", excedente_sig)
 
     registrar_bitacora(
         db=db,

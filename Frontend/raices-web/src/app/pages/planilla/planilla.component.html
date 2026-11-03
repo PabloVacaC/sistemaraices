@@ -188,6 +188,7 @@
             <th class="col-anticipos">Pago Anticipos</th>
             <th class="col-ant-desc">Total Ant. y Desc.</th>
             <th class="col-liquido">Líquido Pagable</th>
+            <th class="col-anticipo-sig">Anticipo para el Siguiente Mes</th>
           </tr>
         </thead>
         <tbody>
@@ -329,6 +330,9 @@
                   } @else {
                   <span class="badge-quincena-pendiente">PENDIENTE</span>
                   }
+                  @if ((f.anticipos_periodo_siguiente || 0) > 0) {
+                  <span class="subnote-anticipo-sig">(+ Bs {{ f.anticipos_periodo_siguiente | number:'1.2-2' }} al sig. mes)</span>
+                  }
                 </div>
                 @if (f.estado_liquidacion === 'LIQUIDADO') {
                 <button class="btn btn-xs btn-outline-emerald" (click)="abrirModalLiquidarFila(f)"
@@ -345,10 +349,22 @@
                 }
               </div>
             </td>
+
+            <!-- Columna spec.md: Anticipo para el Siguiente Mes -->
+            <td class="col-anticipo-sig">
+              @if ((f.anticipos_periodo_siguiente || 0) > 0) {
+              <div class="stacked-totals text-center">
+                <span class="font-bold text-purple-900">Bs {{ f.anticipos_periodo_siguiente | number:'1.2-2' }}</span>
+                <span class="badge-anticipo-sig">primer anticipo</span>
+              </div>
+              } @else {
+              <span class="text-slate-400 font-mono">—</span>
+              }
+            </td>
           </tr>
           } @empty {
           <tr>
-            <td colspan="13" class="empty-row">
+            <td colspan="14" class="empty-row">
               No se encontraron trabajadores en este período salarial.
             </td>
           </tr>
@@ -371,6 +387,9 @@
             <td class="font-bold" [class.text-emerald-800]="(planilla()?.totales?.total_liquido_pagable || 0) >= 0"
               [class.text-red-700]="(planilla()?.totales?.total_liquido_pagable || 0) < 0">
               Bs {{ (planilla()?.totales?.total_liquido_pagable || 0) | number:'1.2-2' }}
+            </td>
+            <td class="font-bold text-purple-900 text-center">
+              Bs {{ (planilla()?.totales?.total_anticipos_periodo_siguiente || 0) | number:'1.2-2' }}
             </td>
           </tr>
         </tfoot>
@@ -444,11 +463,17 @@
 
       <!-- Botón para alternar formulario de nuevo descuento -->
       @if (planilla()?.estado_periodo === 'ABIERTO') {
-      <div class="modal-sub-actions mt-2 mb-3">
-        <button class="btn btn-sm btn-primary" (click)="showFormNuevoDescuento.set(!showFormNuevoDescuento())">
-          {{ showFormNuevoDescuento() ? '✕ Ocultar Formulario' : '+ Agregar Descuento' }}
-        </button>
-      </div>
+        @if (selectedFilaDescuentos()?.estado_liquidacion === 'LIQUIDADO') {
+        <div class="alert-box-warning mt-2 mb-3">
+          <span>El sueldo de este trabajador ya se encuentra <strong>LIQUIDADO</strong> en este período. No se permite registrar nuevos descuentos.</span>
+        </div>
+        } @else {
+        <div class="modal-sub-actions mt-2 mb-3">
+          <button class="btn btn-sm btn-primary" (click)="showFormNuevoDescuento.set(!showFormNuevoDescuento())">
+            {{ showFormNuevoDescuento() ? '✕ Ocultar Formulario' : '+ Agregar Descuento' }}
+          </button>
+        </div>
+        }
       }
 
       <!-- Formulario para agregar descuento dinámico -->
@@ -624,7 +649,12 @@
           <tbody>
             @for (ar of anticiposRiderFilaList(); track ar.id) {
             <tr>
-              <td><span class="mono-badge">{{ ar.numero_comprobante }}</span></td>
+              <td>
+                <span class="mono-badge">{{ ar.numero_comprobante }}</span>
+                @if (ar.es_periodo_siguiente) {
+                <span class="badge-anticipo-sig ml-1" title="Generado por excedente de sueldo del mes anterior">Mes Anterior</span>
+                }
+              </td>
               <td>{{ ar.fecha_entrega }}</td>
               <td><span class="pill-mini">{{ ar.metodo_pago }}</span></td>
               <td class="font-bold text-purple-800">Bs {{ ar.importe | number:'1.2-2' }}</td>
@@ -1128,6 +1158,13 @@
               number:'1.2-2' }}</span>
           </div>
           }
+          @if ((currentReceipt()?.anticipos_rider_descontados || 0) > 0) {
+          <div class="rb-row text-slate-700">
+            <span>(-) Anticipo Rider y Otros Anticipos:</span>
+            <span class="text-purple-700 font-medium">- Bs {{ (currentReceipt()?.anticipos_rider_descontados || 0) |
+              number:'1.2-2' }}</span>
+          </div>
+          }
           @if ((currentReceipt()?.descuentos_salariales || 0) > 0) {
           <div class="rb-row text-slate-700">
             <span>(-) Otros Descuentos / Sanciones:</span>
@@ -1147,6 +1184,16 @@
             <span>(+/-) Otros Ajustes / Bonos:</span>
             <span class="text-purple-700 font-medium">{{ (currentReceipt()?.ajustes || 0) > 0 ? '+' : '' }} Bs {{
               (currentReceipt()?.ajustes || 0) | number:'1.2-2' }}</span>
+          </div>
+          }
+          @if ((currentReceipt()?.excedente_siguiente_mes || 0) > 0) {
+          <div class="rb-row text-slate-700">
+            <span>(=) Sueldo Líquido del Período:</span>
+            <span class="font-semibold text-slate-900">Bs {{ (currentReceipt()?.sueldo_liquido_periodo || 0) | number:'1.2-2' }}</span>
+          </div>
+          <div class="rb-row text-purple-800">
+            <span>(+) Anticipo para el Siguiente Mes:</span>
+            <span class="font-semibold text-purple-800">+ Bs {{ (currentReceipt()?.excedente_siguiente_mes || 0) | number:'1.2-2' }}</span>
           </div>
           }
           <div class="rb-row font-bold text-slate-900 border-t pt-1.5 mt-1">
@@ -1234,6 +1281,12 @@
           <strong class="text-amber">- Bs {{ (selectedFilaLiquidacion()?.pago_anticipos || 0) | number:'1.2-2'
             }}</strong>
         </div>
+        @if ((selectedFilaLiquidacion()?.pago_anticipos_rider || 0) > 0) {
+        <div class="summary-line">
+          <span>(-) Anticipo Rider y Otros Anticipos:</span>
+          <strong class="text-purple">- Bs {{ (selectedFilaLiquidacion()?.pago_anticipos_rider || 0) | number:'1.2-2' }}</strong>
+        </div>
+        }
         @if ((selectedFilaLiquidacion()?.total_descuentos || 0) > 0) {
         <div class="summary-line">
           <span>(-) Total Descuentos:</span>
@@ -1294,6 +1347,12 @@
             <option value="CHEQUE">Cheque</option>
           </select>
         </div>
+
+        @if ((liquidacionFilaForm.monto_pago_inmediato || 0) > calcularSaldoLiquidacionFila()) {
+        <div class="alert-box-info col-span-2 my-2">
+          <strong>ℹ️ Pago con Excedente:</strong> Se liquidará el sueldo de <strong>Bs {{ calcularSaldoLiquidacionFila() | number:'1.2-2' }}</strong> y el excedente de <strong>Bs {{ ((liquidacionFilaForm.monto_pago_inmediato || 0) - calcularSaldoLiquidacionFila()) | number:'1.2-2' }}</strong> se transferirá automáticamente como <strong>Anticipo Rider para el siguiente mes</strong> con la fecha de liquidación seleccionada.
+        </div>
+        }
         }
 
         <div class="form-group col-span-2">

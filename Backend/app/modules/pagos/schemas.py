@@ -136,6 +136,7 @@ class LiquidacionOut(BaseModel):
     pago_inmediato_comprobante: Optional[str] = None
     total_pagos_previos: Optional[Decimal] = Decimal("0.00")
     pago_quincena_previo: Optional[Decimal] = Decimal("0.00")
+    excedente_siguiente_mes: Optional[Decimal] = Decimal("0.00")
     pagos: List[PagoLiquidacionOut] = []
 
     class Config:

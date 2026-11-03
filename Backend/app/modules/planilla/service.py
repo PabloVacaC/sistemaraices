@@ -303,6 +303,13 @@ def obtener_o_generar_planilla(db: Session, periodo_id: int) -> PlanillaMensualO
         # Líquido pagable = Total Ganado − Total Ant. y Desc.
         liquido_pagable = total_ganado - total_anticipos_descuentos
 
+        # Anticipo para el período siguiente: excedente entregado al liquidar el sueldo (spec.md)
+        sueldo_correspondiente = liquido_pagable + ajustes_liq
+        if monto_pago_liquidacion > max(Decimal("0.00"), sueldo_correspondiente):
+            monto_anticipos_sig = monto_pago_liquidacion - max(Decimal("0.00"), sueldo_correspondiente)
+        else:
+            monto_anticipos_sig = Decimal("0.00")
+
         # Saldo pendiente real de liquidar sueldo restante
         saldo_pendiente_real = max(
             Decimal("0.00"),
@@ -482,6 +489,20 @@ def actualizar_dias_trabajados(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="El período ya ha sido completamente LIQUIDADO para este trabajador. No se admiten modificaciones salariales en períodos liquidados.",
+        )
+
+    # Verificar si el trabajador ya fue completamente liquidado en este período
+    liq_desc = db.execute(
+        select(Liquidacion).where(
+            Liquidacion.trabajador_id == datos.trabajador_id,
+            Liquidacion.periodo_id == datos.periodo_id,
+            Liquidacion.estado == "LIQUIDADO",
+        )
+    ).scalars().first()
+    if liq_desc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="El período ya ha sido completamente LIQUIDADO para este trabajador. No se admiten nuevos descuentos.",
         )
 
     det = db.execute(
@@ -846,6 +867,7 @@ def listar_anticipos_rider(
             importe=r.importe,
             metodo_pago=r.metodo_pago,
             estado=r.estado,
+            es_periodo_siguiente=r.es_periodo_siguiente,
             observaciones=r.observaciones,
             usuario_id=r.usuario_id,
             usuario_nombre=r.usuario_nombre,
@@ -898,6 +920,20 @@ def registrar_anticipo_rider(
             detail="El período ya ha sido completamente LIQUIDADO para este trabajador. No se pueden registrar más anticipos rider porque el sueldo ya ha sido completamente LIQUIDADO.",
         )
 
+    # Verificar si el trabajador ya fue completamente liquidado en este período
+    liq_desc = db.execute(
+        select(Liquidacion).where(
+            Liquidacion.trabajador_id == datos.trabajador_id,
+            Liquidacion.periodo_id == datos.periodo_id,
+            Liquidacion.estado == "LIQUIDADO",
+        )
+    ).scalars().first()
+    if liq_desc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="El período ya ha sido completamente LIQUIDADO para este trabajador. No se admiten nuevos descuentos.",
+        )
+
     nro_comprobante = generar_numero_comprobante(db, "RID")
 
     nuevo_rider = AnticipoRider(
@@ -939,6 +975,7 @@ def registrar_anticipo_rider(
         importe=nuevo_rider.importe,
         metodo_pago=nuevo_rider.metodo_pago,
         estado=nuevo_rider.estado,
+        es_periodo_siguiente=nuevo_rider.es_periodo_siguiente,
         observaciones=nuevo_rider.observaciones,
         usuario_id=nuevo_rider.usuario_id,
         usuario_nombre=nuevo_rider.usuario_nombre,
@@ -992,6 +1029,7 @@ def anular_anticipo_rider(
         importe=rider_obj.importe,
         metodo_pago=rider_obj.metodo_pago,
         estado=rider_obj.estado,
+        es_periodo_siguiente=rider_obj.es_periodo_siguiente,
         observaciones=rider_obj.observaciones,
         usuario_id=rider_obj.usuario_id,
         usuario_nombre=rider_obj.usuario_nombre,
