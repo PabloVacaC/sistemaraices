@@ -729,7 +729,7 @@ def cerrar_planilla_periodo(
     if usuario_ci:
         u = db.execute(select(Usuario).where(Usuario.ci == usuario_ci)).scalars().first()
         if u:
-            usuario_nombre = f"{u.nombres} {u.apellidos}".strip()
+            usuario_nombre = f"{u.nombre} {u.apellido}".strip()
 
     cierre = db.execute(
         select(PlanillaCierre).where(PlanillaCierre.periodo_id == periodo_id)
