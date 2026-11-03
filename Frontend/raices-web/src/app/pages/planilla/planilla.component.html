@@ -132,18 +132,18 @@
       <div class="kpi-val text-emerald-700">
         Bs {{ (planilla()?.totales?.solicitud_sueldo || 0) | number:'1.2-2' }}
       </div>
-      <span class="kpi-subtext">Reposición + Líquido Sueldo</span>
+      <span class="kpi-subtext">
+        Reposición + Líquido • Total Mes: Bs {{ (planilla()?.totales?.solicitud_total_mes || 0) | number:'1.2-2' }}
+      </span>
     </div>
 
-    <!-- 8. Total Descuentos -->
+    <!-- 8. Anticipo Rider y Otros Anticipos -->
     <div class="kpi-card">
-      <span class="kpi-label">Total Descuentos</span>
-      <div class="kpi-val text-rose-700">
-        Bs {{ (planilla()?.totales?.total_descuentos || 0) | number:'1.2-2' }}
+      <span class="kpi-label">Anticipo Rider y Otros Anticipos</span>
+      <div class="kpi-val text-purple-700">
+        Bs {{ (planilla()?.totales?.total_anticipos_rider || 0) | number:'1.2-2' }}
       </div>
-      <span class="kpi-subtext">
-        Retenciones • Solicitud Total: Bs {{ (planilla()?.totales?.solicitud_total_mes || 0) | number:'1.2-2' }}
-      </span>
+      <span class="kpi-subtext">Total vales y anticipos rider</span>
     </div>
   </div>
 
