@@ -242,7 +242,7 @@ export class PlanillaComponent implements OnInit {
     // 2. Cargar áreas para filtros
     this.dataService.getAreas().subscribe({
       next: (a) => this.areas.set(a),
-      error: () => {}
+      error: () => { }
     });
   }
 
@@ -793,8 +793,8 @@ export class PlanillaComponent implements OnInit {
         const montoLiquidado = (fila.pago_liquidacion !== undefined && fila.pago_liquidacion !== null && Number(fila.pago_liquidacion) > 0)
           ? Number(fila.pago_liquidacion)
           : (Number(fila.monto_pagado_total || 0) > Number(fila.pago_quincena || 0)
-              ? Number(fila.monto_pagado_total) - Number(fila.pago_quincena || 0)
-              : Math.max(0, Number(fila.liquido_pagable || 0)));
+            ? Number(fila.monto_pagado_total) - Number(fila.pago_quincena || 0)
+            : Math.max(0, Number(fila.liquido_pagable || 0)));
 
         const excedente = Number(fila.anticipos_periodo_siguiente || 0);
         const sueldoLiquidoPeriodo = Math.max(0, montoLiquidado - excedente);

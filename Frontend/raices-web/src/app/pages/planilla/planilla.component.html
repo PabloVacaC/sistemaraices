@@ -145,6 +145,15 @@
       </div>
       <span class="kpi-subtext">Total vales y anticipos rider</span>
     </div>
+
+    <!-- 9. Total Descuentos del Mes -->
+    <div class="kpi-card">
+      <span class="kpi-label">Total Descuentos del Mes</span>
+      <div class="kpi-val text-rose-700">
+        Bs {{ (planilla()?.totales?.total_descuentos || 0) | number:'1.2-2' }}
+      </div>
+      <span class="kpi-subtext">Total de descuentos del período</span>
+    </div>
   </div>
 
   <!-- Barra de Búsqueda y Filtros Rápidos -->
