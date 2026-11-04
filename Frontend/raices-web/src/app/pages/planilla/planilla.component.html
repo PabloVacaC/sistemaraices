@@ -1350,7 +1350,7 @@
 
         @if ((liquidacionFilaForm.monto_pago_inmediato || 0) > calcularSaldoLiquidacionFila()) {
         <div class="alert-box-info col-span-2 my-2">
-          <strong>ℹ️ Pago con Excedente:</strong> Se liquidará el sueldo de <strong>Bs {{ calcularSaldoLiquidacionFila() | number:'1.2-2' }}</strong> y el excedente de <strong>Bs {{ ((liquidacionFilaForm.monto_pago_inmediato || 0) - calcularSaldoLiquidacionFila()) | number:'1.2-2' }}</strong> se transferirá automáticamente como <strong>Anticipo Rider para el siguiente mes</strong> con la fecha de liquidación seleccionada.
+          <strong>ℹ️ Pago con Excedente:</strong> Se liquidará el sueldo de <strong>Bs {{ calcularSaldoLiquidacionFila() | number:'1.2-2' }}</strong> y el excedente de <strong>Bs {{ ((liquidacionFilaForm.monto_pago_inmediato || 0) - calcularSaldoLiquidacionFila()) | number:'1.2-2' }}</strong> se transferirá automáticamente y se registrará como otro anticipo para el mes siguiente con la fecha de liquidación seleccionada.
         </div>
         }
         }
