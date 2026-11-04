@@ -648,7 +648,7 @@ export class PlanillaComponent implements OnInit {
       solicitud_quincena: solQuincena,
       entregado_sueldo: null,
       solicitud_sueldo: solSueldo,
-      otros_gastos: anticiposSig > 0 ? anticiposSig : null,
+      otros_gastos: anticiposSig > 0 ? -Math.abs(anticiposSig) : null,
       otros_gastos_detalle: anticiposSig > 0 ? 'Anticipos para el siguiente mes (Excedentes de sueldo)' : ''
     };
     this.showModalCerrarPlanilla.set(true);
