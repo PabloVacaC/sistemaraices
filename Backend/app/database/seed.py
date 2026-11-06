@@ -15,6 +15,53 @@ from app.models.entities import (
 from app.core.security import get_password_hash
 
 
+TRABAJADORES_EXCEL = [
+    {"nombres": "EBERT", "apellidos": "ORETEA", "cargo": "ENCARGADO GENERAL", "area": "DON FELIPE", "fecha_ingreso": "2025-01-27", "sueldoBase": 7000.0, "estado": True},
+    {"nombres": "CLEITON", "apellidos": "ASIAMA", "cargo": "ENCARGADO PLANTA Y CONFINAMIENTO", "area": "DON CESAR", "fecha_ingreso": "2023-07-07", "sueldoBase": 4000.0, "estado": True},
+    {"nombres": "MARCOS", "apellidos": "PACHECO", "cargo": "OPERADOR", "area": "DON CESAR", "fecha_ingreso": "2026-03-07", "sueldoBase": 3700.0, "estado": True},
+    {"nombres": "PEDRO", "apellidos": "ORTIZ", "cargo": "ENCARGADO VAQUEROS", "area": "DON FELIPE", "fecha_ingreso": "2025-01-10", "sueldoBase": 3700.0, "estado": True},
+    {"nombres": "JUAN", "apellidos": "C. MOLINA", "cargo": "OPERADOR", "area": "DON FELIPE", "fecha_ingreso": "2026-07-07", "sueldoBase": 3700.0, "estado": True},
+    {"nombres": "J,", "apellidos": "EDUARDO CAYUBA", "cargo": "CONFINAMIENTO", "area": "DON FELIPE", "fecha_ingreso": "2025-06-16", "sueldoBase": 3700.0, "estado": True},
+    {"nombres": "MARTIN", "apellidos": "FARFAN", "cargo": "OPERADOR", "area": "DON FELIPE", "fecha_ingreso": "2026-01-04", "sueldoBase": 3700.0, "estado": True},
+    {"nombres": "ROBER R.", "apellidos": "RIVERA VALDIVIA", "cargo": "Veterinario Jr Postura", "area": "AVICOLA DON CESAR", "fecha_ingreso": "2026-03-30", "sueldoBase": 3500.0, "estado": True},
+    {"nombres": "RUBEN", "apellidos": "MELGAR", "cargo": "ENCARGADO DE MANTENIMIENTO", "area": "DON FELIPE", "fecha_ingreso": "2024-05-31", "sueldoBase": 3500.0, "estado": True},
+    {"nombres": "YOCELIN", "apellidos": "GUERRA", "cargo": "Encargada Filtros y Planta de Alimento", "area": "PLANTA DE ALIMENTO", "fecha_ingreso": "2026-05-04", "sueldoBase": 3500.0, "estado": True},
+    {"nombres": "ELENA", "apellidos": "DUTRA", "cargo": "COCINA", "area": "DON FELIPE", "fecha_ingreso": "2026-07-13", "sueldoBase": 3300.0, "estado": True},
+    {"nombres": "EBERTO", "apellidos": "MASAI TAPIOSI", "cargo": "VAQUERO", "area": "DON FELIPE", "fecha_ingreso": "2026-09-19", "sueldoBase": 3300.0, "estado": True},
+    {"nombres": "DAVID", "apellidos": "GUZMAN MEDINA", "cargo": "VAQUERO", "area": "DON CESAR", "fecha_ingreso": "2026-07-26", "sueldoBase": 3300.0, "estado": True},
+    {"nombres": "FRANCISCO", "apellidos": "SOSA", "cargo": "AYUDANTE CONF.", "area": "DON FELIPE", "fecha_ingreso": "2026-07-29", "sueldoBase": 2900.0, "estado": True},
+    {"nombres": "MARIA", "apellidos": "SHENEIDER", "cargo": "COCINA", "area": "DON CESAR", "fecha_ingreso": "2024-01-29", "sueldoBase": 3300.0, "estado": True},
+    {"nombres": "TERESA", "apellidos": "BAILABA", "cargo": "ENCARGADA ALIMENTACIÓN", "area": "DON FELIPE", "fecha_ingreso": "2025-01-27", "sueldoBase": 3300.0, "estado": True},
+    {"nombres": "CRISTOBAL", "apellidos": "CAYUBA", "cargo": "VAQUERO", "area": "DON FELIPE", "fecha_ingreso": "2025-09-02", "sueldoBase": 3300.0, "estado": True},
+    {"nombres": "JORGE", "apellidos": "GARCIA", "cargo": "OPERADOR", "area": "DON FELIPE", "fecha_ingreso": "2026-06-10", "sueldoBase": 2900.0, "estado": False},
+    {"nombres": "ALFREDO", "apellidos": "ARREDONDO VACA", "cargo": "VAQUERO", "area": "DON FELIPE", "fecha_ingreso": "2026-02-10", "sueldoBase": 3300.0, "estado": False},
+    {"nombres": "JESUS", "apellidos": "JUSTINIANO", "cargo": "VAQUERO", "area": "DON FELIPE", "fecha_ingreso": "2026-10-16", "sueldoBase": 3700.0, "estado": True},
+    {"nombres": "MARTIN", "apellidos": "URRURI", "cargo": "COCINA", "area": "DON FELIPE", "fecha_ingreso": "2026-07-21", "sueldoBase": 2900.0, "estado": True},
+    {"nombres": "LEONCIO", "apellidos": "YOVIO", "cargo": "VAQUERO JR", "area": "DON FELIPE", "fecha_ingreso": "2026-02-09", "sueldoBase": 3300.0, "estado": True},
+    {"nombres": "DIEGO", "apellidos": "CABRERA JUSTINIANO", "cargo": "AYUDANTE CONF. PLANTA Y JARDINERIA", "area": "PLANTA DE ALIMENTO", "fecha_ingreso": "2026-03-22", "sueldoBase": 3300.0, "estado": True},
+    {"nombres": "FERNANDO", "apellidos": "TOMICHA", "cargo": "GALPONERO", "area": "AVICOLA DON CESAR", "fecha_ingreso": "2026-03-06", "sueldoBase": 3000.0, "estado": True},
+    {"nombres": "JUANITO", "apellidos": "LIMON", "cargo": "AYUDANTE CONF. PLANTA Y JARDINERIA", "area": "PLANTA DE ALIMENTO", "fecha_ingreso": "2026-10-07", "sueldoBase": 2900.0, "estado": True},
+    {"nombres": "BISMAR", "apellidos": "LIMPIAS", "cargo": "APOYO AGRICOLA E INVENTARIOS", "area": "DON FELIPE", "fecha_ingreso": "2026-05-15", "sueldoBase": 3300.0, "estado": True},
+    {"nombres": "ISMAEL", "apellidos": "GALARZA", "cargo": "CLASIFICADRORA", "area": "AVICOLA DON CESAR", "fecha_ingreso": "2026-07-01", "sueldoBase": 2900.0, "estado": True},
+    {"nombres": "YERIG", "apellidos": "MONTERO ROJA", "cargo": "GALPONERO", "area": "AVICOLA DON CESAR", "fecha_ingreso": "2026-06-30", "sueldoBase": 2900.0, "estado": True},
+    {"nombres": "ALVERTO", "apellidos": "MONTERO ROJA", "cargo": "GALPONERO", "area": "AVICOLA DON CESAR", "fecha_ingreso": "2026-06-30", "sueldoBase": 2900.0, "estado": True},
+    {"nombres": "ARNALDO", "apellidos": "MASAI", "cargo": "AYUDANTE CONF. PLANTA Y JARDINERIA", "area": "DON CESAR", "fecha_ingreso": "2026-10-09", "sueldoBase": 3300.0, "estado": False},
+    {"nombres": "SERGIO", "apellidos": "ROCA S.", "cargo": "LIMPIA ALAMBRE", "area": "DON CESAR", "fecha_ingreso": "2026-08-11", "sueldoBase": 2900.0, "estado": True},
+    {"nombres": "CARLOS H.", "apellidos": "VARGAS D.", "cargo": "APOYO CONFINAMIENTO", "area": "DON FELIPE", "fecha_ingreso": "2026-08-11", "sueldoBase": 2900.0, "estado": True},
+    {"nombres": "JULIO", "apellidos": "CESAR CUIGAY", "cargo": "OPERADOR", "area": "DON FELIPE", "fecha_ingreso": "2026-10-07", "sueldoBase": 3500.0, "estado": False},
+    {"nombres": "JULIO", "apellidos": "MENDOZA", "cargo": "OPERADOR", "area": "DON FELIPE", "fecha_ingreso": "2026-10-07", "sueldoBase": 2900.0, "estado": True},
+    {"nombres": "MARCELO", "apellidos": "BORORA", "cargo": "OPERADOR", "area": "DON FELIPE", "fecha_ingreso": "2026-08-21", "sueldoBase": 2900.0, "estado": False},
+    {"nombres": "JORGE", "apellidos": "SURUBI CASTRO", "cargo": "OPERADOR", "area": "DON FELIPE", "fecha_ingreso": "2026-10-21", "sueldoBase": 2900.0, "estado": True},
+    {"nombres": "JOSE", "apellidos": "ALFREDO VILLA", "cargo": "OPERADOR", "area": "DON FELIPE", "fecha_ingreso": "2026-10-19", "sueldoBase": 2900.0, "estado": True},
+    {"nombres": "ROXANA", "apellidos": "PEREZ GUERRA", "cargo": "OPERADOR", "area": "DON FELIPE", "fecha_ingreso": "2026-10-19", "sueldoBase": 2900.0, "estado": True},
+    {"nombres": "IGNACIO", "apellidos": "YUBANORE", "cargo": "OPERADOR", "area": "DON FELIPE", "fecha_ingreso": "2026-10-20", "sueldoBase": 3000.0, "estado": True},
+    {"nombres": "HENRY", "apellidos": "CUBA NAVA", "cargo": "OPERADOR", "area": "DON FELIPE", "fecha_ingreso": "2026-09-14", "sueldoBase": 3500.0, "estado": True},
+    {"nombres": "FELIPE", "apellidos": "VACUARY", "cargo": "OPERADOR", "area": "DON FELIPE", "fecha_ingreso": "2026-10-01", "sueldoBase": 2900.0, "estado": False},
+    {"nombres": "PEDRO", "apellidos": "SURUBI CASTRO", "cargo": "OPERADOR", "area": "DON FELIPE", "fecha_ingreso": "2026-10-19", "sueldoBase": 2900.0, "estado": True},
+    {"nombres": "LEONARDO", "apellidos": "SOLETO GUTIERREZ", "cargo": "GALPONERO", "area": "AVICOLA DON CESAR", "fecha_ingreso": "2026-09-30", "sueldoBase": 2900.0, "estado": True},
+]
+
+
 def init_db():
     print("Creando tablas en PostgreSQL...")
     Base.metadata.create_all(bind=engine)
@@ -173,6 +220,10 @@ def init_db():
             {"nombre": "Recursos Humanos", "descripcion": "Gestión de personal y talento"},
             {"nombre": "Finanzas y Contabilidad", "descripcion": "Administración financiera"},
             {"nombre": "Operaciones", "descripcion": "Producción y logística"},
+            {"nombre": "DON FELIPE", "descripcion": "Hacienda Don Felipe (Ganadería y Confinamiento)"},
+            {"nombre": "DON CESAR", "descripcion": "Hacienda Don Cesar (Producción y Confinamiento)"},
+            {"nombre": "AVICOLA DON CESAR", "descripcion": "Granjas Avícolas Don Cesar (Postura y Galpones)"},
+            {"nombre": "PLANTA DE ALIMENTO", "descripcion": "Planta de Alimento Balanceado y Filtros"},
         ]
 
         areas_db = {}
@@ -293,6 +344,30 @@ def init_db():
             )
             db.add(contacto)
             db.commit()
+
+        # 5. Sembrar los 43 Trabajadores Oficiales del Excel
+        print("Sincronizando trabajadores del Excel oficial...")
+        for w in TRABAJADORES_EXCEL:
+            t_existente = db.execute(
+                select(Trabajador).where(
+                    Trabajador.nombres == w["nombres"],
+                    Trabajador.apellidos == w["apellidos"]
+                )
+            ).scalars().first()
+            if not t_existente:
+                area_obj = areas_db.get(w["area"]) or areas_db.get("Operaciones") or list(areas_db.values())[0]
+                t_nuevo = Trabajador(
+                    nombres=w["nombres"],
+                    apellidos=w["apellidos"],
+                    cargo=w["cargo"],
+                    area_id=area_obj.id,
+                    fecha_ingreso=date.fromisoformat(w["fecha_ingreso"]),
+                    sueldoBase=w["sueldoBase"],
+                    estado=w["estado"],
+                )
+                db.add(t_nuevo)
+        db.commit()
+        print("Trabajadores del Excel oficial sincronizados con éxito.")
 
     except Exception as e:
         db.rollback()
