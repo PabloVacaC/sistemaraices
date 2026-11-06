@@ -6,11 +6,15 @@
 
 set -e
 
+# Directorio base del proyecto (un nivel arriba de scripts/)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+
 # Configuración básica (o sobreescribir con variables de entorno)
 CONTAINER_NAME="${RAICES_DB_CONTAINER:-raices_db}"
 DB_NAME="${POSTGRES_DB:-sistemraices_db}"
 DB_USER="${POSTGRES_USER:-postgres}"
-BACKUP_DIR="${BACKUP_DIR:-./backups}"
+BACKUP_DIR="${BACKUP_DIR:-$PROJECT_DIR/backups}"
 RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-15}"
 
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
