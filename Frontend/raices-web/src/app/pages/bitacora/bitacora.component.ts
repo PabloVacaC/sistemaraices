@@ -84,6 +84,19 @@ import { Bitacora } from '../../core/models/types';
             </tbody>
           </table>
         </div>
+
+        <div class="pagination-footer">
+          <span class="pagination-info">Mostrando {{ registros().length }} registros (Página {{ page() }})</span>
+          <div class="pagination-actions">
+            <button class="btn btn-xs btn-secondary" [disabled]="page() <= 1" (click)="cambiarPagina(page() - 1)">
+              ← Anterior
+            </button>
+            <span class="page-badge">Pág. {{ page() }}</span>
+            <button class="btn btn-xs btn-secondary" [disabled]="registros().length < limit()" (click)="cambiarPagina(page() + 1)">
+              Siguiente →
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   `,
@@ -159,6 +172,39 @@ import { Bitacora } from '../../core/models/types';
       padding: 36px 16px;
       color: var(--text-muted);
     }
+
+    .pagination-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 18px;
+      border-top: 1px solid var(--border-color);
+      background-color: var(--bg-card);
+      border-bottom-left-radius: var(--radius-lg);
+      border-bottom-right-radius: var(--radius-lg);
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .pagination-info {
+      font-size: 0.825rem;
+      color: var(--text-secondary);
+    }
+
+    .pagination-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .page-badge {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      padding: 3px 8px;
+      background-color: var(--bg-muted);
+      border-radius: var(--radius-xs);
+    }
   `]
 })
 export class BitacoraComponent implements OnInit {
@@ -166,16 +212,26 @@ export class BitacoraComponent implements OnInit {
   private toast = inject(ToastService);
 
   public registros = signal<Bitacora[]>([]);
+  public page = signal<number>(1);
+  public limit = signal<number>(50);
 
   ngOnInit(): void {
     this.cargarBitacora();
   }
 
-  cargarBitacora(): void {
-    this.dataService.getBitacora(100).subscribe({
+  cargarBitacora(nuevaPagina?: number): void {
+    if (nuevaPagina && nuevaPagina >= 1) {
+      this.page.set(nuevaPagina);
+    }
+    this.dataService.getBitacora(this.limit(), undefined, this.page()).subscribe({
       next: (data) => this.registros.set(data),
       error: () => this.toast.error('Error al cargar la bitácora')
     });
+  }
+
+  cambiarPagina(p: number): void {
+    if (p < 1) return;
+    this.cargarBitacora(p);
   }
 
   getAccionBadgeClass(accion: string): string {

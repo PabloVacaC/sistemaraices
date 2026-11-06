@@ -31,11 +31,14 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Configuración de CORS para Angular (localhost:4200) y clientes móviles
+# Configuración de CORS segura y flexible según el entorno
+cors_origins = settings.cors_origins_list
+is_wildcard = cors_origins == ["*"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=cors_origins,
+    allow_credentials=not is_wildcard,
     allow_methods=["*"],
     allow_headers=["*"],
 )

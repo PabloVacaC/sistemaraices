@@ -148,8 +148,8 @@ export class DataService {
   }
 
   // --- Bitácora ---
-  getBitacora(limit: number = 50, modulo?: string): Observable<Bitacora[]> {
-    let params: any = { limit };
+  getBitacora(limit: number = 50, modulo?: string, page: number = 1): Observable<Bitacora[]> {
+    let params: any = { limit, page };
     if (modulo) params.modulo = modulo;
     return this.http.get<Bitacora[]>(`${this.API_URL}/bitacora/`, {
       headers: this.auth.getHeaders(),
@@ -271,11 +271,19 @@ export class DataService {
   // INVENTARIO: ALMACÉN
   // ==========================================
 
-  getProductosAlmacen(busqueda?: string, estado_stock?: string, unidad_control?: string): Observable<ProductoAlmacen[]> {
+  getProductosAlmacen(
+    busqueda?: string,
+    estado_stock?: string,
+    unidad_control?: string,
+    page?: number,
+    limit?: number
+  ): Observable<ProductoAlmacen[]> {
     let params: any = {};
     if (busqueda) params.busqueda = busqueda;
     if (estado_stock && estado_stock !== 'TODOS') params.estado_stock = estado_stock;
     if (unidad_control) params.unidad_control = unidad_control;
+    if (page) params.page = page;
+    if (limit) params.limit = limit;
     return this.http.get<ProductoAlmacen[]>(`${this.API_URL}/inventario/almacen/productos`, {
       headers: this.auth.getHeaders(),
       params
@@ -334,6 +342,8 @@ export class DataService {
       if (paramsObj.area_id) params.area_id = paramsObj.area_id;
       if (paramsObj.fecha_inicio) params.fecha_inicio = paramsObj.fecha_inicio;
       if (paramsObj.fecha_fin) params.fecha_fin = paramsObj.fecha_fin;
+      if (paramsObj.page) params.page = paramsObj.page;
+      if (paramsObj.limit) params.limit = paramsObj.limit;
     }
     return this.http.get<MovimientoAlmacen[]>(`${this.API_URL}/inventario/almacen/movimientos`, {
       headers: this.auth.getHeaders(),
@@ -360,6 +370,8 @@ export class DataService {
       if (paramsObj.fecha_inicio) params.fecha_inicio = paramsObj.fecha_inicio;
       if (paramsObj.fecha_fin) params.fecha_fin = paramsObj.fecha_fin;
       if (paramsObj.estado) params.estado = paramsObj.estado;
+      if (paramsObj.page) params.page = paramsObj.page;
+      if (paramsObj.limit) params.limit = paramsObj.limit;
     }
     return this.http.get<GastoMenor[]>(`${this.API_URL}/inventario/gastos`, {
       headers: this.auth.getHeaders(),

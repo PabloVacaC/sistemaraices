@@ -322,6 +322,20 @@
           </tbody>
         </table>
       </div>
+
+      <!-- Paginación de Almacén -->
+      <div class="pagination-footer">
+        <span class="pagination-info">Mostrando {{ productos().length }} productos (Página {{ pageAlmacen() }})</span>
+        <div class="pagination-actions">
+          <button class="btn btn-xs btn-secondary" [disabled]="pageAlmacen() <= 1" (click)="cambiarPaginaAlmacen(pageAlmacen() - 1)">
+            ← Anterior
+          </button>
+          <span class="page-badge">Pág. {{ pageAlmacen() }}</span>
+          <button class="btn btn-xs btn-secondary" [disabled]="productos().length < limitAlmacen()" (click)="cambiarPaginaAlmacen(pageAlmacen() + 1)">
+            Siguiente →
+          </button>
+        </div>
+      </div>
     </section>
   }
 
@@ -447,6 +461,20 @@
             }
           </tbody>
         </table>
+      </div>
+
+      <!-- Paginación de Gastos Menores -->
+      <div class="pagination-footer">
+        <span class="pagination-info">Mostrando {{ gastos().length }} gastos menores (Página {{ pageGastos() }})</span>
+        <div class="pagination-actions">
+          <button class="btn btn-xs btn-secondary" [disabled]="pageGastos() <= 1" (click)="cambiarPaginaGastos(pageGastos() - 1)">
+            ← Anterior
+          </button>
+          <span class="page-badge">Pág. {{ pageGastos() }}</span>
+          <button class="btn btn-xs btn-secondary" [disabled]="gastos().length < limitGastos()" (click)="cambiarPaginaGastos(pageGastos() + 1)">
+            Siguiente →
+          </button>
+        </div>
       </div>
     </section>
   }

@@ -15,6 +15,7 @@ import {
   Trabajador,
   Area,
 } from '../../core/models/types';
+import { compressImageFile } from '../../core/utils/image-compressor.util';
 
 @Component({
   selector: 'app-inventario',
@@ -39,6 +40,8 @@ export class InventarioComponent implements OnInit {
   filtroEstadoStock = signal<string>('TODOS');
   filtroUnidadControl = signal<string>('TODOS');
   reporteAlmacen = signal<ReporteAlmacenResumen | null>(null);
+  pageAlmacen = signal<number>(1);
+  limitAlmacen = signal<number>(50);
 
   // Producto seleccionado para ficha detallada
   productoDetalle = signal<ProductoAlmacenDetalle | null>(null);
@@ -50,6 +53,8 @@ export class InventarioComponent implements OnInit {
   filtroAreaGastos = signal<number | null>(null);
   filtroEstadoGastos = signal<string>('TODOS');
   reporteGastos = signal<ReporteGastosResumen | null>(null);
+  pageGastos = signal<number>(1);
+  limitGastos = signal<number>(50);
 
   // Catálogos
   trabajadores = signal<Trabajador[]>([]);
@@ -197,12 +202,17 @@ export class InventarioComponent implements OnInit {
     });
   }
 
-  cargarProductosAlmacen(): void {
+  cargarProductosAlmacen(nuevaPagina?: number): void {
+    if (nuevaPagina && nuevaPagina >= 1) {
+      this.pageAlmacen.set(nuevaPagina);
+    }
     this.loading.set(true);
     this.dataService.getProductosAlmacen(
       this.filtroBusquedaAlmacen(),
       this.filtroEstadoStock(),
-      this.filtroUnidadControl() !== 'TODOS' ? this.filtroUnidadControl() : undefined
+      this.filtroUnidadControl() !== 'TODOS' ? this.filtroUnidadControl() : undefined,
+      this.pageAlmacen(),
+      this.limitAlmacen()
     ).subscribe({
       next: (prods) => {
         this.productos.set(prods);
@@ -215,15 +225,30 @@ export class InventarioComponent implements OnInit {
     });
   }
 
-  cargarGastosMenores(): void {
+  cambiarPaginaAlmacen(p: number): void {
+    if (p < 1) return;
+    this.cargarProductosAlmacen(p);
+  }
+
+  cargarGastosMenores(nuevaPagina?: number): void {
+    if (nuevaPagina && nuevaPagina >= 1) {
+      this.pageGastos.set(nuevaPagina);
+    }
     this.dataService.getGastosMenores({
       busqueda: this.filtroBusquedaGastos(),
       area_id: this.filtroAreaGastos() || undefined,
-      estado: this.filtroEstadoGastos() !== 'TODOS' ? this.filtroEstadoGastos() : undefined
+      estado: this.filtroEstadoGastos() !== 'TODOS' ? this.filtroEstadoGastos() : undefined,
+      page: this.pageGastos(),
+      limit: this.limitGastos()
     }).subscribe({
       next: (data) => this.gastos.set(data),
       error: () => {}
     });
+  }
+
+  cambiarPaginaGastos(p: number): void {
+    if (p < 1) return;
+    this.cargarGastosMenores(p);
   }
 
   cargarReportes(): void {
@@ -749,7 +774,7 @@ export class InventarioComponent implements OnInit {
   // CAPTURA DE FOTOS / IMÁGENES (CÁMARA Y ARCHIVOS)
   // ==========================================
 
-  onImageFileSelected(event: any, target: 'producto' | 'gasto'): void {
+  async onImageFileSelected(event: any, target: 'producto' | 'gasto'): Promise<void> {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -758,21 +783,24 @@ export class InventarioComponent implements OnInit {
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      this.toast.warning('La imagen supera el límite de 5 MB. Selecciona una imagen más ligera.');
-      return;
-    }
+    try {
+      // Compresión inteligente en el navegador: reduce fotos de 10MB a ~40-80KB en alta calidad
+      const compressedBase64 = await compressImageFile(file, {
+        maxWidth: 1024,
+        maxHeight: 1024,
+        quality: 0.8,
+        mimeType: 'image/webp',
+      });
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const base64 = reader.result as string;
       if (target === 'producto') {
-        this.nuevoProductoForm.foto = base64;
+        this.nuevoProductoForm.foto = compressedBase64;
       } else {
-        this.gastoForm.foto_comprobante = base64;
+        this.gastoForm.foto_comprobante = compressedBase64;
       }
-    };
-    reader.readAsDataURL(file);
+    } catch (err) {
+      console.error('Error al optimizar y comprimir la imagen:', err);
+      this.toast.error('Ocurrió un error al procesar la imagen seleccionada.');
+    }
   }
 
   removerFoto(target: 'producto' | 'gasto'): void {

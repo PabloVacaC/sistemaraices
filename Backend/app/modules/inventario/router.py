@@ -1,6 +1,6 @@
 from typing import List, Optional
 from datetime import date
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, Response, status
 from sqlalchemy.orm import Session
 
 from app.database.connection import get_db
@@ -33,15 +33,28 @@ router = APIRouter(prefix="/inventario", tags=["Módulo de Inventario: Almacén 
 
 @router.get("/almacen/productos", response_model=List[ProductoAlmacenOut])
 def listar_productos(
+    response: Response,
     busqueda: Optional[str] = Query(None, description="Búsqueda por nombre o código"),
     estado_stock: Optional[str] = Query(None, description="Filtro de stock: TODOS, NORMAL, BAJO, AGOTADO"),
     unidad_control: Optional[str] = Query(None, description="Filtro por unidad de control"),
+    page: Optional[int] = Query(None, ge=1, description="Número de página"),
+    limit: Optional[int] = Query(None, ge=1, le=500, description="Límite de registros por página"),
+    skip: Optional[int] = Query(None, ge=0, description="Salto de registros"),
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user),
 ):
-    return service.listar_productos(
-        db, busqueda=busqueda, estado_stock=estado_stock, unidad_control=unidad_control
+    items, total = service.listar_productos(
+        db,
+        busqueda=busqueda,
+        estado_stock=estado_stock,
+        unidad_control=unidad_control,
+        page=page,
+        limit=limit,
+        skip=skip,
     )
+    response.headers["X-Total-Count"] = str(total)
+    response.headers["Access-Control-Expose-Headers"] = "X-Total-Count"
+    return items
 
 
 @router.get("/almacen/productos/buscar", response_model=List[dict])
@@ -114,16 +127,20 @@ def anular_movimiento(
 
 @router.get("/almacen/movimientos", response_model=List[MovimientoAlmacenOut])
 def listar_movimientos(
+    response: Response,
     almacen_id: Optional[int] = Query(None),
     tipo_movimiento: Optional[str] = Query(None),
     trabajador_id: Optional[int] = Query(None),
     area_id: Optional[int] = Query(None),
     fecha_inicio: Optional[date] = Query(None),
     fecha_fin: Optional[date] = Query(None),
+    page: Optional[int] = Query(None, ge=1, description="Número de página"),
+    limit: Optional[int] = Query(None, ge=1, le=500, description="Límite por página"),
+    skip: Optional[int] = Query(None, ge=0, description="Salto de registros"),
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user),
 ):
-    return service.listar_movimientos(
+    items, total = service.listar_movimientos(
         db,
         almacen_id=almacen_id,
         tipo_movimiento=tipo_movimiento,
@@ -131,7 +148,13 @@ def listar_movimientos(
         area_id=area_id,
         fecha_inicio=fecha_inicio,
         fecha_fin=fecha_fin,
+        page=page,
+        limit=limit,
+        skip=skip,
     )
+    response.headers["X-Total-Count"] = str(total)
+    response.headers["Access-Control-Expose-Headers"] = "X-Total-Count"
+    return items
 
 
 @router.get("/almacen/reportes/resumen", response_model=ReporteAlmacenResumen)
@@ -148,16 +171,20 @@ def obtener_reporte_almacen(
 
 @router.get("/gastos", response_model=List[GastoMenorOut])
 def listar_gastos_menores(
+    response: Response,
     busqueda: Optional[str] = Query(None),
     area_id: Optional[int] = Query(None),
     trabajador_id: Optional[int] = Query(None),
     fecha_inicio: Optional[date] = Query(None),
     fecha_fin: Optional[date] = Query(None),
     estado: Optional[str] = Query(None),
+    page: Optional[int] = Query(None, ge=1, description="Número de página"),
+    limit: Optional[int] = Query(None, ge=1, le=500, description="Límite por página"),
+    skip: Optional[int] = Query(None, ge=0, description="Salto de registros"),
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user),
 ):
-    return service.listar_gastos_menores(
+    items, total = service.listar_gastos_menores(
         db,
         busqueda=busqueda,
         area_id=area_id,
@@ -165,7 +192,13 @@ def listar_gastos_menores(
         fecha_inicio=fecha_inicio,
         fecha_fin=fecha_fin,
         estado=estado,
+        page=page,
+        limit=limit,
+        skip=skip,
     )
+    response.headers["X-Total-Count"] = str(total)
+    response.headers["Access-Control-Expose-Headers"] = "X-Total-Count"
+    return items
 
 
 @router.post("/gastos", response_model=GastoMenorOut, status_code=status.HTTP_201_CREATED)

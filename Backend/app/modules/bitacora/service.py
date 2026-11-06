@@ -10,6 +10,7 @@ def registrar_bitacora(
     accion: str,
     descripcion: str,
     usuario_ci: Optional[str] = None,
+    commit: bool = True,
 ):
     try:
         now = datetime.now()
@@ -22,7 +23,10 @@ def registrar_bitacora(
             usuario_ci=usuario_ci,
         )
         db.add(registro)
-        db.commit()
+        if commit:
+            db.commit()
+        else:
+            db.flush()
     except Exception as e:
-        db.rollback()
-        print(f"Error al registrar bitácora: {e}")
+        # No se ejecuta db.rollback() para preservar la integridad transaccional del llamador
+        print(f"Advertencia: no se pudo registrar en bitácora: {e}")

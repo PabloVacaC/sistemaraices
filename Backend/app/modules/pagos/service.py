@@ -1221,6 +1221,7 @@ def registrar_liquidacion(
                             f"por excedente de liquidación de {periodo.descripcion} para {trabajador.nombres} {trabajador.apellidos}"
                         ),
                         usuario_ci=usuario_ci,
+                        commit=False,
                     )
 
     liq.saldo_pendiente = max(Decimal("0.00"), liq.monto_neto - liq.monto_pagado)

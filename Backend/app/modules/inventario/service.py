@@ -192,6 +192,7 @@ def crear_producto_con_primera_compra(
             f"a Bs {datos.precio_total} (Bs {precio_unitario}/{nuevo_producto.unidad_control})."
         ),
         usuario_ci=usuario_ci,
+        commit=False,
     )
 
     db.commit()
@@ -301,6 +302,7 @@ def registrar_compra_posterior(
             f"({f'{variacion_porcentual:+.2f}%' if variacion_porcentual is not None else 'N/A'}). Stock actual: {stock_res}."
         ),
         usuario_ci=usuario_ci,
+        commit=False,
     )
 
     db.commit()
@@ -386,6 +388,7 @@ def registrar_salida_almacen(
             f"Motivo: {datos.motivo}. Stock resultante: {stock_res}."
         ),
         usuario_ci=usuario_ci,
+        commit=False,
     )
 
     db.commit()
@@ -459,6 +462,7 @@ def registrar_ajuste_stock(
             f"Stock anterior: {stock_ant}, Nuevo stock: {stock_res}. Motivo: {datos.motivo}"
         ),
         usuario_ci=usuario_ci,
+        commit=False,
     )
 
     db.commit()
@@ -578,6 +582,7 @@ def anular_movimiento(
         accion="ANULACION",
         descripcion=f"Se anuló el movimiento {mov.numero_comprobante} de '{producto.nombre}'. Motivo: {motivo_limpio}",
         usuario_ci=usuario_ci,
+        commit=False,
     )
 
     db.commit()
@@ -593,8 +598,11 @@ def listar_productos(
     busqueda: Optional[str] = None,
     estado_stock: Optional[str] = None,
     unidad_control: Optional[str] = None,
-) -> List[Almacen]:
-    stmt = select(Almacen).where(Almacen.estado == True).order_by(Almacen.nombre)
+    page: Optional[int] = None,
+    limit: Optional[int] = None,
+    skip: Optional[int] = None,
+) -> Tuple[List[Almacen], int]:
+    stmt = select(Almacen).where(Almacen.estado == True)
 
     if busqueda and busqueda.strip():
         term = f"%{busqueda.strip().lower()}%"
@@ -619,7 +627,19 @@ def listar_productos(
         elif st in ("NORMAL", "NORMALES"):
             stmt = stmt.where(Almacen.stock_actual > Almacen.stock_minimo)
 
-    return list(db.execute(stmt).scalars().unique().all())
+    # Conteo total antes de paginar
+    total = db.scalar(select(func.count()).select_from(stmt.subquery())) or 0
+
+    stmt = stmt.order_by(Almacen.nombre)
+
+    if limit is not None:
+        offset = skip if skip is not None else ((page - 1) * limit if page and page >= 1 else 0)
+        stmt = stmt.offset(offset).limit(limit)
+    elif skip is not None:
+        stmt = stmt.offset(skip)
+
+    items = list(db.execute(stmt).scalars().unique().all())
+    return items, total
 
 
 def buscar_productos_autocomplete(db: Session, q: str) -> List[dict]:
@@ -668,11 +688,11 @@ def listar_movimientos(
     area_id: Optional[int] = None,
     fecha_inicio: Optional[date] = None,
     fecha_fin: Optional[date] = None,
-) -> List[MovimientoAlmacen]:
-    stmt = select(MovimientoAlmacen).order_by(
-        desc(MovimientoAlmacen.fecha_movimiento),
-        desc(MovimientoAlmacen.id),
-    )
+    page: Optional[int] = None,
+    limit: Optional[int] = None,
+    skip: Optional[int] = None,
+) -> Tuple[List[MovimientoAlmacen], int]:
+    stmt = select(MovimientoAlmacen)
 
     if almacen_id:
         stmt = stmt.where(MovimientoAlmacen.almacen_id == almacen_id)
@@ -687,7 +707,21 @@ def listar_movimientos(
     if fecha_fin:
         stmt = stmt.where(MovimientoAlmacen.fecha_movimiento <= fecha_fin)
 
-    return list(db.execute(stmt).scalars().unique().all())
+    total = db.scalar(select(func.count()).select_from(stmt.subquery())) or 0
+
+    stmt = stmt.order_by(
+        desc(MovimientoAlmacen.fecha_movimiento),
+        desc(MovimientoAlmacen.id),
+    )
+
+    if limit is not None:
+        offset = skip if skip is not None else ((page - 1) * limit if page and page >= 1 else 0)
+        stmt = stmt.offset(offset).limit(limit)
+    elif skip is not None:
+        stmt = stmt.offset(skip)
+
+    items = list(db.execute(stmt).scalars().unique().all())
+    return items, total
 
 
 # =========================================================================
@@ -743,6 +777,7 @@ def crear_gasto_menor(
             f"Fecha: {nuevo_gasto.fecha_gasto}. Método: {nuevo_gasto.metodo_pago}."
         ),
         usuario_ci=usuario_ci,
+        commit=False,
     )
 
     db.commit()
@@ -799,6 +834,7 @@ def actualizar_gasto_menor(
             f"Antes: [{antiguo_resumen}]. Ahora: [{nuevo_resumen}]. Motivo: {datos.motivo_edicion.strip()}"
         ),
         usuario_ci=usuario_ci,
+        commit=False,
     )
 
     db.commit()
@@ -828,6 +864,7 @@ def anular_gasto_menor(
         accion="ANULAR_GASTO",
         descripcion=f"Se anuló el gasto menor {gasto.numero_comprobante} ('{gasto.nombre}', Bs {gasto.importe_total}). Motivo: {motivo_limpio}",
         usuario_ci=usuario_ci,
+        commit=False,
     )
 
     db.commit()
@@ -842,8 +879,11 @@ def listar_gastos_menores(
     fecha_inicio: Optional[date] = None,
     fecha_fin: Optional[date] = None,
     estado: Optional[str] = None,
-) -> List[GastoMenor]:
-    stmt = select(GastoMenor).order_by(desc(GastoMenor.fecha_gasto), desc(GastoMenor.id))
+    page: Optional[int] = None,
+    limit: Optional[int] = None,
+    skip: Optional[int] = None,
+) -> Tuple[List[GastoMenor], int]:
+    stmt = select(GastoMenor)
 
     if busqueda and busqueda.strip():
         term = f"%{busqueda.strip().lower()}%"
@@ -866,7 +906,18 @@ def listar_gastos_menores(
     if estado:
         stmt = stmt.where(GastoMenor.estado == estado.upper())
 
-    return list(db.execute(stmt).scalars().unique().all())
+    total = db.scalar(select(func.count()).select_from(stmt.subquery())) or 0
+
+    stmt = stmt.order_by(desc(GastoMenor.fecha_gasto), desc(GastoMenor.id))
+
+    if limit is not None:
+        offset = skip if skip is not None else ((page - 1) * limit if page and page >= 1 else 0)
+        stmt = stmt.offset(offset).limit(limit)
+    elif skip is not None:
+        stmt = stmt.offset(skip)
+
+    items = list(db.execute(stmt).scalars().unique().all())
+    return items, total
 
 
 # =========================================================================
