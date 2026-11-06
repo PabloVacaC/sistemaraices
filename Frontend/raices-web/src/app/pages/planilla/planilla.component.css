@@ -231,7 +231,8 @@
 
 .planilla-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   font-size: 0.84rem;
   text-align: left;
   white-space: nowrap;
@@ -252,15 +253,48 @@
   padding: 0.75rem 0.75rem;
   border-bottom: 1px solid #f1f5f9;
   vertical-align: middle;
+  background: #ffffff;
 }
 
-.planilla-table tbody tr:hover {
-  background: #fafafa;
+.planilla-table tbody tr:hover td {
+  background: #f8fafc;
 }
 
+/* --- Columnas Fijas / Sticky (# y Nombre Completo) --- */
 .col-nro {
-  width: 40px;
+  width: 48px;
+  min-width: 48px;
+  max-width: 48px;
   text-align: center;
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: #ffffff;
+}
+
+.planilla-table thead th.col-nro {
+  background: #f8fafc;
+  z-index: 4;
+}
+
+.col-nombre {
+  min-width: 220px;
+  position: sticky;
+  left: 48px;
+  z-index: 2;
+  background: #ffffff;
+  border-right: 2px solid #e2e8f0 !important;
+  box-shadow: 4px 0 6px -2px rgba(0, 0, 0, 0.06);
+}
+
+.planilla-table thead th.col-nombre {
+  background: #f8fafc;
+  z-index: 4;
+}
+
+.planilla-table tbody tr:hover td.col-nro,
+.planilla-table tbody tr:hover td.col-nombre {
+  background: #f8fafc;
 }
 
 .worker-cell {

@@ -33,3 +33,4 @@ def reiniciar_base_de_datos():
 
 if __name__ == "__main__":
     reiniciar_base_de_datos()
+
