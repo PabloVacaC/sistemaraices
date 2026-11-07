@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, timezone, timedelta
 from decimal import Decimal
 from typing import List, Optional, Dict, Any
 from sqlalchemy.orm import Session, joinedload
@@ -799,7 +799,7 @@ def cerrar_planilla_periodo(
     cierre.observaciones = req.observaciones
     cierre.usuario_ci = usuario_ci
     cierre.usuario_nombre = usuario_nombre
-    cierre.fecha_cierre = datetime.now()
+    cierre.fecha_cierre = datetime.now(timezone(timedelta(hours=-4)))
 
     periodo.estado = "CERRADO"
     db.commit()

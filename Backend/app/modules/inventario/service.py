@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, timezone, timedelta
 from typing import List, Optional, Tuple
 from decimal import Decimal
 from sqlalchemy.orm import Session
@@ -42,7 +42,8 @@ def generar_codigo_producto(db: Session) -> str:
 
 def generar_comprobante(db: Session, prefijo: str) -> str:
     """Genera comprobantes correlativos tipo: CMP-202610-0001, MOV-202610-0001, GAS-202610-0001"""
-    now = datetime.now()
+    # Zona horaria Bolivia (UTC-4)
+    now = datetime.now(timezone(timedelta(hours=-4)))
     ym = now.strftime("%Y%m")
 
     total = 0

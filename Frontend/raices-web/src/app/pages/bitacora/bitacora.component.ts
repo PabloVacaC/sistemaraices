@@ -56,7 +56,7 @@ import { Bitacora } from '../../core/models/types';
                   <td>
                     <div class="timestamp-cell">
                       <strong>{{ b.fecha }}</strong>
-                      <small>{{ b.hora }}</small>
+                      <small>{{ formatHora(b.hora) }}</small>
                     </div>
                   </td>
                   <td>
@@ -232,6 +232,12 @@ export class BitacoraComponent implements OnInit {
   cambiarPagina(p: number): void {
     if (p < 1) return;
     this.cargarBitacora(p);
+  }
+
+  formatHora(hora: string | null | undefined): string {
+    if (!hora) return '--:--:--';
+    // Si viene con microsegundos (ej: "15:30:00.123456"), se recorta a HH:MM:SS
+    return hora.split('.')[0];
   }
 
   getAccionBadgeClass(accion: string): string {

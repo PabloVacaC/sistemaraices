@@ -8,6 +8,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-1234}
       POSTGRES_DB: ${POSTGRES_DB:-sistemraices_db}
+      TZ: "America/La_Paz"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
@@ -28,6 +29,7 @@ services:
     container_name: raices_backend
     restart: always
     environment:
+      TZ: "America/La_Paz"
       APP_NAME: ${APP_NAME:-SISTEMAS_RAICES}
       DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-1234}@db:5432/${POSTGRES_DB:-sistemraices_db}}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:-QpJ5nbWbfUVcPNo7uVEDGWsGRNsS7ruIHAK8W5nr-8Ks1vdhBgSDkbYJZ4XztZjM}
@@ -49,6 +51,8 @@ services:
       dockerfile: Dockerfile
     container_name: raices_frontend
     restart: always
+    environment:
+      TZ: "America/La_Paz"
     ports:
       - "80:80"
     depends_on:

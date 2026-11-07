@@ -1,7 +1,19 @@
 import calendar
-from datetime import date, time, datetime
+from datetime import date, time, datetime, timezone, timedelta
 from typing import Optional, List
 from decimal import Decimal
+
+# Zona horaria oficial de Bolivia: UTC-4 (America/La_Paz)
+TZ_BOLIVIA = timezone(timedelta(hours=-4))
+
+def get_bolivia_now() -> datetime:
+    return datetime.now(TZ_BOLIVIA)
+
+def get_bolivia_date() -> date:
+    return datetime.now(TZ_BOLIVIA).date()
+
+def get_bolivia_time() -> time:
+    return datetime.now(TZ_BOLIVIA).time().replace(microsecond=0)
 from sqlalchemy import (
     Column,
     Integer,
@@ -170,9 +182,9 @@ class Bitacora(Base):
     __tablename__ = "bitacora"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    fecha: Mapped[date] = mapped_column(Date, default=date.today, nullable=False, index=True)
+    fecha: Mapped[date] = mapped_column(Date, default=get_bolivia_date, nullable=False, index=True)
     hora: Mapped[time] = mapped_column(
-        Time, default=lambda: datetime.now().time(), nullable=False
+        Time, default=get_bolivia_time, nullable=False
     )
     modulo: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
     accion: Mapped[str] = mapped_column(String(50), nullable=False)
@@ -602,8 +614,8 @@ class MovimientoAlmacen(Base):
     stock_resultante: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)
     motivo: Mapped[str] = mapped_column(Text, nullable=False)
     observaciones: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    fecha_movimiento: Mapped[date] = mapped_column(Date, default=date.today, nullable=False, index=True)
-    hora_movimiento: Mapped[time] = mapped_column(Time, default=lambda: datetime.now().time(), nullable=False)
+    fecha_movimiento: Mapped[date] = mapped_column(Date, default=get_bolivia_date, nullable=False, index=True)
+    hora_movimiento: Mapped[time] = mapped_column(Time, default=get_bolivia_time, nullable=False)
     estado: Mapped[str] = mapped_column(String(30), default="CONFIRMADO", nullable=False, index=True)  # CONFIRMADO, ANULADO, REVERTIDO
     motivo_anulacion: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     fecha_creacion: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
