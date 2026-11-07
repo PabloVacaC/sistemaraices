@@ -164,3 +164,25 @@ def editar_anticipo_rider(
     return service.editar_anticipo_rider(
         db, anticipo_rider_id=anticipo_rider_id, datos=datos, usuario_ci=current_user.ci
     )
+
+
+# =========================================================================
+# REINICIO Y LIMPIEZA DE FILA DE PLANILLA
+# =========================================================================
+@router.post("/limpiar-fila/{periodo_id}/{trabajador_id}")
+def limpiar_fila_trabajador(
+    periodo_id: int,
+    trabajador_id: int,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+):
+    """
+    Borra todos los pagos, anticipos, vales rider, descuentos y ajustes manuales
+    de un trabajador para el período actual, dejándolo limpio como al inicio de mes.
+    """
+    return service.limpiar_fila_trabajador(
+        db,
+        periodo_id=periodo_id,
+        trabajador_id=trabajador_id,
+        usuario_ci=current_user.ci,
+    )

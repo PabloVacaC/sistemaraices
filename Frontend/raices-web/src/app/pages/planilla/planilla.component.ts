@@ -135,6 +135,11 @@ export class PlanillaComponent implements OnInit {
   // Modal: Edición Integral de Fila de Planilla
   showModalEditarFila = signal<boolean>(false);
   filaEnEdicion = signal<PlanillaFila | null>(null);
+
+  // Modal Limpiar Fila (Reinicio a inicio de mes)
+  showModalLimpiarFila = signal<boolean>(false);
+  selectedFilaLimpiar = signal<PlanillaFila | null>(null);
+  loadingLimpiarFila = signal<boolean>(false);
   anticiposFilaEdicionList = signal<Anticipo[]>([]);
   anticiposRiderFilaEdicionList = signal<AnticipoRider[]>([]);
   descuentosFilaEdicionList = signal<Descuento[]>([]);
@@ -1358,5 +1363,44 @@ export class PlanillaComponent implements OnInit {
   // ==========================================
   imprimirPlanilla() {
     window.print();
+  }
+
+  // ==========================================
+  // GESTIÓN DE LIMPIEZA DE FILA (INICIO DE MES)
+  // ==========================================
+  abrirModalLimpiarFila(fila: PlanillaFila | null | undefined) {
+    if (!fila) return;
+    if (this.planilla()?.estado_periodo === 'CERRADO') {
+      this.toast.error('No se puede limpiar una fila en una planilla que ya está cerrada.');
+      return;
+    }
+    this.selectedFilaLimpiar.set(fila);
+    this.showModalLimpiarFila.set(true);
+  }
+
+  cerrarModalLimpiarFila() {
+    this.showModalLimpiarFila.set(false);
+    this.selectedFilaLimpiar.set(null);
+    this.loadingLimpiarFila.set(false);
+  }
+
+  ejecutarLimpiarFila() {
+    const fila = this.selectedFilaLimpiar();
+    const periodoId = this.selectedPeriodoId();
+    if (!fila || !periodoId) return;
+
+    this.loadingLimpiarFila.set(true);
+    this.dataService.limpiarFilaPlanilla(periodoId, fila.trabajador_id).subscribe({
+      next: (res) => {
+        this.toast.success(res.mensaje || `Fila de ${fila.nombre_completo} limpiada correctamente.`);
+        this.cerrarModalLimpiarFila();
+        this.showModalEditarFila.set(false);
+        this.cargarPlanilla();
+      },
+      error: (err) => {
+        this.toast.error(err.error?.detail || 'Error al limpiar la fila del trabajador.');
+        this.loadingLimpiarFila.set(false);
+      }
+    });
   }
 }

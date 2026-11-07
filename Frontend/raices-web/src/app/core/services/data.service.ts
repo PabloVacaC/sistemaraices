@@ -486,6 +486,12 @@ export class DataService {
     });
   }
 
+  limpiarFilaPlanilla(periodoId: number, trabajadorId: number): Observable<any> {
+    return this.http.post<any>(`${this.API_URL}/planilla/limpiar-fila/${periodoId}/${trabajadorId}`, {}, {
+      headers: this.auth.getHeaders()
+    });
+  }
+
   getDescuentos(periodoId: number, trabajadorId?: number): Observable<Descuento[]> {
     let params: any = { periodo_id: periodoId };
     if (trabajadorId) {

@@ -2,7 +2,7 @@ from datetime import date, datetime, timezone, timedelta
 from decimal import Decimal
 from typing import List, Optional, Dict, Any
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import select, func, and_, or_, desc
+from sqlalchemy import select, func, and_, or_, desc, delete
 from fastapi import HTTPException, status
 
 from app.models.entities import (
@@ -1268,3 +1268,151 @@ def editar_anticipo_rider(
         usuario_id=rider.usuario_id,
         usuario_nombre=rider.usuario_nombre,
     )
+
+
+def limpiar_fila_trabajador(
+    db: Session,
+    periodo_id: int,
+    trabajador_id: int,
+    usuario_ci: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    Borra todos los pagos, anticipos, vales rider, descuentos y ajustes de días
+    de un trabajador para el período indicado, dejándolo completamente limpio
+    como al inicio de mes.
+    """
+    # 1. Validar período
+    periodo = db.execute(
+        select(PeriodoSalarial).where(PeriodoSalarial.id == periodo_id)
+    ).scalars().first()
+    if not periodo:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Período salarial con ID {periodo_id} no encontrado.",
+        )
+
+    if periodo.estado == "CERRADO":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No se puede limpiar una fila en un período salarial que ya está cerrado.",
+        )
+
+    # 2. Validar trabajador
+    trabajador = db.execute(
+        select(Trabajador).where(Trabajador.id == trabajador_id)
+    ).scalars().first()
+    if not trabajador:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Trabajador con ID {trabajador_id} no encontrado.",
+        )
+
+    nombre_completo = f"{trabajador.apellidos} {trabajador.nombres}".strip()
+
+    # 3. Eliminar Pagos de Liquidación y Liquidaciones del trabajador en este período
+    liqs = db.execute(
+        select(Liquidacion).where(
+            Liquidacion.periodo_id == periodo_id,
+            Liquidacion.trabajador_id == trabajador_id,
+        )
+    ).scalars().all()
+
+    liq_ids = [l.id for l in liqs]
+    num_pagos = 0
+    if liq_ids:
+        num_pagos = db.execute(
+            delete(PagoLiquidacion).where(PagoLiquidacion.liquidacion_id.in_(liq_ids))
+        ).rowcount
+        db.execute(
+            delete(Liquidacion).where(Liquidacion.id.in_(liq_ids))
+        )
+
+    # 4. Eliminar Anticipos ordinarios del trabajador en este período
+    num_anticipos = db.execute(
+        delete(Anticipo).where(
+            Anticipo.periodo_id == periodo_id,
+            Anticipo.trabajador_id == trabajador_id,
+        )
+    ).rowcount
+
+    # 5. Eliminar Anticipos Rider del trabajador en este período
+    num_riders = db.execute(
+        delete(AnticipoRider).where(
+            AnticipoRider.periodo_id == periodo_id,
+            AnticipoRider.trabajador_id == trabajador_id,
+        )
+    ).rowcount
+
+    # 6. Eliminar Descuentos del trabajador en este período
+    num_descuentos = db.execute(
+        delete(Descuento).where(
+            Descuento.periodo_id == periodo_id,
+            Descuento.trabajador_id == trabajador_id,
+        )
+    ).rowcount
+
+    # 7. Restablecer días trabajados en PlanillaDetalle al cálculo automático inicial
+    det = db.execute(
+        select(PlanillaDetalle).where(
+            PlanillaDetalle.periodo_id == periodo_id,
+            PlanillaDetalle.trabajador_id == trabajador_id,
+        )
+    ).scalars().first()
+
+    dias_auto = calcular_dias_trabajados_automaticos(trabajador, periodo)
+    haber_basico = trabajador.sueldoBase
+    total_ganado = calcular_total_ganado(haber_basico, dias_auto)
+
+    if det:
+        det.haber_basico = haber_basico
+        det.dias_trabajados = dias_auto
+        det.dias_manual = False
+        det.total_ganado = total_ganado
+        det.observaciones = None
+    else:
+        nuevo_det = PlanillaDetalle(
+            periodo_id=periodo_id,
+            trabajador_id=trabajador_id,
+            haber_basico=haber_basico,
+            dias_trabajados=dias_auto,
+            dias_manual=False,
+            total_ganado=total_ganado,
+        )
+        db.add(nuevo_det)
+
+    db.commit()
+
+    # 8. Registrar en bitácora con zona horaria de Bolivia
+    resumen_eliminados = []
+    if num_pagos > 0:
+        resumen_eliminados.append(f"{num_pagos} pago(s) de liquidación")
+    if len(liq_ids) > 0:
+        resumen_eliminados.append(f"{len(liq_ids)} liquidación(es)")
+    if num_anticipos > 0:
+        resumen_eliminados.append(f"{num_anticipos} anticipo(s)")
+    if num_riders > 0:
+        resumen_eliminados.append(f"{num_riders} anticipo(s) rider")
+    if num_descuentos > 0:
+        resumen_eliminados.append(f"{num_descuentos} descuento(s)")
+
+    detalle_str = ", ".join(resumen_eliminados) if resumen_eliminados else "sin movimientos previos"
+
+    registrar_bitacora(
+        db=db,
+        modulo="PLANILLA",
+        accion="LIMPIAR_FILA",
+        descripcion=(
+            f"Se limpiaron y restablecieron todos los datos a inicio de mes para el trabajador "
+            f"{nombre_completo} (ID: {trabajador_id}) en el período {periodo.descripcion} (ID: {periodo_id}). "
+            f"Elementos eliminados: {detalle_str}. Días trabajados restablecidos a: {dias_auto}."
+        ),
+        usuario_ci=usuario_ci,
+    )
+
+    return {
+        "mensaje": f"Fila de {nombre_completo} limpiada exitosamente. Se restableció como a inicio de mes.",
+        "trabajador_id": trabajador_id,
+        "periodo_id": periodo_id,
+        "dias_trabajados": dias_auto,
+        "total_ganado": float(total_ganado),
+    }
