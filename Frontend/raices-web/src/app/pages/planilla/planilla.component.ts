@@ -12,6 +12,7 @@ import {
   PlanillaCierre,
   CerrarPlanillaPayload,
   ActualizarDiasTrabajadosPayload,
+  ActualizarFilaPlanillaPayload,
   Descuento,
   DescuentoCreatePayload,
   Anticipo,
@@ -130,6 +131,27 @@ export class PlanillaComponent implements OnInit {
     observaciones: '',
     confirmar_excedente: false
   };
+
+  // Modal: Edición Integral de Fila de Planilla
+  showModalEditarFila = signal<boolean>(false);
+  filaEnEdicion = signal<PlanillaFila | null>(null);
+  anticiposFilaEdicionList = signal<Anticipo[]>([]);
+  anticiposRiderFilaEdicionList = signal<AnticipoRider[]>([]);
+  descuentosFilaEdicionList = signal<Descuento[]>([]);
+  editarFilaForm = {
+    haber_basico: 0,
+    dias_trabajados: 30,
+    pago_quincena: 0,
+    observaciones: ''
+  };
+
+  get totalGanadoCalculadoEdicion(): number {
+    const haber = Number(this.editarFilaForm.haber_basico) || 0;
+    const dias = Number(this.editarFilaForm.dias_trabajados) || 0;
+    if (dias >= 30) return haber;
+    if (dias <= 0) return 0;
+    return Math.round(((haber / 30) * dias) * 100) / 100;
+  }
 
   showModalCerrarPlanilla = signal<boolean>(false);
   modoVerCierre = signal<boolean>(false);
@@ -575,6 +597,380 @@ export class PlanillaComponent implements OnInit {
         } else {
           this.toast.error(msg || 'Error al registrar anticipo');
         }
+        this.loading.set(false);
+      }
+    });
+  }
+
+  anularAnticipo(a: Anticipo) {
+    const motivo = prompt(`¿Estás seguro de anular el anticipo ${a.numero_comprobante} por Bs ${a.importe}?\nIngresa el motivo (quedará en Bs 0.00):`, 'Anulado por corrección en planilla');
+    if (!motivo || !motivo.trim()) return;
+
+    this.loading.set(true);
+    this.dataService.anularAnticipo(a.id, motivo.trim()).subscribe({
+      next: () => {
+        this.toast.success(`Anticipo ${a.numero_comprobante} anulado.`);
+        const fila = this.selectedFilaAnticipos();
+        if (fila) {
+          this.cargarAnticiposDeFila(fila.trabajador_id);
+        }
+        this.cargarPlanilla();
+        this.loading.set(false);
+      },
+      error: (err: any) => {
+        const msg = err?.error?.detail || 'Error al anular anticipo';
+        this.toast.error(msg);
+        this.loading.set(false);
+      }
+    });
+  }
+
+  editarAnticipo(a: Anticipo) {
+    const nuevoMontoStr = prompt(`Modificar importe para el anticipo ${a.numero_comprobante}:\nMonto actual: Bs ${a.importe}\nIngresa el nuevo monto en Bs (o 0 para anular):`, String(a.importe));
+    if (nuevoMontoStr === null) return;
+
+    const nuevoMonto = parseFloat(nuevoMontoStr);
+    if (isNaN(nuevoMonto) || nuevoMonto < 0) {
+      this.toast.warning('Ingresa un monto válido.');
+      return;
+    }
+
+    this.loading.set(true);
+    this.dataService.editarAnticipo(a.id, nuevoMonto, 'Modificado por corrección en planilla').subscribe({
+      next: () => {
+        this.toast.success(`Anticipo ${a.numero_comprobante} actualizado.`);
+        const fila = this.selectedFilaAnticipos();
+        if (fila) {
+          this.cargarAnticiposDeFila(fila.trabajador_id);
+        }
+        this.cargarPlanilla();
+        this.loading.set(false);
+      },
+      error: (err: any) => {
+        const msg = err?.error?.detail || 'Error al editar anticipo';
+        this.toast.error(msg);
+        this.loading.set(false);
+      }
+    });
+  }
+
+  // ==========================================
+  // GESTIÓN INTEGRAL: EDITAR FILA DE PLANILLA
+  // ==========================================
+  abrirModalEditarFila(fila: PlanillaFila) {
+    this.filaEnEdicion.set(fila);
+    this.editarFilaForm = {
+      haber_basico: Number(fila.haber_basico) || 0,
+      dias_trabajados: Number(fila.dias_trabajados) || 30,
+      pago_quincena: Number(fila.pago_quincena) || 0,
+      observaciones: ''
+    };
+    const pid = this.selectedPeriodoId();
+    if (pid) {
+      this.dataService.getAnticipos(pid).subscribe({
+        next: (list) => {
+          this.anticiposFilaEdicionList.set(
+            list.filter(a => a.trabajador_id === fila.trabajador_id && a.estado !== 'ANULADO')
+          );
+        }
+      });
+      this.dataService.getAnticiposRider(pid, fila.trabajador_id).subscribe({
+        next: (list) => {
+          this.anticiposRiderFilaEdicionList.set(
+            list.filter(ar => ar.estado !== 'ANULADO')
+          );
+        }
+      });
+      this.dataService.getDescuentos(pid, fila.trabajador_id).subscribe({
+        next: (list) => {
+          this.descuentosFilaEdicionList.set(
+            list.filter(d => d.estado !== 'ANULADO')
+          );
+        }
+      });
+    }
+    this.showModalEditarFila.set(true);
+  }
+
+  guardarEdicionFila() {
+    const fila = this.filaEnEdicion();
+    const pid = this.selectedPeriodoId();
+    if (!fila || !pid) return;
+
+    const haber = Number(this.editarFilaForm.haber_basico);
+    if (isNaN(haber) || haber <= 0) {
+      this.toast.warning('El haber básico debe ser mayor a Bs 0.');
+      return;
+    }
+
+    const dias = Number(this.editarFilaForm.dias_trabajados);
+    if (isNaN(dias) || dias < 0 || dias > 30) {
+      this.toast.warning('Los días trabajados deben estar entre 0 y 30.');
+      return;
+    }
+
+    const quincena = Number(this.editarFilaForm.pago_quincena);
+    if (isNaN(quincena) || quincena < 0) {
+      this.toast.warning('El pago de quincena no puede ser negativo.');
+      return;
+    }
+
+    this.loading.set(true);
+    const payload: ActualizarFilaPlanillaPayload = {
+      trabajador_id: fila.trabajador_id,
+      periodo_id: pid,
+      haber_basico: haber,
+      dias_trabajados: dias,
+      pago_quincena: quincena,
+      observaciones: this.editarFilaForm.observaciones || undefined
+    };
+
+    this.dataService.actualizarFilaPlanilla(payload).subscribe({
+      next: () => {
+        this.toast.success(`Fila actualizada correctamente para ${fila.nombre_completo}`);
+        this.showModalEditarFila.set(false);
+        this.cargarPlanilla();
+        this.loading.set(false);
+      },
+      error: (err: any) => {
+        const msg = err?.error?.detail || 'Error al actualizar fila de planilla';
+        this.toast.error(msg);
+        this.loading.set(false);
+      }
+    });
+  }
+
+  dejarQuincenaEnCero() {
+    if (confirm('¿Confirmas dejar el pago de quincena en Bs 0.00 (PENDIENTE)?')) {
+      this.editarFilaForm.pago_quincena = 0;
+    }
+  }
+
+  anularAnticipoDesdeFila(a: Anticipo) {
+    const motivo = prompt(`¿Estás seguro de anular el anticipo ${a.numero_comprobante} por Bs ${a.importe}?\nIngresa el motivo (quedará en Bs 0.00):`, 'Anulado por corrección en planilla');
+    if (!motivo || !motivo.trim()) return;
+
+    this.loading.set(true);
+    this.dataService.anularAnticipo(a.id, motivo.trim()).subscribe({
+      next: () => {
+        this.toast.success(`Anticipo ${a.numero_comprobante} anulado.`);
+        const fila = this.filaEnEdicion();
+        const pid = this.selectedPeriodoId();
+        if (fila && pid) {
+          this.dataService.getAnticipos(pid).subscribe({
+            next: (list) => {
+              this.anticiposFilaEdicionList.set(
+                list.filter(ant => ant.trabajador_id === fila.trabajador_id && ant.estado !== 'ANULADO')
+              );
+            }
+          });
+        }
+        this.cargarPlanilla();
+        this.loading.set(false);
+      },
+      error: (err: any) => {
+        const msg = err?.error?.detail || 'Error al anular anticipo';
+        this.toast.error(msg);
+        this.loading.set(false);
+      }
+    });
+  }
+
+  editarMontoAnticipo(a: Anticipo) {
+    const nuevoMontoStr = prompt(`Modificar importe para el anticipo ${a.numero_comprobante}:\nMonto actual: Bs ${a.importe}\nIngresa el nuevo monto en Bs (o 0 para anular):`, String(a.importe));
+    if (nuevoMontoStr === null) return;
+
+    const nuevoMonto = parseFloat(nuevoMontoStr);
+    if (isNaN(nuevoMonto) || nuevoMonto < 0) {
+      this.toast.warning('Ingresa un monto válido.');
+      return;
+    }
+
+    this.loading.set(true);
+    this.dataService.editarAnticipo(a.id, nuevoMonto, 'Modificado por corrección en planilla').subscribe({
+      next: () => {
+        this.toast.success(`Anticipo ${a.numero_comprobante} actualizado.`);
+        const fila = this.filaEnEdicion();
+        const pid = this.selectedPeriodoId();
+        if (fila && pid) {
+          this.dataService.getAnticipos(pid).subscribe({
+            next: (list) => {
+              this.anticiposFilaEdicionList.set(
+                list.filter(ant => ant.trabajador_id === fila.trabajador_id && ant.estado !== 'ANULADO')
+              );
+            }
+          });
+        }
+        this.cargarPlanilla();
+        this.loading.set(false);
+      },
+      error: (err: any) => {
+        const msg = err?.error?.detail || 'Error al editar anticipo';
+        this.toast.error(msg);
+        this.loading.set(false);
+      }
+    });
+  }
+
+  anularTodosLosAnticiposFila() {
+    const list = this.anticiposFilaEdicionList();
+    if (!list || list.length === 0) {
+      this.toast.info('No hay anticipos activos para anular.');
+      return;
+    }
+    if (!confirm(`¿Estás seguro de anular TODOS los ${list.length} anticipos de este trabajador y dejarlos en Bs 0.00?`)) {
+      return;
+    }
+
+    this.loading.set(true);
+    let completados = 0;
+    list.forEach(a => {
+      this.dataService.anularAnticipo(a.id, 'Anulado masivamente por corrección en planilla').subscribe({
+        next: () => {
+          completados++;
+          if (completados >= list.length) {
+            this.toast.success('Todos los anticipos fueron anulados (total Bs 0.00).');
+            const fila = this.filaEnEdicion();
+            const pid = this.selectedPeriodoId();
+            if (fila && pid) {
+              this.dataService.getAnticipos(pid).subscribe({
+                next: (res) => {
+                  this.anticiposFilaEdicionList.set(
+                    res.filter(ant => ant.trabajador_id === fila.trabajador_id && ant.estado !== 'ANULADO')
+                  );
+                }
+              });
+            }
+            this.cargarPlanilla();
+            this.loading.set(false);
+          }
+        },
+        error: () => {
+          completados++;
+          if (completados >= list.length) {
+            this.cargarPlanilla();
+            this.loading.set(false);
+          }
+        }
+      });
+    });
+  }
+
+  anularAnticipoRiderDesdeFila(ar: AnticipoRider) {
+    const motivo = prompt(`¿Estás seguro de anular el anticipo rider ${ar.numero_comprobante} por Bs ${ar.importe}?\nIngresa el motivo (quedará en Bs 0.00):`, 'Anulado por corrección en planilla');
+    if (!motivo || !motivo.trim()) return;
+
+    this.loading.set(true);
+    this.dataService.anularAnticipoRider(ar.id, motivo.trim()).subscribe({
+      next: () => {
+        this.toast.success(`Anticipo rider ${ar.numero_comprobante} anulado.`);
+        const fila = this.filaEnEdicion();
+        const pid = this.selectedPeriodoId();
+        if (fila && pid) {
+          this.dataService.getAnticiposRider(pid, fila.trabajador_id).subscribe({
+            next: (list) => {
+              this.anticiposRiderFilaEdicionList.set(list.filter(r => r.estado !== 'ANULADO'));
+            }
+          });
+        }
+        this.cargarPlanilla();
+        this.loading.set(false);
+      },
+      error: (err: any) => {
+        const msg = err?.error?.detail || 'Error al anular anticipo rider';
+        this.toast.error(msg);
+        this.loading.set(false);
+      }
+    });
+  }
+
+  editarMontoAnticipoRider(ar: AnticipoRider) {
+    const nuevoMontoStr = prompt(`Modificar importe para el anticipo rider ${ar.numero_comprobante}:\nMonto actual: Bs ${ar.importe}\nIngresa el nuevo monto en Bs (o 0 para anular):`, String(ar.importe));
+    if (nuevoMontoStr === null) return;
+
+    const nuevoMonto = parseFloat(nuevoMontoStr);
+    if (isNaN(nuevoMonto) || nuevoMonto < 0) {
+      this.toast.warning('Ingresa un monto válido.');
+      return;
+    }
+
+    this.loading.set(true);
+    this.dataService.editarAnticipoRider(ar.id, nuevoMonto, 'Modificado por corrección en planilla').subscribe({
+      next: () => {
+        this.toast.success(`Anticipo rider ${ar.numero_comprobante} actualizado.`);
+        const fila = this.filaEnEdicion();
+        const pid = this.selectedPeriodoId();
+        if (fila && pid) {
+          this.dataService.getAnticiposRider(pid, fila.trabajador_id).subscribe({
+            next: (list) => {
+              this.anticiposRiderFilaEdicionList.set(list.filter(r => r.estado !== 'ANULADO'));
+            }
+          });
+        }
+        this.cargarPlanilla();
+        this.loading.set(false);
+      },
+      error: (err: any) => {
+        const msg = err?.error?.detail || 'Error al editar anticipo rider';
+        this.toast.error(msg);
+        this.loading.set(false);
+      }
+    });
+  }
+
+  anularDescuentoDesdeFila(d: Descuento) {
+    const motivo = prompt(`¿Motivo de anulación para el descuento ${d.numero_comprobante}?`, 'Anulado por corrección en planilla');
+    if (!motivo || !motivo.trim()) return;
+
+    this.loading.set(true);
+    this.dataService.anularDescuento(d.id, motivo.trim()).subscribe({
+      next: () => {
+        this.toast.success(`Descuento ${d.numero_comprobante} anulado.`);
+        const fila = this.filaEnEdicion();
+        const pid = this.selectedPeriodoId();
+        if (fila && pid) {
+          this.dataService.getDescuentos(pid, fila.trabajador_id).subscribe({
+            next: (list) => {
+              this.descuentosFilaEdicionList.set(list.filter(desc => desc.estado !== 'ANULADO'));
+            }
+          });
+        }
+        this.cargarPlanilla();
+        this.loading.set(false);
+      },
+      error: (err: any) => {
+        const msg = err?.error?.detail || 'Error al anular descuento';
+        this.toast.error(msg);
+        this.loading.set(false);
+      }
+    });
+  }
+
+  anularPagoQuincenaActual() {
+    const fila = this.selectedFilaQuincena();
+    const pid = this.selectedPeriodoId();
+    if (!fila || !pid) return;
+
+    if (!confirm(`¿Estás seguro de anular el pago de quincena para ${fila.nombre_completo} y dejarlo en Bs 0.00 (PENDIENTE)?`)) {
+      return;
+    }
+
+    this.loading.set(true);
+    this.showModalPagoQuincena.set(false);
+    this.dataService.actualizarFilaPlanilla({
+      trabajador_id: fila.trabajador_id,
+      periodo_id: pid,
+      pago_quincena: 0,
+      observaciones: 'Quincena anulada por corrección en planilla'
+    }).subscribe({
+      next: () => {
+        this.toast.success(`Pago de quincena anulado para ${fila.nombre_completo}. Estado restablecido a PENDIENTE.`);
+        this.cargarPlanilla();
+        this.loading.set(false);
+      },
+      error: (err: any) => {
+        const msg = err?.error?.detail || 'Error al anular pago de quincena';
+        this.toast.error(msg);
         this.loading.set(false);
       }
     });

@@ -1363,3 +1363,60 @@
   line-height: 1.4;
 }
 
+/* =========================================================================
+   ESTILOS DE EDICIÓN DE FILA DE PLANILLA
+   ========================================================================= */
+.worker-subline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.btn-edit-row-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #334155;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  line-height: 1.2;
+}
+
+.btn-edit-row-chip:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+  border-color: #94a3b8;
+}
+
+.col-acciones {
+  min-width: 90px;
+  text-align: center;
+}
+
+.modal-edit-fila-card {
+  max-width: 680px;
+  width: 95%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-body-scroll {
+  overflow-y: auto;
+  max-height: calc(88vh - 140px);
+  padding-right: 4px;
+}
+
+.row-actions-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+

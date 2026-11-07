@@ -33,6 +33,7 @@ import {
   PlanillaCierre,
   CerrarPlanillaPayload,
   ActualizarDiasTrabajadosPayload,
+  ActualizarFilaPlanillaPayload,
   Descuento,
   DescuentoCreatePayload,
   AnticipoRider,
@@ -445,6 +446,30 @@ export class DataService {
 
   actualizarDiasTrabajados(payload: ActualizarDiasTrabajadosPayload): Observable<PlanillaFila> {
     return this.http.put<PlanillaFila>(`${this.API_URL}/planilla/dias-trabajados`, payload, {
+      headers: this.auth.getHeaders()
+    });
+  }
+
+  actualizarFilaPlanilla(payload: ActualizarFilaPlanillaPayload): Observable<PlanillaFila> {
+    return this.http.put<PlanillaFila>(`${this.API_URL}/planilla/fila`, payload, {
+      headers: this.auth.getHeaders()
+    });
+  }
+
+  editarAnticipo(id: number, importe: number, observaciones?: string): Observable<any> {
+    return this.http.patch(`${this.API_URL}/pagos/anticipos/${id}`, { importe, observaciones }, {
+      headers: this.auth.getHeaders()
+    });
+  }
+
+  editarAnticipoRider(id: number, importe: number, observaciones?: string): Observable<AnticipoRider> {
+    return this.http.patch<AnticipoRider>(`${this.API_URL}/planilla/anticipos-rider/${id}`, { importe, observaciones }, {
+      headers: this.auth.getHeaders()
+    });
+  }
+
+  anularPagoLiquidacion(pagoId: number, motivo: string): Observable<any> {
+    return this.http.patch(`${this.API_URL}/pagos/liquidaciones/pagos/${pagoId}/anular`, { motivo }, {
       headers: this.auth.getHeaders()
     });
   }

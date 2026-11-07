@@ -10,6 +10,7 @@ from app.modules.pagos.schemas import (
     PeriodoSalarialCreate,
     AnticipoOut,
     AnticipoCreate,
+    AnticipoUpdateIn,
     LiquidacionOut,
     LiquidacionCreate,
     PagoLiquidacionOut,
@@ -113,6 +114,17 @@ def anular_anticipo(
     current_user: Usuario = Depends(get_current_user),
 ):
     return service.anular_anticipo(db, id, motivo=payload.motivo, usuario_ci=current_user.ci)
+
+
+@router.patch("/anticipos/{id}", response_model=AnticipoOut)
+def editar_anticipo(
+    id: int,
+    payload: AnticipoUpdateIn,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+):
+    """Permite editar el importe u observaciones de un anticipo o dejarlo en 0."""
+    return service.editar_anticipo(db, id, payload, usuario_ci=current_user.ci)
 
 
 # =========================================================================

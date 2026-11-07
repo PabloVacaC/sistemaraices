@@ -496,6 +496,7 @@ export interface PlanillaFila {
   dias_manual: boolean;
   total_ganado: number;
   pago_quincena: number;
+  pago_quincena_id?: number;
   estado_quincena: string;
   quincena_sugerida: number;
   supera_quincena: boolean;
@@ -598,6 +599,15 @@ export interface ActualizarDiasTrabajadosPayload {
   trabajador_id: number;
   periodo_id: number;
   dias_trabajados: number;
+  observaciones?: string;
+}
+
+export interface ActualizarFilaPlanillaPayload {
+  trabajador_id: number;
+  periodo_id: number;
+  haber_basico?: number;
+  dias_trabajados?: number;
+  pago_quincena?: number;
   observaciones?: string;
 }
 

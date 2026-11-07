@@ -43,6 +43,11 @@ class AnticipoRiderCreate(BaseModel):
     observaciones: Optional[str] = None
 
 
+class AnticipoRiderUpdateIn(BaseModel):
+    importe: Decimal = Field(..., ge=0, description="Nuevo importe (0 para anular/dejar en cero)")
+    observaciones: Optional[str] = None
+
+
 class AnticipoRiderOut(BaseModel):
     id: int
     numero_comprobante: str
@@ -71,6 +76,16 @@ class ActualizarDiasTrabajadosIn(BaseModel):
     observaciones: Optional[str] = None
 
 
+# --- EDICIÓN COMPLETA DE FILA DE PLANILLA ---
+class ActualizarFilaPlanillaIn(BaseModel):
+    periodo_id: int
+    trabajador_id: int
+    haber_basico: Optional[Decimal] = Field(None, gt=0, description="Haber básico mensual computable")
+    dias_trabajados: Optional[int] = Field(None, ge=0, le=30, description="Días trabajados (0 a 30)")
+    pago_quincena: Optional[Decimal] = Field(None, ge=0, description="Nuevo monto de quincena o 0 para anular/eliminar")
+    observaciones: Optional[str] = None
+
+
 # --- FILA DE LA PLANILLA (13 COLUMNAS EXACTAS DE RF-9) ---
 class PlanillaFilaOut(BaseModel):
     # Col 1: Numeración consecutiva visual
@@ -95,6 +110,7 @@ class PlanillaFilaOut(BaseModel):
     total_ganado: Decimal
     # Col 9: Pago de quincena
     pago_quincena: Decimal
+    pago_quincena_id: Optional[int] = None
     estado_quincena: str  # LIQUIDADA, PENDIENTE
     quincena_sugerida: Decimal
     supera_quincena: bool = False

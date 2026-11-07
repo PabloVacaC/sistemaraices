@@ -20,6 +20,7 @@ from app.models.entities import (
 )
 from app.modules.pagos.schemas import (
     AnticipoCreate,
+    AnticipoUpdateIn,
     LiquidacionCreate,
     PagoLiquidacionCreate,
     PagoParcialDirectoCreate,
@@ -1615,6 +1616,68 @@ def anular_anticipo(db: Session, anticipo_id: int, motivo: str, usuario_ci: Opti
         usuario_ci=usuario_ci,
     )
     return {"mensaje": f"Anticipo {anticipo.numero_comprobante} anulado exitosamente."}
+
+
+def editar_anticipo(
+    db: Session, anticipo_id: int, datos: AnticipoUpdateIn, usuario_ci: Optional[str] = None
+) -> AnticipoOut:
+    """Modifica el importe u observaciones de un anticipo. Si el importe es 0, lo anula justificadamente."""
+    anticipo = db.execute(select(Anticipo).where(Anticipo.id == anticipo_id)).scalars().first()
+    if not anticipo:
+        raise HTTPException(status_code=404, detail="Anticipo no encontrado.")
+    if anticipo.estado == "ANULADO":
+        raise HTTPException(status_code=400, detail="El anticipo ya se encuentra anulado.")
+    if anticipo.periodo and anticipo.periodo.estado == "CERRADO":
+        raise HTTPException(status_code=400, detail="El período salarial está CERRADO.")
+
+    if datos.importe <= Decimal("0.00"):
+        anular_anticipo(db, anticipo_id, motivo=datos.observaciones or "Dejado en Bs 0.00 por edición", usuario_ci=usuario_ci)
+        db.refresh(anticipo)
+        return AnticipoOut.model_validate(anticipo)
+
+    monto_anterior = anticipo.importe
+    anticipo.importe = datos.importe
+    if datos.observaciones is not None:
+        anticipo.observaciones = datos.observaciones
+
+    db.flush()
+
+    liq = db.execute(
+        select(Liquidacion).where(
+            Liquidacion.trabajador_id == anticipo.trabajador_id,
+            Liquidacion.periodo_id == anticipo.periodo_id,
+            Liquidacion.estado != "ANULADO",
+        )
+    ).scalars().first()
+    if liq:
+        total_anticipos = db.scalar(
+            select(func.sum(Anticipo.importe)).where(
+                Anticipo.trabajador_id == anticipo.trabajador_id,
+                Anticipo.periodo_id == anticipo.periodo_id,
+                Anticipo.estado == "PAGADO",
+            )
+        ) or Decimal("0.00")
+        liq.total_anticipos = total_anticipos
+        liq.monto_neto = max(Decimal("0.00"), liq.sueldo_base + liq.ajustes - liq.total_anticipos)
+        liq.saldo_pendiente = max(Decimal("0.00"), liq.monto_neto - liq.monto_pagado)
+        if liq.saldo_pendiente <= 0 and liq.monto_pagado > 0:
+            liq.estado = "LIQUIDADO"
+        elif liq.monto_pagado > 0:
+            liq.estado = "PARCIAL"
+        else:
+            liq.estado = "PENDIENTE"
+
+    db.commit()
+    db.refresh(anticipo)
+
+    registrar_bitacora(
+        db=db,
+        modulo="ANTICIPOS",
+        accion="MODIFICAR",
+        descripcion=f"Se modificó el anticipo {anticipo.numero_comprobante} de Bs {monto_anterior} a Bs {datos.importe}.",
+        usuario_ci=usuario_ci,
+    )
+    return AnticipoOut.model_validate(anticipo)
 
 
 def anular_liquidacion(db: Session, liquidacion_id: int, motivo: str, usuario_ci: Optional[str] = None):

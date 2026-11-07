@@ -33,6 +33,11 @@ class PeriodoSalarialCreate(BaseModel):
 
 
 # --- ANTICIPOS ---
+class AnticipoUpdateIn(BaseModel):
+    importe: Decimal = Field(..., ge=0, description="Nuevo importe del anticipo (0 para anular/dejar en cero)")
+    observaciones: Optional[str] = None
+
+
 class AnticipoCreate(BaseModel):
     trabajador_id: int
     periodo_id: int

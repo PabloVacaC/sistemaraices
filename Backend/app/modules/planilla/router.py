@@ -9,10 +9,12 @@ from app.modules.planilla.schemas import (
     PlanillaMensualOut,
     PlanillaFilaOut,
     ActualizarDiasTrabajadosIn,
+    ActualizarFilaPlanillaIn,
     DescuentoCreate,
     DescuentoOut,
     AnticipoRiderCreate,
     AnticipoRiderOut,
+    AnticipoRiderUpdateIn,
     CerrarPlanillaRequest,
     PlanillaCierreOut,
 )
@@ -43,6 +45,16 @@ def actualizar_dias_trabajados(
 ):
     """Permite ajustar los días trabajados en una planilla abierta y recalcula el total ganado."""
     return service.actualizar_dias_trabajados(db, datos, usuario_ci=current_user.ci)
+
+
+@router.put("/fila", response_model=PlanillaFilaOut)
+def actualizar_fila_planilla(
+    datos: ActualizarFilaPlanillaIn,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+):
+    """Permite editar una fila completa de la planilla (haber básico, días trabajados, quincena, observaciones)."""
+    return service.actualizar_fila_planilla(db, datos, usuario_ci=current_user.ci)
 
 
 @router.post("/cerrar/{periodo_id}")
@@ -138,4 +150,17 @@ def anular_anticipo_rider(
     """Anula de forma justificada un anticipo rider conservando el registro histórico."""
     return service.anular_anticipo_rider(
         db, anticipo_rider_id=anticipo_rider_id, motivo=datos.motivo, usuario_ci=current_user.ci
+    )
+
+
+@router.patch("/anticipos-rider/{anticipo_rider_id}", response_model=AnticipoRiderOut)
+def editar_anticipo_rider(
+    anticipo_rider_id: int,
+    datos: AnticipoRiderUpdateIn,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+):
+    """Permite editar el importe de un anticipo rider o dejarlo en 0."""
+    return service.editar_anticipo_rider(
+        db, anticipo_rider_id=anticipo_rider_id, datos=datos, usuario_ci=current_user.ci
     )

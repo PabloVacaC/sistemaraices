@@ -198,6 +198,7 @@
             <th class="col-ant-desc">Total Ant. y Desc.</th>
             <th class="col-liquido">Líquido Pagable</th>
             <th class="col-anticipo-sig">Anticipo para el Siguiente Mes</th>
+            <th class="col-acciones">Acciones</th>
           </tr>
         </thead>
         <tbody>
@@ -210,7 +211,14 @@
             <td class="col-nombre">
               <div class="worker-cell">
                 <span class="font-bold text-slate-900">{{ f.nombre_completo }}</span>
-                <span class="text-xs text-slate-500">CI: {{ f.ci || 'S/N' }}</span>
+                <div class="worker-subline">
+                  <span class="text-xs text-slate-500">CI: {{ f.ci || 'S/N' }}</span>
+                  @if (planilla()?.estado_periodo === 'ABIERTO') {
+                  <button class="btn-edit-row-chip" (click)="abrirModalEditarFila(f)" title="Editar fila del trabajador (haberes, quincena, anticipos...)">
+                    ✎ Editar Fila
+                  </button>
+                  }
+                </div>
               </div>
             </td>
 
@@ -370,10 +378,21 @@
               <span class="text-slate-400 font-mono">—</span>
               }
             </td>
+
+            <!-- Columna Acciones Rápidas -->
+            <td class="col-acciones">
+              @if (planilla()?.estado_periodo === 'ABIERTO') {
+              <button class="btn btn-xs btn-outline-slate" (click)="abrirModalEditarFila(f)" title="Editar fila completa del trabajador">
+                ✎ Editar
+              </button>
+              } @else {
+              <span class="text-xs text-slate-400">—</span>
+              }
+            </td>
           </tr>
           } @empty {
           <tr>
-            <td colspan="14" class="empty-row">
+            <td colspan="15" class="empty-row">
               No se encontraron trabajadores en este período salarial.
             </td>
           </tr>
@@ -400,6 +419,7 @@
             <td class="font-bold text-purple-900 text-center">
               Bs {{ (planilla()?.totales?.total_anticipos_periodo_siguiente || 0) | number:'1.2-2' }}
             </td>
+            <td>—</td>
           </tr>
         </tfoot>
       </table>
@@ -774,6 +794,7 @@
               <th>Método</th>
               <th>Importe</th>
               <th>Observaciones</th>
+              <th class="text-right">Acción</th>
             </tr>
           </thead>
           <tbody>
@@ -784,10 +805,24 @@
               <td><span class="pill-mini">{{ a.metodo_pago }}</span></td>
               <td class="font-bold text-amber-800">Bs {{ a.importe | number:'1.2-2' }}</td>
               <td class="text-xs text-slate-600">{{ a.observaciones || '—' }}</td>
+              <td class="text-right">
+                @if (planilla()?.estado_periodo === 'ABIERTO') {
+                <div class="row-actions-group justify-end flex items-center gap-1">
+                  <button class="btn btn-xs btn-outline-slate" (click)="editarAnticipo(a)" title="Modificar monto de este anticipo">
+                    ✎
+                  </button>
+                  <button class="btn btn-xs btn-outline-danger" (click)="anularAnticipo(a)" title="Anular anticipo (dejar en Bs 0.00)">
+                    Anular
+                  </button>
+                </div>
+                } @else {
+                <span class="text-xs text-slate-400">—</span>
+                }
+              </td>
             </tr>
             } @empty {
             <tr>
-              <td colspan="5" class="empty-row">No hay anticipos registrados para este trabajador.</td>
+              <td colspan="6" class="empty-row">No hay anticipos registrados para este trabajador.</td>
             </tr>
             }
           </tbody>
@@ -994,6 +1029,19 @@
         Trabajador: <strong>{{ selectedFilaQuincena()?.nombre_completo }}</strong>
         (Sueldo Base: <strong>Bs {{ (selectedFilaQuincena()?.haber_basico || 0) | number:'1.2-2' }}</strong>)
       </p>
+
+      @if ((selectedFilaQuincena()?.pago_quincena || 0) > 0) {
+      <div class="alert-box-info mb-4 flex items-center justify-between p-3 bg-indigo-50 border border-indigo-200 rounded-lg">
+        <div>
+          <span class="text-sm text-indigo-900">Quincena pagada actualmente: <strong>Bs {{ (selectedFilaQuincena()?.pago_quincena || 0) | number:'1.2-2' }}</strong></span>
+        </div>
+        @if (planilla()?.estado_periodo === 'ABIERTO') {
+        <button class="btn btn-xs btn-outline-danger" (click)="anularPagoQuincenaActual()" title="Anular este pago y dejar la quincena en Bs 0.00">
+          🗑️ Anular Pago (Dejar en Bs 0.00)
+        </button>
+        }
+      </div>
+      }
 
       <!-- Resumen Financiero de Quincena -->
       <div class="confirmation-summary-box mb-4">
@@ -1377,6 +1425,240 @@
         </button>
         <button class="btn btn-success" (click)="confirmarLiquidacionFila()" [disabled]="loading()">
           Confirmar Liquidación y Generar Comprobante
+        </button>
+      </div>
+    </div>
+  </div>
+  }
+
+  <!-- ================================================================= -->
+  <!-- MODAL: EDICIÓN INTEGRAL DE FILA DE PLANILLA (spec.md) -->
+  <!-- ================================================================= -->
+  @if (showModalEditarFila()) {
+  <div class="modal-backdrop">
+    <div class="modal-card modal-card-lg animate-scale-up modal-edit-fila-card">
+      <div class="modal-header">
+        <div>
+          <h3>Editar Fila de Planilla</h3>
+          <span class="text-xs text-slate-500">
+            Trabajador: <strong>{{ filaEnEdicion()?.nombre_completo }}</strong> • CI: <strong>{{ filaEnEdicion()?.ci || 'S/N' }}</strong> • Cargo: <strong>{{ filaEnEdicion()?.cargo }}</strong>
+          </span>
+        </div>
+        <button class="btn-close" (click)="showModalEditarFila.set(false)">✕</button>
+      </div>
+
+      <div class="modal-body-scroll">
+        <!-- SECCIÓN 1: HABER BÁSICO Y DÍAS TRABAJADOS -->
+        <div class="inner-form-card mb-4">
+          <h4 class="text-slate-800 font-bold mb-2">1. Haber Básico y Días Trabajados</h4>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Haber Básico Computable (Bs) *</label>
+              <input type="number" min="1" step="50" class="input-clean font-bold text-lg"
+                [(ngModel)]="editarFilaForm.haber_basico" />
+              <span class="text-xs text-slate-400">Salario base para este mes</span>
+            </div>
+
+            <div class="form-group">
+              <label>Días Trabajados (0 a 30) *</label>
+              <input type="number" min="0" max="30" class="input-clean font-bold text-lg"
+                [(ngModel)]="editarFilaForm.dias_trabajados" />
+              <span class="text-xs text-slate-400">Días computables del ciclo</span>
+            </div>
+
+            <div class="form-group col-span-2">
+              <div class="readonly-kpi-badge flex items-center justify-between text-blue-800 bg-blue-50 p-2.5 rounded-lg border border-blue-200">
+                <span class="font-medium text-sm">Total Ganado Calculado:</span>
+                <strong class="text-lg">Bs {{ totalGanadoCalculadoEdicion | number:'1.2-2' }}</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SECCIÓN 2: PAGO DE QUINCENA -->
+        <div class="inner-form-card mb-4">
+          <div class="flex items-center justify-between mb-2">
+            <h4 class="text-slate-800 font-bold">2. Pago de Quincena (Día 18)</h4>
+            @if (editarFilaForm.pago_quincena > 0) {
+            <button class="btn btn-xs btn-outline-danger" (click)="dejarQuincenaEnCero()" title="Dejar la quincena en 0">
+              🗑️ Dejar en Bs 0.00 (PENDIENTE)
+            </button>
+            }
+          </div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Monto Pago Quincena (Bs)</label>
+              <div class="input-currency-wrapper">
+                <span class="currency-prefix">Bs</span>
+                <input type="number" min="0" step="10" class="input-clean font-bold text-lg"
+                  [(ngModel)]="editarFilaForm.pago_quincena" />
+              </div>
+              <span class="text-xs text-slate-400">Si se equivocó y no pagó, ingrese 0.00</span>
+            </div>
+            <div class="form-group">
+              <label>Estado Resultante</label>
+              <div class="p-2 rounded font-semibold text-sm"
+                [ngClass]="editarFilaForm.pago_quincena > 0 ? 'bg-indigo-50 text-indigo-800 border border-indigo-200' : 'bg-amber-50 text-amber-800 border border-amber-200'">
+                {{ editarFilaForm.pago_quincena > 0 ? 'LIQUIDADA (Bs ' + (editarFilaForm.pago_quincena | number:'1.2-2') + ')' : 'PENDIENTE (Bs 0.00)' }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SECCIÓN 3: VALES DE ANTICIPO -->
+        <div class="inner-form-card mb-4">
+          <div class="flex items-center justify-between mb-2">
+            <div>
+              <h4 class="text-slate-800 font-bold">3. Vales de Anticipo Registrados</h4>
+              <span class="text-xs text-slate-500">Total activo: <strong>Bs {{ (filaEnEdicion()?.pago_anticipos || 0) | number:'1.2-2' }}</strong></span>
+            </div>
+            @if (anticiposFilaEdicionList().length > 0) {
+            <button class="btn btn-xs btn-outline-danger" (click)="anularTodosLosAnticiposFila()" title="Anular todos los anticipos y dejar en Bs 0.00">
+              ⚠️ Dejar todos en Bs 0.00
+            </button>
+            }
+          </div>
+
+          <div class="table-responsive">
+            <table class="clean-table">
+              <thead>
+                <tr>
+                  <th>N° Vale</th>
+                  <th>Fecha</th>
+                  <th>Importe</th>
+                  <th>Observaciones</th>
+                  <th class="text-right">Acción</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (a of anticiposFilaEdicionList(); track a.id) {
+                <tr>
+                  <td><span class="mono-badge">{{ a.numero_comprobante }}</span></td>
+                  <td>{{ a.fecha_entrega }}</td>
+                  <td class="font-bold text-amber-900">Bs {{ a.importe | number:'1.2-2' }}</td>
+                  <td class="text-xs text-slate-500">{{ a.observaciones || '—' }}</td>
+                  <td class="text-right">
+                    <div class="row-actions-group justify-end flex items-center gap-1">
+                      <button class="btn btn-xs btn-outline-slate" (click)="editarMontoAnticipo(a)" title="Editar monto">
+                        ✎
+                      </button>
+                      <button class="btn btn-xs btn-outline-danger" (click)="anularAnticipoDesdeFila(a)" title="Dejar en Bs 0.00">
+                        Anular
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                } @empty {
+                <tr>
+                  <td colspan="5" class="empty-row text-xs">No hay anticipos activos para este trabajador (Total Bs 0.00).</td>
+                </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- SECCIÓN 4: ANTICIPOS RIDER Y OTROS -->
+        <div class="inner-form-card mb-4">
+          <div class="flex items-center justify-between mb-2">
+            <div>
+              <h4 class="text-slate-800 font-bold">4. Anticipos Rider y Otros</h4>
+              <span class="text-xs text-slate-500">Total activo: <strong>Bs {{ (filaEnEdicion()?.pago_anticipos_rider || 0) | number:'1.2-2' }}</strong></span>
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="clean-table">
+              <thead>
+                <tr>
+                  <th>N° Comprobante</th>
+                  <th>Fecha</th>
+                  <th>Importe</th>
+                  <th>Observaciones</th>
+                  <th class="text-right">Acción</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (ar of anticiposRiderFilaEdicionList(); track ar.id) {
+                <tr>
+                  <td><span class="mono-badge">{{ ar.numero_comprobante }}</span></td>
+                  <td>{{ ar.fecha_entrega }}</td>
+                  <td class="font-bold text-purple-900">Bs {{ ar.importe | number:'1.2-2' }}</td>
+                  <td class="text-xs text-slate-500">{{ ar.observaciones || '—' }}</td>
+                  <td class="text-right">
+                    <div class="row-actions-group justify-end flex items-center gap-1">
+                      <button class="btn btn-xs btn-outline-slate" (click)="editarMontoAnticipoRider(ar)" title="Editar monto">
+                        ✎
+                      </button>
+                      <button class="btn btn-xs btn-outline-danger" (click)="anularAnticipoRiderDesdeFila(ar)" title="Dejar en Bs 0.00">
+                        Anular
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                } @empty {
+                <tr>
+                  <td colspan="5" class="empty-row text-xs">No hay anticipos rider activos para este trabajador.</td>
+                </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- SECCIÓN 5: DESCUENTOS -->
+        <div class="inner-form-card mb-4">
+          <div class="flex items-center justify-between mb-2">
+            <div>
+              <h4 class="text-slate-800 font-bold">5. Descuentos Salariales</h4>
+              <span class="text-xs text-slate-500">Total activo: <strong>Bs {{ (filaEnEdicion()?.total_descuentos || 0) | number:'1.2-2' }}</strong></span>
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="clean-table">
+              <thead>
+                <tr>
+                  <th>N° Vale</th>
+                  <th>Concepto</th>
+                  <th>Importe</th>
+                  <th class="text-right">Acción</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (d of descuentosFilaEdicionList(); track d.id) {
+                <tr>
+                  <td><span class="mono-badge">{{ d.numero_comprobante }}</span></td>
+                  <td class="text-xs">{{ d.concepto }}</td>
+                  <td class="font-bold text-red-900">Bs {{ d.importe | number:'1.2-2' }}</td>
+                  <td class="text-right">
+                    <button class="btn btn-xs btn-outline-danger" (click)="anularDescuentoDesdeFila(d)" title="Anular descuento">
+                      Anular
+                    </button>
+                  </td>
+                </tr>
+                } @empty {
+                <tr>
+                  <td colspan="4" class="empty-row text-xs">No hay descuentos activos.</td>
+                </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- SECCIÓN 6: OBSERVACIONES -->
+        <div class="form-group mb-2">
+          <label>Observaciones de la Edición (Opcional)</label>
+          <input type="text" placeholder="Ej. Corrección de error de tipeo en anticipo..." class="input-clean"
+            [(ngModel)]="editarFilaForm.observaciones" />
+        </div>
+      </div>
+
+      <div class="modal-actions mt-4">
+        <button class="btn btn-secondary" (click)="showModalEditarFila.set(false)">Cancelar</button>
+        <button class="btn btn-primary font-bold" (click)="guardarEdicionFila()" [disabled]="loading()">
+          Guardar Cambios de la Fila
         </button>
       </div>
     </div>
