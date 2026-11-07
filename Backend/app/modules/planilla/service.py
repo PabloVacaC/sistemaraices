@@ -20,17 +20,13 @@ from app.models.entities import (
 from app.modules.pagos.service import (
     generar_numero_comprobante,
     IMPORTE_REFERENCIA_QUINCENA,
-    registrar_pago_parcial_directo,
 )
-from app.modules.pagos.schemas import PagoParcialDirectoCreate
 from app.modules.planilla.schemas import (
     DescuentoCreate,
     DescuentoOut,
     AnticipoRiderCreate,
     AnticipoRiderOut,
-    AnticipoRiderUpdateIn,
     ActualizarDiasTrabajadosIn,
-    ActualizarFilaPlanillaIn,
     PlanillaFilaOut,
     PlanillaResumenTotales,
     PlanillaMensualOut,
@@ -281,7 +277,6 @@ def obtener_o_generar_planilla(db: Session, periodo_id: int) -> PlanillaMensualO
             if getattr(p, "tipo_pago", "") in ("PAGO_QUINCENA", "REVISION_QUINCENA")
         ]
         monto_quincena = sum((p.monto for p in pagos_quincena), Decimal("0.00"))
-        pago_quincena_id = pagos_quincena[0].id if pagos_quincena else None
         estado_quincena = "LIQUIDADA" if (pagos_quincena or (liq and liq.estado == "LIQUIDADO")) else "PENDIENTE"
 
         total_pagado = sum((p.monto for p in pagos_confirmados), Decimal("0.00"))
@@ -374,7 +369,6 @@ def obtener_o_generar_planilla(db: Session, periodo_id: int) -> PlanillaMensualO
             dias_manual=dias_manual,
             total_ganado=total_ganado,
             pago_quincena=monto_quincena,
-            pago_quincena_id=pago_quincena_id,
             estado_quincena=estado_quincena,
             quincena_sugerida=quincena_sugerida,
             supera_quincena=supera_quincena,
@@ -554,186 +548,6 @@ def actualizar_dias_trabajados(
     )
 
     # Devolver la planilla actualizada del trabajador
-    planilla_completa = obtener_o_generar_planilla(db, datos.periodo_id)
-    for f in planilla_completa.filas:
-        if f.trabajador_id == datos.trabajador_id:
-            return f
-
-    raise HTTPException(status_code=500, detail="Error al recuperar fila de planilla.")
-
-
-# =========================================================================
-# EDICIÓN COMPLETA DE FILA DE PLANILLA
-# =========================================================================
-def actualizar_fila_planilla(
-    db: Session, datos: ActualizarFilaPlanillaIn, usuario_ci: Optional[str] = None
-) -> PlanillaFilaOut:
-    """
-    Permite modificar de manera integral una fila de la planilla:
-    - Haber básico (ajusta el sueldo base computable del mes)
-    - Días trabajados (0 a 30) y recalcula total ganado automáticamente
-    - Pago de Quincena (ajusta monto o lo deja en Bs 0.00 anulando el pago existente)
-    - Observaciones salariales del trabajador en este período
-    """
-    periodo = db.execute(
-        select(PeriodoSalarial).where(PeriodoSalarial.id == datos.periodo_id)
-    ).scalars().first()
-    if not periodo:
-        raise HTTPException(status_code=404, detail="Período no encontrado.")
-
-    if periodo.estado == "CERRADO":
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="La planilla de este período está CERRADA. No se admiten modificaciones.",
-        )
-
-    trabajador = db.execute(
-        select(Trabajador).where(Trabajador.id == datos.trabajador_id)
-    ).scalars().first()
-    if not trabajador:
-        raise HTTPException(status_code=404, detail="Trabajador no encontrado.")
-
-    # 1. Recuperar o inicializar PlanillaDetalle
-    det = db.execute(
-        select(PlanillaDetalle).where(
-            PlanillaDetalle.periodo_id == datos.periodo_id,
-            PlanillaDetalle.trabajador_id == datos.trabajador_id,
-        )
-    ).scalars().first()
-
-    nuevo_haber = datos.haber_basico if datos.haber_basico is not None else (det.haber_basico if det else trabajador.sueldoBase)
-    nuevos_dias = datos.dias_trabajados if datos.dias_trabajados is not None else (det.dias_trabajados if det else 30)
-    nuevo_total_ganado = calcular_total_ganado(nuevo_haber, nuevos_dias)
-
-    if det:
-        if datos.haber_basico is not None:
-            det.haber_basico = nuevo_haber
-        if datos.dias_trabajados is not None:
-            det.dias_trabajados = nuevos_dias
-            det.dias_manual = True
-        det.total_ganado = nuevo_total_ganado
-        if datos.observaciones is not None:
-            det.observaciones = datos.observaciones
-    else:
-        det = PlanillaDetalle(
-            periodo_id=datos.periodo_id,
-            trabajador_id=datos.trabajador_id,
-            haber_basico=nuevo_haber,
-            dias_trabajados=nuevos_dias,
-            dias_manual=(datos.dias_trabajados is not None),
-            total_ganado=nuevo_total_ganado,
-            observaciones=datos.observaciones,
-        )
-        db.add(det)
-
-    db.flush()
-
-    # 2. Manejo de Pago de Quincena (si se especificó en el request)
-    if datos.pago_quincena is not None:
-        stmt_quincenas = (
-            select(PagoLiquidacion)
-            .join(Liquidacion)
-            .where(
-                Liquidacion.trabajador_id == datos.trabajador_id,
-                Liquidacion.periodo_id == datos.periodo_id,
-                PagoLiquidacion.tipo_pago.in_(["PAGO_QUINCENA", "REVISION_QUINCENA"]),
-                PagoLiquidacion.estado == "CONFIRMADO",
-            )
-        )
-        pagos_quincena = list(db.execute(stmt_quincenas).scalars().unique().all())
-
-        if datos.pago_quincena == Decimal("0.00"):
-            # Anular pagos de quincena existentes para dejar en cero
-            for pq in pagos_quincena:
-                pq.estado = "ANULADO"
-                pq.motivo_anulacion = "Anulado por edición de fila en planilla (dejar en Bs 0.00)"
-        else:
-            if pagos_quincena:
-                # Actualizar monto del pago principal
-                pagos_quincena[0].monto = datos.pago_quincena
-                pagos_quincena[0].tipo_pago = "PAGO_QUINCENA"
-                for extra_pq in pagos_quincena[1:]:
-                    extra_pq.estado = "ANULADO"
-                    extra_pq.motivo_anulacion = "Anulado duplicado por ajuste de quincena en planilla"
-            else:
-                # Crear nuevo pago de quincena directo
-                payload_q = PagoParcialDirectoCreate(
-                    trabajador_id=datos.trabajador_id,
-                    periodo_id=datos.periodo_id,
-                    monto=datos.pago_quincena,
-                    tipo_pago="PAGO_QUINCENA",
-                    metodo_pago="EFECTIVO",
-                    fecha_pago=date(periodo.anio, periodo.mes, min(18, calendar.monthrange(periodo.anio, periodo.mes)[1])),
-                    observaciones=datos.observaciones or "Registrado por edición de fila en planilla",
-                )
-                registrar_pago_parcial_directo(db, payload_q, usuario_ci=usuario_ci)
-
-    # 3. Recalcular liquidación activa asociada si existe
-    liq = db.execute(
-        select(Liquidacion).where(
-            Liquidacion.trabajador_id == datos.trabajador_id,
-            Liquidacion.periodo_id == datos.periodo_id,
-            Liquidacion.estado != "ANULADO",
-        )
-    ).scalars().first()
-    if liq:
-        total_anticipos = db.scalar(
-            select(func.sum(Anticipo.importe)).where(
-                Anticipo.trabajador_id == datos.trabajador_id,
-                Anticipo.periodo_id == datos.periodo_id,
-                Anticipo.estado == "PAGADO",
-            )
-        ) or Decimal("0.00")
-        total_riders = db.scalar(
-            select(func.sum(AnticipoRider.importe)).where(
-                AnticipoRider.trabajador_id == datos.trabajador_id,
-                AnticipoRider.periodo_id == datos.periodo_id,
-                AnticipoRider.estado == "PAGADO",
-            )
-        ) or Decimal("0.00")
-        total_pagos = db.scalar(
-            select(func.sum(PagoLiquidacion.monto)).where(
-                PagoLiquidacion.liquidacion_id == liq.id,
-                PagoLiquidacion.estado == "CONFIRMADO",
-            )
-        ) or Decimal("0.00")
-
-        liq.sueldo_base = nuevo_total_ganado
-        liq.total_anticipos = total_anticipos + total_riders
-        liq.monto_neto = max(Decimal("0.00"), liq.sueldo_base + liq.ajustes - liq.total_anticipos)
-        liq.monto_pagado = total_pagos
-        liq.saldo_pendiente = max(Decimal("0.00"), liq.monto_neto - liq.monto_pagado)
-        if liq.saldo_pendiente <= 0 and liq.monto_pagado > 0:
-            liq.estado = "LIQUIDADO"
-        elif liq.monto_pagado > 0:
-            liq.estado = "PARCIAL"
-        else:
-            liq.estado = "PENDIENTE"
-
-    db.commit()
-
-    # 4. Registrar en bitácora con hora oficial de Bolivia
-    detalles_mod = []
-    if datos.haber_basico is not None:
-        detalles_mod.append(f"Haber Básico: Bs {nuevo_haber}")
-    if datos.dias_trabajados is not None:
-        detalles_mod.append(f"Días: {nuevos_dias}")
-    if datos.pago_quincena is not None:
-        detalles_mod.append(f"Quincena: Bs {datos.pago_quincena}")
-
-    registrar_bitacora(
-        db=db,
-        modulo="PLANILLA",
-        accion="MODIFICAR_FILA",
-        descripcion=(
-            f"Se editó la fila de planilla de {trabajador.nombres} {trabajador.apellidos} en {periodo.descripcion}. "
-            f"Cambios: {', '.join(detalles_mod) if detalles_mod else 'Sin cambios directos'}. "
-            f"Total Ganado: Bs {nuevo_total_ganado}."
-        ),
-        usuario_ci=usuario_ci,
-    )
-
-    # Devolver la fila actualizada recalculada
     planilla_completa = obtener_o_generar_planilla(db, datos.periodo_id)
     for f in planilla_completa.filas:
         if f.trabajador_id == datos.trabajador_id:
@@ -1222,66 +1036,17 @@ def anular_anticipo_rider(
     )
 
 
-def editar_anticipo_rider(
-    db: Session, anticipo_rider_id: int, datos: AnticipoRiderUpdateIn, usuario_ci: Optional[str] = None
-) -> AnticipoRiderOut:
-    """Modifica el importe de un anticipo rider. Si el importe es 0, lo anula justificadamente."""
-    rider = db.execute(select(AnticipoRider).where(AnticipoRider.id == anticipo_rider_id)).scalars().first()
-    if not rider:
-        raise HTTPException(status_code=404, detail="Anticipo rider no encontrado.")
-    if rider.estado == "ANULADO":
-        raise HTTPException(status_code=400, detail="El anticipo rider ya se encuentra anulado.")
-    if rider.periodo and rider.periodo.estado == "CERRADO":
-        raise HTTPException(status_code=400, detail="El período salarial está CERRADO.")
-
-    if datos.importe <= Decimal("0.00"):
-        return anular_anticipo_rider(db, anticipo_rider_id, motivo=datos.observaciones or "Dejado en Bs 0.00 por edición", usuario_ci=usuario_ci)
-
-    monto_anterior = rider.importe
-    rider.importe = datos.importe
-    if datos.observaciones is not None:
-        rider.observaciones = datos.observaciones
-
-    db.commit()
-    db.refresh(rider)
-
-    registrar_bitacora(
-        db=db,
-        modulo="ANTICIPOS_RIDER",
-        accion="MODIFICAR",
-        descripcion=f"Se modificó el anticipo rider {rider.numero_comprobante} de Bs {monto_anterior} a Bs {datos.importe}.",
-        usuario_ci=usuario_ci,
-    )
-    return AnticipoRiderOut(
-        id=rider.id,
-        numero_comprobante=rider.numero_comprobante,
-        trabajador_id=rider.trabajador_id,
-        trabajador_nombre=f"{rider.trabajador.nombres} {rider.trabajador.apellidos}" if rider.trabajador else None,
-        periodo_id=rider.periodo_id,
-        fecha_solicitud=rider.fecha_solicitud,
-        fecha_entrega=rider.fecha_entrega,
-        importe=rider.importe,
-        metodo_pago=rider.metodo_pago,
-        estado=rider.estado,
-        es_periodo_siguiente=rider.es_periodo_siguiente,
-        observaciones=rider.observaciones,
-        usuario_id=rider.usuario_id,
-        usuario_nombre=rider.usuario_nombre,
-    )
-
-
 def limpiar_fila_trabajador(
     db: Session,
     periodo_id: int,
     trabajador_id: int,
     usuario_ci: Optional[str] = None,
-) -> Dict[str, Any]:
+) -> dict:
     """
-    Borra todos los pagos, anticipos, vales rider, descuentos y ajustes de días
-    de un trabajador para el período indicado, dejándolo completamente limpio
-    como al inicio de mes.
+    Elimina todos los datos registrados en el período (quincena, anticipos, anticipos rider,
+    descuentos, liquidaciones y ajustes manuales de días) para un trabajador,
+    restableciendo su fila de planilla exactamente al estado limpio de inicio de mes.
     """
-    # 1. Validar período
     periodo = db.execute(
         select(PeriodoSalarial).where(PeriodoSalarial.id == periodo_id)
     ).scalars().first()
@@ -1294,10 +1059,9 @@ def limpiar_fila_trabajador(
     if periodo.estado == "CERRADO":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No se puede limpiar una fila en un período salarial que ya está cerrado.",
+            detail=f"No se puede limpiar la fila porque la planilla de {periodo.descripcion} ya está CERRADA.",
         )
 
-    # 2. Validar trabajador
     trabajador = db.execute(
         select(Trabajador).where(Trabajador.id == trabajador_id)
     ).scalars().first()
@@ -1307,112 +1071,78 @@ def limpiar_fila_trabajador(
             detail=f"Trabajador con ID {trabajador_id} no encontrado.",
         )
 
-    nombre_completo = f"{trabajador.apellidos} {trabajador.nombres}".strip()
-
-    # 3. Eliminar Pagos de Liquidación y Liquidaciones del trabajador en este período
-    liqs = db.execute(
-        select(Liquidacion).where(
+    # 1. Eliminar Pagos de Liquidación asociados a liquidaciones de este trabajador en este período
+    liq_ids = db.execute(
+        select(Liquidacion.id).where(
             Liquidacion.periodo_id == periodo_id,
             Liquidacion.trabajador_id == trabajador_id,
         )
     ).scalars().all()
 
-    liq_ids = [l.id for l in liqs]
-    num_pagos = 0
     if liq_ids:
-        num_pagos = db.execute(
-            delete(PagoLiquidacion).where(PagoLiquidacion.liquidacion_id.in_(liq_ids))
-        ).rowcount
         db.execute(
-            delete(Liquidacion).where(Liquidacion.id.in_(liq_ids))
+            delete(PagoLiquidacion).where(PagoLiquidacion.liquidacion_id.in_(liq_ids))
         )
 
-    # 4. Eliminar Anticipos ordinarios del trabajador en este período
-    num_anticipos = db.execute(
+    # 2. Eliminar Liquidaciones
+    db.execute(
+        delete(Liquidacion).where(
+            Liquidacion.periodo_id == periodo_id,
+            Liquidacion.trabajador_id == trabajador_id,
+        )
+    )
+
+    # 3. Eliminar Anticipos ordinarios
+    db.execute(
         delete(Anticipo).where(
             Anticipo.periodo_id == periodo_id,
             Anticipo.trabajador_id == trabajador_id,
         )
-    ).rowcount
+    )
 
-    # 5. Eliminar Anticipos Rider del trabajador en este período
-    num_riders = db.execute(
+    # 4. Eliminar Anticipos Rider
+    db.execute(
         delete(AnticipoRider).where(
             AnticipoRider.periodo_id == periodo_id,
             AnticipoRider.trabajador_id == trabajador_id,
         )
-    ).rowcount
+    )
 
-    # 6. Eliminar Descuentos del trabajador en este período
-    num_descuentos = db.execute(
+    # 5. Eliminar Descuentos
+    db.execute(
         delete(Descuento).where(
             Descuento.periodo_id == periodo_id,
             Descuento.trabajador_id == trabajador_id,
         )
-    ).rowcount
+    )
 
-    # 7. Restablecer días trabajados en PlanillaDetalle al cálculo automático inicial
-    det = db.execute(
-        select(PlanillaDetalle).where(
+    # 6. Eliminar PlanillaDetalle para reiniciar a cálculo automático inicial
+    db.execute(
+        delete(PlanillaDetalle).where(
             PlanillaDetalle.periodo_id == periodo_id,
             PlanillaDetalle.trabajador_id == trabajador_id,
         )
-    ).scalars().first()
+    )
 
-    dias_auto = calcular_dias_trabajados_automaticos(trabajador, periodo)
-    haber_basico = trabajador.sueldoBase
-    total_ganado = calcular_total_ganado(haber_basico, dias_auto)
-
-    if det:
-        det.haber_basico = haber_basico
-        det.dias_trabajados = dias_auto
-        det.dias_manual = False
-        det.total_ganado = total_ganado
-        det.observaciones = None
-    else:
-        nuevo_det = PlanillaDetalle(
-            periodo_id=periodo_id,
-            trabajador_id=trabajador_id,
-            haber_basico=haber_basico,
-            dias_trabajados=dias_auto,
-            dias_manual=False,
-            total_ganado=total_ganado,
-        )
-        db.add(nuevo_det)
-
-    db.commit()
-
-    # 8. Registrar en bitácora con zona horaria de Bolivia
-    resumen_eliminados = []
-    if num_pagos > 0:
-        resumen_eliminados.append(f"{num_pagos} pago(s) de liquidación")
-    if len(liq_ids) > 0:
-        resumen_eliminados.append(f"{len(liq_ids)} liquidación(es)")
-    if num_anticipos > 0:
-        resumen_eliminados.append(f"{num_anticipos} anticipo(s)")
-    if num_riders > 0:
-        resumen_eliminados.append(f"{num_riders} anticipo(s) rider")
-    if num_descuentos > 0:
-        resumen_eliminados.append(f"{num_descuentos} descuento(s)")
-
-    detalle_str = ", ".join(resumen_eliminados) if resumen_eliminados else "sin movimientos previos"
-
+    nombre_completo = f"{trabajador.nombres} {trabajador.apellidos}".strip()
     registrar_bitacora(
         db=db,
         modulo="PLANILLA",
         accion="LIMPIAR_FILA",
         descripcion=(
-            f"Se limpiaron y restablecieron todos los datos a inicio de mes para el trabajador "
-            f"{nombre_completo} (ID: {trabajador_id}) en el período {periodo.descripcion} (ID: {periodo_id}). "
-            f"Elementos eliminados: {detalle_str}. Días trabajados restablecidos a: {dias_auto}."
+            f"Se limpiaron y eliminaron todos los datos del mes (quincenas, anticipos, anticipos rider, "
+            f"descuentos y liquidación) para el trabajador {nombre_completo} (CI: {trabajador.ci or 'S/N'}) "
+            f"en el período {periodo.descripcion} (ID: {periodo_id}). La fila se restableció a inicio de mes."
         ),
         usuario_ci=usuario_ci,
+        commit=False,
     )
 
+    db.commit()
+
     return {
-        "mensaje": f"Fila de {nombre_completo} limpiada exitosamente. Se restableció como a inicio de mes.",
-        "trabajador_id": trabajador_id,
+        "ok": True,
+        "message": f"Fila de {nombre_completo} restablecida a inicio de mes exitosamente.",
         "periodo_id": periodo_id,
-        "dias_trabajados": dias_auto,
-        "total_ganado": float(total_ganado),
+        "trabajador_id": trabajador_id,
     }

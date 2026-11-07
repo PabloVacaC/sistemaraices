@@ -9,12 +9,10 @@ from app.modules.planilla.schemas import (
     PlanillaMensualOut,
     PlanillaFilaOut,
     ActualizarDiasTrabajadosIn,
-    ActualizarFilaPlanillaIn,
     DescuentoCreate,
     DescuentoOut,
     AnticipoRiderCreate,
     AnticipoRiderOut,
-    AnticipoRiderUpdateIn,
     CerrarPlanillaRequest,
     PlanillaCierreOut,
 )
@@ -47,14 +45,20 @@ def actualizar_dias_trabajados(
     return service.actualizar_dias_trabajados(db, datos, usuario_ci=current_user.ci)
 
 
-@router.put("/fila", response_model=PlanillaFilaOut)
-def actualizar_fila_planilla(
-    datos: ActualizarFilaPlanillaIn,
+@router.post("/periodo/{periodo_id}/trabajador/{trabajador_id}/limpiar")
+def limpiar_fila_trabajador(
+    periodo_id: int,
+    trabajador_id: int,
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user),
 ):
-    """Permite editar una fila completa de la planilla (haber básico, días trabajados, quincena, observaciones)."""
-    return service.actualizar_fila_planilla(db, datos, usuario_ci=current_user.ci)
+    """Elimina todos los datos registrados en el período para un trabajador, restableciendo la fila a inicio de mes."""
+    return service.limpiar_fila_trabajador(
+        db=db,
+        periodo_id=periodo_id,
+        trabajador_id=trabajador_id,
+        usuario_ci=current_user.ci,
+    )
 
 
 @router.post("/cerrar/{periodo_id}")
@@ -150,39 +154,4 @@ def anular_anticipo_rider(
     """Anula de forma justificada un anticipo rider conservando el registro histórico."""
     return service.anular_anticipo_rider(
         db, anticipo_rider_id=anticipo_rider_id, motivo=datos.motivo, usuario_ci=current_user.ci
-    )
-
-
-@router.patch("/anticipos-rider/{anticipo_rider_id}", response_model=AnticipoRiderOut)
-def editar_anticipo_rider(
-    anticipo_rider_id: int,
-    datos: AnticipoRiderUpdateIn,
-    db: Session = Depends(get_db),
-    current_user: Usuario = Depends(get_current_user),
-):
-    """Permite editar el importe de un anticipo rider o dejarlo en 0."""
-    return service.editar_anticipo_rider(
-        db, anticipo_rider_id=anticipo_rider_id, datos=datos, usuario_ci=current_user.ci
-    )
-
-
-# =========================================================================
-# REINICIO Y LIMPIEZA DE FILA DE PLANILLA
-# =========================================================================
-@router.post("/limpiar-fila/{periodo_id}/{trabajador_id}")
-def limpiar_fila_trabajador(
-    periodo_id: int,
-    trabajador_id: int,
-    db: Session = Depends(get_db),
-    current_user: Usuario = Depends(get_current_user),
-):
-    """
-    Borra todos los pagos, anticipos, vales rider, descuentos y ajustes manuales
-    de un trabajador para el período actual, dejándolo limpio como al inicio de mes.
-    """
-    return service.limpiar_fila_trabajador(
-        db,
-        periodo_id=periodo_id,
-        trabajador_id=trabajador_id,
-        usuario_ci=current_user.ci,
     )

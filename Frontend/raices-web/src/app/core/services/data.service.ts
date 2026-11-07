@@ -33,7 +33,6 @@ import {
   PlanillaCierre,
   CerrarPlanillaPayload,
   ActualizarDiasTrabajadosPayload,
-  ActualizarFilaPlanillaPayload,
   Descuento,
   DescuentoCreatePayload,
   AnticipoRider,
@@ -450,28 +449,12 @@ export class DataService {
     });
   }
 
-  actualizarFilaPlanilla(payload: ActualizarFilaPlanillaPayload): Observable<PlanillaFila> {
-    return this.http.put<PlanillaFila>(`${this.API_URL}/planilla/fila`, payload, {
-      headers: this.auth.getHeaders()
-    });
-  }
-
-  editarAnticipo(id: number, importe: number, observaciones?: string): Observable<any> {
-    return this.http.patch(`${this.API_URL}/pagos/anticipos/${id}`, { importe, observaciones }, {
-      headers: this.auth.getHeaders()
-    });
-  }
-
-  editarAnticipoRider(id: number, importe: number, observaciones?: string): Observable<AnticipoRider> {
-    return this.http.patch<AnticipoRider>(`${this.API_URL}/planilla/anticipos-rider/${id}`, { importe, observaciones }, {
-      headers: this.auth.getHeaders()
-    });
-  }
-
-  anularPagoLiquidacion(pagoId: number, motivo: string): Observable<any> {
-    return this.http.patch(`${this.API_URL}/pagos/liquidaciones/pagos/${pagoId}/anular`, { motivo }, {
-      headers: this.auth.getHeaders()
-    });
+  limpiarFilaTrabajador(periodoId: number, trabajadorId: number): Observable<any> {
+    return this.http.post<any>(
+      `${this.API_URL}/planilla/periodo/${periodoId}/trabajador/${trabajadorId}/limpiar`,
+      {},
+      { headers: this.auth.getHeaders() }
+    );
   }
 
   cerrarPlanilla(periodoId: number, payload: CerrarPlanillaPayload): Observable<any> {
@@ -482,12 +465,6 @@ export class DataService {
 
   getCierrePlanilla(periodoId: number): Observable<PlanillaCierre | null> {
     return this.http.get<PlanillaCierre | null>(`${this.API_URL}/planilla/cierre/${periodoId}`, {
-      headers: this.auth.getHeaders()
-    });
-  }
-
-  limpiarFilaPlanilla(periodoId: number, trabajadorId: number): Observable<any> {
-    return this.http.post<any>(`${this.API_URL}/planilla/limpiar-fila/${periodoId}/${trabajadorId}`, {}, {
       headers: this.auth.getHeaders()
     });
   }

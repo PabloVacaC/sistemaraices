@@ -1364,237 +1364,130 @@
 }
 
 /* =========================================================================
-   ESTILOS DE EDICIÓN DE FILA DE PLANILLA
+   COLUMNA Y ACCIÓN DE LIMPIAR FILA (RESTABLECER A INICIO DE MES)
    ========================================================================= */
-.worker-subline {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 2px;
-}
-
-.btn-edit-row-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  padding: 2px 7px;
-  font-size: 0.7rem;
-  font-weight: 600;
-  color: #334155;
-  background: #f1f5f9;
-  border: 1px solid #cbd5e1;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  line-height: 1.2;
-}
-
-.btn-edit-row-chip:hover {
-  background: #e2e8f0;
-  color: #0f172a;
-  border-color: #94a3b8;
-}
-
 .col-acciones {
-  min-width: 90px;
+  width: 95px;
+  min-width: 95px;
   text-align: center;
 }
 
-.modal-edit-fila-card {
-  max-width: 680px;
-  width: 95%;
-  max-height: 90vh;
+.worker-title-row {
   display: flex;
-  flex-direction: column;
-}
-
-.modal-body-scroll {
-  overflow-y: auto;
-  max-height: calc(88vh - 140px);
-  padding-right: 4px;
-}
-
-.row-actions-group {
-  display: inline-flex;
   align-items: center;
-  gap: 4px;
+  justify-content: space-between;
+  gap: 0.4rem;
 }
 
-/* Chip de Limpiar Fila en Celda de Trabajador */
-.btn-clean-row-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  padding: 2px 7px;
-  font-size: 0.7rem;
-  font-weight: 600;
-  color: #b91c1c;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
+.btn-clean-inline {
+  background: transparent;
+  border: 1px solid transparent;
+  color: #94a3b8;
+  padding: 2px 4px;
   border-radius: 4px;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   transition: all 0.15s ease;
-  line-height: 1.2;
+  opacity: 0.5;
 }
 
-.btn-clean-row-chip:hover {
+.worker-cell:hover .btn-clean-inline {
+  opacity: 1;
+}
+
+.btn-clean-inline:hover {
+  color: #ef4444;
   background: #fee2e2;
-  color: #991b1b;
   border-color: #fca5a5;
+  opacity: 1;
 }
 
-/* Botón de Limpiar Fila en Columna Acciones */
-.btn-limpiar-fila {
-  display: inline-flex;
+/* Modal Limpiar Fila */
+.modal-danger-card {
+  max-width: 520px;
+}
+
+.header-with-icon {
+  display: flex;
   align-items: center;
-  gap: 0.35rem;
-  padding: 0.35rem 0.65rem;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: #dc2626;
-  background-color: #fef2f2;
-  border: 1px solid #fecaca;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.2s ease;
+  gap: 0.75rem;
 }
 
-.btn-limpiar-fila:hover {
-  background-color: #fee2e2;
-  border-color: #fca5a5;
-  color: #b91c1c;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(220, 38, 38, 0.1);
-}
-
-.btn-limpiar-fila svg {
-  flex-shrink: 0;
-}
-
-.btn-outline-danger {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.4rem 0.75rem;
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: #dc2626;
-  background-color: #ffffff;
-  border: 1px solid #fca5a5;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.btn-outline-danger:hover {
-  background-color: #fef2f2;
-  border-color: #dc2626;
-  color: #991b1b;
-}
-
-/* Modal Confirmación Limpiar Fila */
-.modal-card-confirm {
-  max-width: 520px !important;
-}
-
-.modal-icon-badge.red {
+.icon-warning-badge {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
   background: #fef2f2;
-  color: #dc2626;
+  color: #ef4444;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid #fee2e2;
 }
 
-.modal-header-centered {
-  text-align: center;
-  margin-bottom: 1.25rem;
-}
-
-.modal-header-centered h2 {
-  font-size: 1.25rem;
-  font-weight: 800;
-  color: #0f172a;
-  margin: 0 0 0.4rem 0;
+.modal-subtitle-text {
+  font-size: 0.82rem;
+  color: #64748b;
+  margin: 0.15rem 0 0 0;
 }
 
 .worker-summary-box {
   background: #f8fafc;
   border: 1px solid #e2e8f0;
   border-radius: 10px;
-  padding: 0.85rem 1rem;
+  padding: 0.75rem 1rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
   margin-bottom: 1rem;
+}
+
+.worker-meta-item {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 0.1rem;
+  font-size: 0.8rem;
 }
 
-.summary-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.85rem;
-}
-
-.summary-row .label {
+.worker-meta-item .label {
   color: #64748b;
-  font-weight: 500;
-}
-
-.delete-details-card {
-  background: #fff;
-  border: 1px solid #fecaca;
-  border-radius: 10px;
-  padding: 0.85rem 1rem;
-  margin-bottom: 1rem;
-}
-
-.delete-details-title {
-  display: block;
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: #991b1b;
+  font-size: 0.72rem;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.03em;
-  margin-bottom: 0.6rem;
 }
 
-.delete-details-list {
-  list-style: none;
+.worker-meta-item .value {
+  color: #0f172a;
+}
+
+.alert-box-warning {
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: 10px;
+  padding: 0.9rem 1rem;
+  font-size: 0.83rem;
+  color: #9a3412;
+}
+
+.alert-box-warning ul {
+  margin: 0.5rem 0 0.5rem 1.25rem;
   padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
+  font-size: 0.8rem;
+  color: #7c2d12;
 }
 
-.delete-details-list li {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.82rem;
-  color: #334155;
-  border-bottom: 1px dashed #fee2e2;
-  padding-bottom: 0.25rem;
+.alert-box-warning li {
+  margin-bottom: 0.25rem;
 }
 
-.delete-details-list li:last-child {
-  border-bottom: none;
-  padding-bottom: 0;
+.clean-note {
+  margin: 0.5rem 0 0 0;
+  font-weight: 600;
+  color: #15803d;
 }
 
-.alert-warning-box {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.65rem;
-  background: #fffbeb;
-  border: 1px solid #fde68a;
-  color: #92400e;
-  padding: 0.75rem 0.9rem;
-  border-radius: 8px;
-  font-size: 0.82rem;
-  line-height: 1.4;
-}
-
-.alert-warning-box svg {
-  flex-shrink: 0;
-  margin-top: 2px;
-  color: #d97706;
-}
 

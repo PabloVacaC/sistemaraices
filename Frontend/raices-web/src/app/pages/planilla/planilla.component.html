@@ -198,7 +198,7 @@
             <th class="col-ant-desc">Total Ant. y Desc.</th>
             <th class="col-liquido">Líquido Pagable</th>
             <th class="col-anticipo-sig">Anticipo para el Siguiente Mes</th>
-            <th class="col-acciones">Acciones</th>
+            <th class="col-acciones">Acción</th>
           </tr>
         </thead>
         <tbody>
@@ -210,18 +210,19 @@
             <!-- 2. Nombre completo y CI (RF-11) -->
             <td class="col-nombre">
               <div class="worker-cell">
-                <span class="font-bold text-slate-900">{{ f.nombre_completo }}</span>
-                <div class="worker-subline">
-                  <span class="text-xs text-slate-500">CI: {{ f.ci || 'S/N' }}</span>
+                <div class="worker-title-row">
+                  <span class="font-bold text-slate-900">{{ f.nombre_completo }}</span>
                   @if (planilla()?.estado_periodo === 'ABIERTO') {
-                  <button class="btn-edit-row-chip" (click)="abrirModalEditarFila(f)" title="Editar fila del trabajador (haberes, quincena, anticipos...)">
-                    ✎ Editar
-                  </button>
-                  <button class="btn-clean-row-chip" (click)="abrirModalLimpiarFila(f)" title="Borrar todo lo insertado en esta fila y dejarla limpia como a inicio de mes">
-                    🗑 Limpiar
+                  <button class="btn-clean-inline" (click)="abrirModalLimpiarFila(f)" title="Limpiar y restablecer esta fila a inicio de mes">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M3 6h18"/>
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
+                      <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                    </svg>
                   </button>
                   }
                 </div>
+                <span class="text-xs text-slate-500">CI: {{ f.ci || 'S/N' }}</span>
               </div>
             </td>
 
@@ -382,24 +383,19 @@
               }
             </td>
 
-            <!-- Columna Acciones Rápidas -->
-            <td class="col-acciones">
+            <!-- Columna Acción: Limpiar y Restablecer a Inicio de Mes -->
+            <td class="col-acciones text-center">
               @if (planilla()?.estado_periodo === 'ABIERTO') {
-              <div class="row-actions-group">
-                <button class="btn btn-xs btn-outline-slate" (click)="abrirModalEditarFila(f)" title="Editar fila completa del trabajador">
-                  ✎ Editar
-                </button>
-                <button class="btn btn-xs btn-limpiar-fila" (click)="abrirModalLimpiarFila(f)" title="Borrar todos los pagos, anticipos, vales y descuentos de este mes para dejar la fila limpia como inicio de mes">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M3 6h18"/>
-                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
-                    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
-                  </svg>
-                  <span>Limpiar</span>
-                </button>
-              </div>
+              <button class="btn btn-xs btn-outline-danger" (click)="abrirModalLimpiarFila(f)" title="Limpiar y restablecer esta fila a inicio de mes">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M3 6h18"/>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
+                  <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                </svg>
+                <span>Limpiar</span>
+              </button>
               } @else {
-              <span class="text-xs text-slate-400">—</span>
+              <span class="text-slate-400 font-mono text-xs">—</span>
               }
             </td>
           </tr>
@@ -432,7 +428,7 @@
             <td class="font-bold text-purple-900 text-center">
               Bs {{ (planilla()?.totales?.total_anticipos_periodo_siguiente || 0) | number:'1.2-2' }}
             </td>
-            <td>—</td>
+            <td class="text-center font-bold text-slate-400">—</td>
           </tr>
         </tfoot>
       </table>
@@ -807,7 +803,6 @@
               <th>Método</th>
               <th>Importe</th>
               <th>Observaciones</th>
-              <th class="text-right">Acción</th>
             </tr>
           </thead>
           <tbody>
@@ -818,24 +813,10 @@
               <td><span class="pill-mini">{{ a.metodo_pago }}</span></td>
               <td class="font-bold text-amber-800">Bs {{ a.importe | number:'1.2-2' }}</td>
               <td class="text-xs text-slate-600">{{ a.observaciones || '—' }}</td>
-              <td class="text-right">
-                @if (planilla()?.estado_periodo === 'ABIERTO') {
-                <div class="row-actions-group justify-end flex items-center gap-1">
-                  <button class="btn btn-xs btn-outline-slate" (click)="editarAnticipo(a)" title="Modificar monto de este anticipo">
-                    ✎
-                  </button>
-                  <button class="btn btn-xs btn-outline-danger" (click)="anularAnticipo(a)" title="Anular anticipo (dejar en Bs 0.00)">
-                    Anular
-                  </button>
-                </div>
-                } @else {
-                <span class="text-xs text-slate-400">—</span>
-                }
-              </td>
             </tr>
             } @empty {
             <tr>
-              <td colspan="6" class="empty-row">No hay anticipos registrados para este trabajador.</td>
+              <td colspan="5" class="empty-row">No hay anticipos registrados para este trabajador.</td>
             </tr>
             }
           </tbody>
@@ -1042,19 +1023,6 @@
         Trabajador: <strong>{{ selectedFilaQuincena()?.nombre_completo }}</strong>
         (Sueldo Base: <strong>Bs {{ (selectedFilaQuincena()?.haber_basico || 0) | number:'1.2-2' }}</strong>)
       </p>
-
-      @if ((selectedFilaQuincena()?.pago_quincena || 0) > 0) {
-      <div class="alert-box-info mb-4 flex items-center justify-between p-3 bg-indigo-50 border border-indigo-200 rounded-lg">
-        <div>
-          <span class="text-sm text-indigo-900">Quincena pagada actualmente: <strong>Bs {{ (selectedFilaQuincena()?.pago_quincena || 0) | number:'1.2-2' }}</strong></span>
-        </div>
-        @if (planilla()?.estado_periodo === 'ABIERTO') {
-        <button class="btn btn-xs btn-outline-danger" (click)="anularPagoQuincenaActual()" title="Anular este pago y dejar la quincena en Bs 0.00">
-          🗑️ Anular Pago (Dejar en Bs 0.00)
-        </button>
-        }
-      </div>
-      }
 
       <!-- Resumen Financiero de Quincena -->
       <div class="confirmation-summary-box mb-4">
@@ -1445,343 +1413,77 @@
   }
 
   <!-- ================================================================= -->
-  <!-- MODAL: EDICIÓN INTEGRAL DE FILA DE PLANILLA (spec.md) -->
-  <!-- ================================================================= -->
-  @if (showModalEditarFila()) {
-  <div class="modal-backdrop">
-    <div class="modal-card modal-card-lg animate-scale-up modal-edit-fila-card">
-      <div class="modal-header">
-        <div>
-          <h3>Editar Fila de Planilla</h3>
-          <span class="text-xs text-slate-500">
-            Trabajador: <strong>{{ filaEnEdicion()?.nombre_completo }}</strong> • CI: <strong>{{ filaEnEdicion()?.ci || 'S/N' }}</strong> • Cargo: <strong>{{ filaEnEdicion()?.cargo }}</strong>
-          </span>
-        </div>
-        <button class="btn-close" (click)="showModalEditarFila.set(false)">✕</button>
-      </div>
-
-      <div class="modal-body-scroll">
-        <!-- SECCIÓN 1: HABER BÁSICO Y DÍAS TRABAJADOS -->
-        <div class="inner-form-card mb-4">
-          <h4 class="text-slate-800 font-bold mb-2">1. Haber Básico y Días Trabajados</h4>
-          <div class="form-grid">
-            <div class="form-group">
-              <label>Haber Básico Computable (Bs) *</label>
-              <input type="number" min="1" step="50" class="input-clean font-bold text-lg"
-                [(ngModel)]="editarFilaForm.haber_basico" />
-              <span class="text-xs text-slate-400">Salario base para este mes</span>
-            </div>
-
-            <div class="form-group">
-              <label>Días Trabajados (0 a 30) *</label>
-              <input type="number" min="0" max="30" class="input-clean font-bold text-lg"
-                [(ngModel)]="editarFilaForm.dias_trabajados" />
-              <span class="text-xs text-slate-400">Días computables del ciclo</span>
-            </div>
-
-            <div class="form-group col-span-2">
-              <div class="readonly-kpi-badge flex items-center justify-between text-blue-800 bg-blue-50 p-2.5 rounded-lg border border-blue-200">
-                <span class="font-medium text-sm">Total Ganado Calculado:</span>
-                <strong class="text-lg">Bs {{ totalGanadoCalculadoEdicion | number:'1.2-2' }}</strong>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- SECCIÓN 2: PAGO DE QUINCENA -->
-        <div class="inner-form-card mb-4">
-          <div class="flex items-center justify-between mb-2">
-            <h4 class="text-slate-800 font-bold">2. Pago de Quincena (Día 18)</h4>
-            @if (editarFilaForm.pago_quincena > 0) {
-            <button class="btn btn-xs btn-outline-danger" (click)="dejarQuincenaEnCero()" title="Dejar la quincena en 0">
-              🗑️ Dejar en Bs 0.00 (PENDIENTE)
-            </button>
-            }
-          </div>
-          <div class="form-grid">
-            <div class="form-group">
-              <label>Monto Pago Quincena (Bs)</label>
-              <div class="input-currency-wrapper">
-                <span class="currency-prefix">Bs</span>
-                <input type="number" min="0" step="10" class="input-clean font-bold text-lg"
-                  [(ngModel)]="editarFilaForm.pago_quincena" />
-              </div>
-              <span class="text-xs text-slate-400">Si se equivocó y no pagó, ingrese 0.00</span>
-            </div>
-            <div class="form-group">
-              <label>Estado Resultante</label>
-              <div class="p-2 rounded font-semibold text-sm"
-                [ngClass]="editarFilaForm.pago_quincena > 0 ? 'bg-indigo-50 text-indigo-800 border border-indigo-200' : 'bg-amber-50 text-amber-800 border border-amber-200'">
-                {{ editarFilaForm.pago_quincena > 0 ? 'LIQUIDADA (Bs ' + (editarFilaForm.pago_quincena | number:'1.2-2') + ')' : 'PENDIENTE (Bs 0.00)' }}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- SECCIÓN 3: VALES DE ANTICIPO -->
-        <div class="inner-form-card mb-4">
-          <div class="flex items-center justify-between mb-2">
-            <div>
-              <h4 class="text-slate-800 font-bold">3. Vales de Anticipo Registrados</h4>
-              <span class="text-xs text-slate-500">Total activo: <strong>Bs {{ (filaEnEdicion()?.pago_anticipos || 0) | number:'1.2-2' }}</strong></span>
-            </div>
-            @if (anticiposFilaEdicionList().length > 0) {
-            <button class="btn btn-xs btn-outline-danger" (click)="anularTodosLosAnticiposFila()" title="Anular todos los anticipos y dejar en Bs 0.00">
-              ⚠️ Dejar todos en Bs 0.00
-            </button>
-            }
-          </div>
-
-          <div class="table-responsive">
-            <table class="clean-table">
-              <thead>
-                <tr>
-                  <th>N° Vale</th>
-                  <th>Fecha</th>
-                  <th>Importe</th>
-                  <th>Observaciones</th>
-                  <th class="text-right">Acción</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (a of anticiposFilaEdicionList(); track a.id) {
-                <tr>
-                  <td><span class="mono-badge">{{ a.numero_comprobante }}</span></td>
-                  <td>{{ a.fecha_entrega }}</td>
-                  <td class="font-bold text-amber-900">Bs {{ a.importe | number:'1.2-2' }}</td>
-                  <td class="text-xs text-slate-500">{{ a.observaciones || '—' }}</td>
-                  <td class="text-right">
-                    <div class="row-actions-group justify-end flex items-center gap-1">
-                      <button class="btn btn-xs btn-outline-slate" (click)="editarMontoAnticipo(a)" title="Editar monto">
-                        ✎
-                      </button>
-                      <button class="btn btn-xs btn-outline-danger" (click)="anularAnticipoDesdeFila(a)" title="Dejar en Bs 0.00">
-                        Anular
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-                } @empty {
-                <tr>
-                  <td colspan="5" class="empty-row text-xs">No hay anticipos activos para este trabajador (Total Bs 0.00).</td>
-                </tr>
-                }
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- SECCIÓN 4: ANTICIPOS RIDER Y OTROS -->
-        <div class="inner-form-card mb-4">
-          <div class="flex items-center justify-between mb-2">
-            <div>
-              <h4 class="text-slate-800 font-bold">4. Anticipos Rider y Otros</h4>
-              <span class="text-xs text-slate-500">Total activo: <strong>Bs {{ (filaEnEdicion()?.pago_anticipos_rider || 0) | number:'1.2-2' }}</strong></span>
-            </div>
-          </div>
-
-          <div class="table-responsive">
-            <table class="clean-table">
-              <thead>
-                <tr>
-                  <th>N° Comprobante</th>
-                  <th>Fecha</th>
-                  <th>Importe</th>
-                  <th>Observaciones</th>
-                  <th class="text-right">Acción</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (ar of anticiposRiderFilaEdicionList(); track ar.id) {
-                <tr>
-                  <td><span class="mono-badge">{{ ar.numero_comprobante }}</span></td>
-                  <td>{{ ar.fecha_entrega }}</td>
-                  <td class="font-bold text-purple-900">Bs {{ ar.importe | number:'1.2-2' }}</td>
-                  <td class="text-xs text-slate-500">{{ ar.observaciones || '—' }}</td>
-                  <td class="text-right">
-                    <div class="row-actions-group justify-end flex items-center gap-1">
-                      <button class="btn btn-xs btn-outline-slate" (click)="editarMontoAnticipoRider(ar)" title="Editar monto">
-                        ✎
-                      </button>
-                      <button class="btn btn-xs btn-outline-danger" (click)="anularAnticipoRiderDesdeFila(ar)" title="Dejar en Bs 0.00">
-                        Anular
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-                } @empty {
-                <tr>
-                  <td colspan="5" class="empty-row text-xs">No hay anticipos rider activos para este trabajador.</td>
-                </tr>
-                }
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- SECCIÓN 5: DESCUENTOS -->
-        <div class="inner-form-card mb-4">
-          <div class="flex items-center justify-between mb-2">
-            <div>
-              <h4 class="text-slate-800 font-bold">5. Descuentos Salariales</h4>
-              <span class="text-xs text-slate-500">Total activo: <strong>Bs {{ (filaEnEdicion()?.total_descuentos || 0) | number:'1.2-2' }}</strong></span>
-            </div>
-          </div>
-
-          <div class="table-responsive">
-            <table class="clean-table">
-              <thead>
-                <tr>
-                  <th>N° Vale</th>
-                  <th>Concepto</th>
-                  <th>Importe</th>
-                  <th class="text-right">Acción</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (d of descuentosFilaEdicionList(); track d.id) {
-                <tr>
-                  <td><span class="mono-badge">{{ d.numero_comprobante }}</span></td>
-                  <td class="text-xs">{{ d.concepto }}</td>
-                  <td class="font-bold text-red-900">Bs {{ d.importe | number:'1.2-2' }}</td>
-                  <td class="text-right">
-                    <button class="btn btn-xs btn-outline-danger" (click)="anularDescuentoDesdeFila(d)" title="Anular descuento">
-                      Anular
-                    </button>
-                  </td>
-                </tr>
-                } @empty {
-                <tr>
-                  <td colspan="4" class="empty-row text-xs">No hay descuentos activos.</td>
-                </tr>
-                }
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- SECCIÓN 6: OBSERVACIONES -->
-        <div class="form-group mb-2">
-          <label>Observaciones de la Edición (Opcional)</label>
-          <input type="text" placeholder="Ej. Corrección de error de tipeo en anticipo..." class="input-clean"
-            [(ngModel)]="editarFilaForm.observaciones" />
-        </div>
-      </div>
-
-      <div class="modal-actions mt-4 flex justify-between items-center">
-        <button class="btn btn-outline-danger" type="button" (click)="abrirModalLimpiarFila(filaEnEdicion())" title="Borrar todos los datos y dejar la fila limpia como a inicio de mes">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M3 6h18"/>
-            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
-            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
-          </svg>
-          <span>Limpiar Fila (Inicio de Mes)</span>
-        </button>
-        <div class="flex gap-2">
-          <button class="btn btn-secondary" (click)="showModalEditarFila.set(false)">Cancelar</button>
-          <button class="btn btn-primary font-bold" (click)="guardarEdicionFila()" [disabled]="loading()">
-            Guardar Cambios de la Fila
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-  }
-
-  <!-- ================================================================= -->
-  <!-- MODAL 8: CONFIRMACIÓN PARA LIMPIAR / RESTABLECER FILA DE PLANILLA -->
+  <!-- MODAL: LIMPIAR Y RESTABLECER FILA A INICIO DE MES -->
   <!-- ================================================================= -->
   @if (showModalLimpiarFila()) {
   <div class="modal-backdrop">
-    <div class="modal-card animate-scale-up modal-card-confirm">
-      <div class="modal-icon-badge red">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M3 6h18" />
-          <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-          <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-          <line x1="10" y1="11" x2="10" y2="17" />
-          <line x1="14" y1="11" x2="14" y2="17" />
-        </svg>
-      </div>
-
-      <div class="modal-header-centered">
-        <h2>¿Limpiar Fila de Planilla?</h2>
-        <p class="modal-desc">
-          Esta acción restablecerá al trabajador al <strong>estado inicial del mes</strong>, eliminando todos los registros insertados en este período.
-        </p>
-      </div>
-
-      <!-- Resumen del trabajador y datos a eliminar -->
-      <div class="worker-summary-box">
-        <div class="summary-row">
-          <span class="label">Trabajador:</span>
-          <span class="val font-bold text-slate-900">{{ selectedFilaLimpiar()?.nombre_completo }}</span>
+    <div class="modal-card animate-scale-up modal-danger-card">
+      <div class="modal-header">
+        <div class="header-with-icon">
+          <div class="icon-warning-badge">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/>
+              <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+          </div>
+          <div>
+            <h3>Limpiar Fila del Trabajador</h3>
+            <p class="modal-subtitle-text">Restablecer datos de este mes al estado inicial</p>
+          </div>
         </div>
-        <div class="summary-row">
-          <span class="label">Cargo / Área:</span>
-          <span class="val text-slate-700">{{ selectedFilaLimpiar()?.cargo }} ({{ selectedFilaLimpiar()?.area }})</span>
-        </div>
-        <div class="summary-row">
-          <span class="label">Haber Básico:</span>
-          <span class="val font-semibold text-slate-800">Bs {{ (selectedFilaLimpiar()?.haber_basico || 0) | number:'1.2-2' }}</span>
-        </div>
+        <button class="btn-close" (click)="showModalLimpiarFila.set(false)" [disabled]="limpiandoFila()">✕</button>
       </div>
 
-      <div class="delete-details-card">
-        <span class="delete-details-title">Se borrarán y restablecerán los siguientes conceptos de este mes:</span>
-        <ul class="delete-details-list">
-          <li>
-            <span>Pago de Quincena (Día 18):</span>
-            <strong>Bs {{ (selectedFilaLimpiar()?.pago_quincena || 0) | number:'1.2-2' }}</strong>
-          </li>
-          <li>
-            <span>Anticipos Rider y Otros:</span>
-            <strong>{{ selectedFilaLimpiar()?.anticipos_rider_count || 0 }} vales (Bs {{ (selectedFilaLimpiar()?.pago_anticipos_rider || 0) | number:'1.2-2' }})</strong>
-          </li>
-          <li>
-            <span>Pago de Anticipos Ordinarios:</span>
-            <strong>{{ selectedFilaLimpiar()?.anticipos_count || 0 }} vales (Bs {{ (selectedFilaLimpiar()?.pago_anticipos || 0) | number:'1.2-2' }})</strong>
-          </li>
-          <li>
-            <span>Descuentos Registrados:</span>
-            <strong>{{ selectedFilaLimpiar()?.descuentos_count || 0 }} desc. (Bs {{ (selectedFilaLimpiar()?.total_descuentos || 0) | number:'1.2-2' }})</strong>
-          </li>
-          <li>
-            <span>Liquidación / Pagos de Sueldo:</span>
-            <strong>{{ selectedFilaLimpiar()?.estado_liquidacion === 'LIQUIDADO' ? 'Liquidado' : (selectedFilaLimpiar()?.estado_liquidacion === 'PARCIAL' ? 'Parcial' : 'Sin pagos') }}</strong>
-          </li>
-          <li>
-            <span>Días Trabajados:</span>
-            <strong>Se restauran al cálculo automático base 30 días</strong>
-          </li>
-        </ul>
-      </div>
+      <div class="modal-body-content">
+        <div class="worker-summary-box">
+          <div class="worker-meta-item">
+            <span class="label">Trabajador:</span>
+            <span class="value font-bold">{{ selectedFilaLimpiar()?.nombre_completo }}</span>
+          </div>
+          <div class="worker-meta-item">
+            <span class="label">CI:</span>
+            <span class="value">{{ selectedFilaLimpiar()?.ci || 'S/N' }}</span>
+          </div>
+          <div class="worker-meta-item">
+            <span class="label">Cargo / Área:</span>
+            <span class="value">{{ selectedFilaLimpiar()?.cargo }} • {{ selectedFilaLimpiar()?.area }}</span>
+          </div>
+          <div class="worker-meta-item">
+            <span class="label">Período:</span>
+            <span class="value font-semibold text-blue-700">{{ periodoActual()?.descripcion }}</span>
+          </div>
+        </div>
 
-      <div class="alert-warning-box">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
-          <line x1="12" y1="9" x2="12" y2="13"/>
-          <line x1="12" y1="17" x2="12.01" y2="17"/>
-        </svg>
-        <span>
-          Esta operación dejará la fila completamente limpia como al inicio de mes.
-        </span>
+        <div class="alert-box-warning">
+          <strong>¿Deseas limpiar todos los datos registrados en esta fila?</strong>
+          <p>Esta acción eliminará de forma irreversible para este período:</p>
+          <ul>
+            <li>Pagos de Quincena (Bs {{ (selectedFilaLimpiar()?.pago_quincena || 0) | number:'1.2-2' }})</li>
+            <li>Anticipos Rider y otros anticipos ({{ selectedFilaLimpiar()?.anticipos_rider_count || 0 }} vales)</li>
+            <li>Anticipos regulares ({{ selectedFilaLimpiar()?.anticipos_count || 0 }} vales)</li>
+            <li>Descuentos del mes ({{ selectedFilaLimpiar()?.descuentos_count || 0 }} registros)</li>
+            <li>Liquidaciones y pagos de sueldo restantes</li>
+            <li>Ajustes manuales de días (se recalculará automáticamente)</li>
+          </ul>
+          <p class="clean-note">✓ La fila volverá a quedar limpia como a inicio de mes, lista para operar de nuevo.</p>
+        </div>
       </div>
 
       <div class="modal-actions mt-6">
-        <button class="btn btn-secondary" type="button" [disabled]="loadingLimpiarFila()" (click)="cerrarModalLimpiarFila()">
+        <button class="btn btn-secondary" (click)="showModalLimpiarFila.set(false)" [disabled]="limpiandoFila()">
           Cancelar
         </button>
-        <button class="btn btn-danger" type="button" [disabled]="loadingLimpiarFila()" (click)="ejecutarLimpiarFila()">
-          @if (loadingLimpiarFila()) {
-            <span>Limpiando fila...</span>
+        <button class="btn btn-danger" (click)="ejecutarLimpiarFila()" [disabled]="limpiandoFila()">
+          @if (limpiandoFila()) {
+          <span>Limpiando fila...</span>
           } @else {
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M3 6h18"/>
-              <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
-              <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
-            </svg>
-            <span>Sí, Limpiar Fila Completa</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 6h18"/>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
+            <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+          </svg>
+          <span>Sí, Limpiar Fila Completa</span>
           }
         </button>
       </div>
