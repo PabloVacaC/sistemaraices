@@ -1,3 +1,6 @@
+import os
+import json
+from decimal import Decimal
 from datetime import date
 from sqlalchemy.orm import Session
 from sqlalchemy import select, text, func
@@ -24,8 +27,6 @@ from app.models.entities import (
     ActividadManejo,
     CosechaRegistro,
 )
-import json
-from decimal import Decimal
 from app.core.security import get_password_hash
 
 
@@ -425,122 +426,124 @@ def init_db():
         db.commit()
         print("Trabajadores del Excel oficial sincronizados con éxito.")
 
-        # 6. Sembrar Potreros y Corrales iniciales y migrar animales existentes
-        print("Verificando potreros y corrales iniciales...")
-        total_potreros = db.scalar(select(func.count(Potrero.id))) or 0
-        if total_potreros == 0:
-            potreros_init = [
-                Potrero(
-                    codigo="POT-0001",
-                    nombre="Potrero 1",
-                    tipo_area="POTRERO",
-                    superficie_ha=Decimal("45.50"),
-                    capacidad_cabezas=80,
-                    color_hex="#10b981",
-                    poligono_geojson=json.dumps({
-                        "type": "Polygon",
-                        "coordinates": [[
-                            [-62.251458, -17.919267],
-                            [-62.246458, -17.919267],
-                            [-62.246458, -17.923267],
-                            [-62.251458, -17.923267],
-                            [-62.251458, -17.919267]
-                        ]]
-                    }),
-                    centroide_lat=Decimal("-17.921267"),
-                    centroide_lng=Decimal("-62.248958"),
-                    estado="ACTIVO",
-                    observaciones="Potrero principal de pastoreo norte",
-                ),
-                Potrero(
-                    codigo="POT-0002",
-                    nombre="Potrero 2",
-                    tipo_area="POTRERO",
-                    superficie_ha=Decimal("50.00"),
-                    capacidad_cabezas=90,
-                    color_hex="#3b82f6",
-                    poligono_geojson=json.dumps({
-                        "type": "Polygon",
-                        "coordinates": [[
-                            [-62.246458, -17.919267],
-                            [-62.241458, -17.919267],
-                            [-62.241458, -17.923267],
-                            [-62.246458, -17.923267],
-                            [-62.246458, -17.919267]
-                        ]]
-                    }),
-                    centroide_lat=Decimal("-17.921267"),
-                    centroide_lng=Decimal("-62.243958"),
-                    estado="ACTIVO",
-                    observaciones="Potrero de rotación pasto Brachiaria",
-                ),
-                Potrero(
-                    codigo="POT-0003",
-                    nombre="Potrero Don Felipe",
-                    tipo_area="POTRERO",
-                    superficie_ha=Decimal("60.00"),
-                    capacidad_cabezas=100,
-                    color_hex="#8b5cf6",
-                    poligono_geojson=json.dumps({
-                        "type": "Polygon",
-                        "coordinates": [[
-                            [-62.251458, -17.923267],
-                            [-62.241458, -17.923267],
-                            [-62.241458, -17.928267],
-                            [-62.251458, -17.928267],
-                            [-62.251458, -17.923267]
-                        ]]
-                    }),
-                    centroide_lat=Decimal("-17.925767"),
-                    centroide_lng=Decimal("-62.246458"),
-                    estado="ACTIVO",
-                    observaciones="Área Don Felipe sur",
-                ),
-                Potrero(
-                    codigo="COR-0001",
-                    nombre="CORRAL DE MANEJO",
-                    tipo_area="CORRAL",
-                    superficie_ha=Decimal("1.50"),
-                    capacidad_cabezas=40,
-                    color_hex="#f59e0b",
-                    poligono_geojson=json.dumps({
-                        "type": "Polygon",
-                        "coordinates": [[
-                            [-62.246958, -17.922967],
-                            [-62.245958, -17.922967],
-                            [-62.245958, -17.923567],
-                            [-62.246958, -17.923567],
-                            [-62.246958, -17.922967]
-                        ]]
-                    }),
-                    centroide_lat=Decimal("-17.923267"),
-                    centroide_lng=Decimal("-62.246458"),
-                    estado="ACTIVO",
-                    observaciones="Corral central con manga y brete",
-                ),
-            ]
-            for p in potreros_init:
-                db.add(p)
-            db.commit()
-            print("Potreros y Corrales iniciales creados exitosamente.")
-
-        # Sincronizar animales existentes que tengan potrero_id NULL
-        potrero_1 = db.execute(select(Potrero).where(Potrero.nombre == "Potrero 1")).scalars().first()
-        corral_m = db.execute(select(Potrero).where(Potrero.nombre == "CORRAL DE MANEJO")).scalars().first()
-
-        if potrero_1 and corral_m:
-            animales_sin_potrero = db.execute(select(Animal).where(Animal.potrero_id.is_(None))).scalars().all()
-            for an in animales_sin_potrero:
-                u = (an.ubicacion or "").upper()
-                if "CORRAL" in u:
-                    an.potrero_id = corral_m.id
-                    an.ubicacion = "CORRAL DE MANEJO"
-                else:
-                    an.potrero_id = potrero_1.id
-                    an.ubicacion = "Potrero 1"
-            if animales_sin_potrero:
+        # 6. Sembrar Potreros y Corrales iniciales (solo si SEED_DEMO_DATA=true, producción limpia por defecto)
+        SEED_DEMO_DATA = os.getenv("SEED_DEMO_DATA", "false").lower() in ("true", "1", "yes")
+        if SEED_DEMO_DATA:
+            print("Verificando potreros y corrales iniciales...")
+            total_potreros = db.scalar(select(func.count(Potrero.id))) or 0
+            if total_potreros == 0:
+                potreros_init = [
+                    Potrero(
+                        codigo="POT-0001",
+                        nombre="Potrero 1",
+                        tipo_area="POTRERO",
+                        superficie_ha=Decimal("45.50"),
+                        capacidad_cabezas=80,
+                        color_hex="#10b981",
+                        poligono_geojson=json.dumps({
+                            "type": "Polygon",
+                            "coordinates": [[
+                                [-62.251458, -17.919267],
+                                [-62.246458, -17.919267],
+                                [-62.246458, -17.923267],
+                                [-62.251458, -17.923267],
+                                [-62.251458, -17.919267]
+                            ]]
+                        }),
+                        centroide_lat=Decimal("-17.921267"),
+                        centroide_lng=Decimal("-62.248958"),
+                        estado="ACTIVO",
+                        observaciones="Potrero principal de pastoreo norte",
+                    ),
+                    Potrero(
+                        codigo="POT-0002",
+                        nombre="Potrero 2",
+                        tipo_area="POTRERO",
+                        superficie_ha=Decimal("50.00"),
+                        capacidad_cabezas=90,
+                        color_hex="#3b82f6",
+                        poligono_geojson=json.dumps({
+                            "type": "Polygon",
+                            "coordinates": [[
+                                [-62.246458, -17.919267],
+                                [-62.241458, -17.919267],
+                                [-62.241458, -17.923267],
+                                [-62.246458, -17.923267],
+                                [-62.246458, -17.919267]
+                            ]]
+                        }),
+                        centroide_lat=Decimal("-17.921267"),
+                        centroide_lng=Decimal("-62.243958"),
+                        estado="ACTIVO",
+                        observaciones="Potrero de rotación pasto Brachiaria",
+                    ),
+                    Potrero(
+                        codigo="POT-0003",
+                        nombre="Potrero Don Felipe",
+                        tipo_area="POTRERO",
+                        superficie_ha=Decimal("60.00"),
+                        capacidad_cabezas=100,
+                        color_hex="#8b5cf6",
+                        poligono_geojson=json.dumps({
+                            "type": "Polygon",
+                            "coordinates": [[
+                                [-62.251458, -17.923267],
+                                [-62.241458, -17.923267],
+                                [-62.241458, -17.928267],
+                                [-62.251458, -17.928267],
+                                [-62.251458, -17.923267]
+                            ]]
+                        }),
+                        centroide_lat=Decimal("-17.925767"),
+                        centroide_lng=Decimal("-62.246458"),
+                        estado="ACTIVO",
+                        observaciones="Área Don Felipe sur",
+                    ),
+                    Potrero(
+                        codigo="COR-0001",
+                        nombre="CORRAL DE MANEJO",
+                        tipo_area="CORRAL",
+                        superficie_ha=Decimal("1.50"),
+                        capacidad_cabezas=40,
+                        color_hex="#f59e0b",
+                        poligono_geojson=json.dumps({
+                            "type": "Polygon",
+                            "coordinates": [[
+                                [-62.246958, -17.922967],
+                                [-62.245958, -17.922967],
+                                [-62.245958, -17.923567],
+                                [-62.246958, -17.923567],
+                                [-62.246958, -17.922967]
+                            ]]
+                        }),
+                        centroide_lat=Decimal("-17.923267"),
+                        centroide_lng=Decimal("-62.246458"),
+                        estado="ACTIVO",
+                        observaciones="Corral central con manga y brete",
+                    ),
+                ]
+                for p in potreros_init:
+                    db.add(p)
                 db.commit()
-                print(f"Se sincronizaron {len(animales_sin_potrero)} animales existentes con sus potreros.")
+                print("Potreros y Corrales iniciales creados exitosamente.")
+
+            # Sincronizar animales existentes que tengan potrero_id NULL
+            potrero_1 = db.execute(select(Potrero).where(Potrero.nombre == "Potrero 1")).scalars().first()
+            corral_m = db.execute(select(Potrero).where(Potrero.nombre == "CORRAL DE MANEJO")).scalars().first()
+
+            if potrero_1 and corral_m:
+                animales_sin_potrero = db.execute(select(Animal).where(Animal.potrero_id.is_(None))).scalars().all()
+                for an in animales_sin_potrero:
+                    u = (an.ubicacion or "").upper()
+                    if "CORRAL" in u:
+                        an.potrero_id = corral_m.id
+                        an.ubicacion = "CORRAL DE MANEJO"
+                    else:
+                        an.potrero_id = potrero_1.id
+                        an.ubicacion = "Potrero 1"
+                if animales_sin_potrero:
+                    db.commit()
+                    print(f"Se sincronizaron {len(animales_sin_potrero)} animales existentes con sus potreros.")
 
         # =========================================================================
         # SEED SANIDAD Y MEDICAMENTOS (SPEC-003)
@@ -722,8 +725,8 @@ def init_db():
             db.commit()
             print(f"Catálogo de {len(medicamentos_init)} medicamentos precargados exitosamente.")
 
-        # 9. Sembrar Áreas y Ciclos Agrícolas Iniciales (SPEC-004)
-        if db.query(func.count(AreaAgricola.id)).scalar() == 0:
+        # 9. Sembrar Áreas y Ciclos Agrícolas Iniciales (solo si SEED_DEMO_DATA=true, producción limpia por defecto)
+        if SEED_DEMO_DATA and db.query(func.count(AreaAgricola.id)).scalar() == 0:
             print("Sembrando parcelas agrícolas y ciclos de demostración...")
             
             # Polígono 1: Parcela Norte - Lote 1 (cerca de -17.920, -62.248)
