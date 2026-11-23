@@ -158,8 +158,8 @@ def init_db():
             "GANADERIA_EDITAR",
             "AGRICULTURA_VER",
             "AGRICULTURA_GESTIONAR",
-            "APICULTURA_VER",
-            "APICULTURA_GESTIONAR",
+            "AVICULTURA_VER",
+            "AVICULTURA_GESTIONAR",
         ]
 
         permisos_db = {}

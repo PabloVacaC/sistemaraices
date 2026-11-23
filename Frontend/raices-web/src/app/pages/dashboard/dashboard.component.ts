@@ -244,33 +244,28 @@ import { ToastService } from '../../core/services/toast.service';
             </div>
           }
 
-          <!-- MÓDULO 4: APICULTURA Y AUDITORÍA (Púrpura / Morado) -->
+          <!-- MÓDULO 4: AVICULTURA Y AUDITORÍA (Púrpura / Morado) -->
           @if (auth.hasPermission('VER_BITACORA') || auth.hasPermission('AGRICULTURA_VER') || auth.hasPermission('GANADERIA_VER') || auth.hasPermission('GESTION_USUARIOS')) {
-            <div class="nav-section-group group-apicultura">
+            <div class="nav-section-group group-avicultura">
               <div class="nav-section-title">
-                <span class="module-dot dot-apicultura"></span>
-                <span>APICULTURA & AUDITORÍA</span>
+                <span class="module-dot dot-avicultura"></span>
+                <span>AVICULTURA & AUDITORÍA</span>
               </div>
 
               @if (auth.hasPermission('AGRICULTURA_VER') || auth.hasPermission('GANADERIA_VER') || auth.hasPermission('GESTION_USUARIOS')) {
                 <a
-                  routerLink="/dashboard/apicultura"
+                  routerLink="/dashboard/avicultura"
                   routerLinkActive="active"
                   class="nav-item"
-                  id="nav-apicultura"
+                  id="nav-avicultura"
                   (click)="mobileMenuOpen.set(false)"
                 >
                   <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="14" r="5"/>
-                    <path d="M12 6v3"/>
-                    <path d="M10 3l2 3 2-3"/>
-                    <path d="M7 14c-2.5 0-4-1.5-4-3.5S4.5 7 7 8.5"/>
-                    <path d="M17 14c2.5 0 4-1.5 4-3.5S19.5 7 17 8.5"/>
-                    <line x1="8" y1="13" x2="16" y2="13"/>
-                    <line x1="8" y1="15" x2="16" y2="15"/>
-                    <line x1="12" y1="19" x2="12" y2="21"/>
+                    <!-- Icono de Avicultura / Granjas de Postura -->
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                    <polyline points="9 22 9 12 15 12 15 22"/>
                   </svg>
-                  <span>Apicultura</span>
+                  <span>Avicultura</span>
                 </a>
               }
 
@@ -509,7 +504,7 @@ import { ToastService } from '../../core/services/toast.service';
           box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.25);
         }
 
-        &.dot-apicultura {
+        &.dot-avicultura {
           background-color: #8b5cf6;
           box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.25);
         }

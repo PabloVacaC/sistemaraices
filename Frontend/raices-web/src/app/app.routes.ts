@@ -44,8 +44,13 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/agricultura/agricultura.component').then(m => m.AgriculturaComponent)
       },
       {
+        path: 'avicultura',
+        loadComponent: () => import('./pages/avicultura/avicultura.component').then(m => m.AviculturaComponent)
+      },
+      {
         path: 'apicultura',
-        loadComponent: () => import('./pages/apicultura/apicultura.component').then(m => m.ApiculturaComponent)
+        redirectTo: 'avicultura',
+        pathMatch: 'full'
       },
       {
         path: 'planilla',
