@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 
 from app.core.config import settings
 from app.database.seed import init_db
@@ -12,6 +13,9 @@ from app.modules.pagos.router import router as pagos_router
 from app.modules.planilla.router import router as planilla_router
 from app.modules.inventario.router import router as inventario_router
 from app.modules.contabilidad.router import router as contabilidad_router
+from app.modules.ganaderia.router import router as ganaderia_router
+from app.modules.sanidad.router import router as sanidad_router
+from app.modules.agricultura.router import router as agricultura_router
 
 
 @asynccontextmanager
@@ -42,6 +46,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # Registro de rutas de la API
 app.include_router(auth_router, prefix="/api")
@@ -52,6 +57,9 @@ app.include_router(pagos_router, prefix="/api")
 app.include_router(planilla_router, prefix="/api")
 app.include_router(inventario_router, prefix="/api")
 app.include_router(contabilidad_router, prefix="/api")
+app.include_router(ganaderia_router, prefix="/api")
+app.include_router(sanidad_router, prefix="/api")
+app.include_router(agricultura_router, prefix="/api")
 
 
 @app.get("/")

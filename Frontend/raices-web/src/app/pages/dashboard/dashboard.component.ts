@@ -33,138 +33,262 @@ import { ToastService } from '../../core/services/toast.service';
         </div>
 
         <nav class="sidebar-nav">
-          <div class="nav-section-title">MÓDULOS DEL SISTEMA</div>
+          <!-- MÓDULO 1: CONTABLE Y ADMINISTRATIVO (Rosa) -->
+          <div class="nav-section-group group-contable">
+            <div class="nav-section-title">
+              <span class="module-dot dot-contable"></span>
+              <span>ADMINISTRACIÓN & CONTABILIDAD</span>
+            </div>
 
-          <a
-            routerLink="/dashboard"
-            routerLinkActive="active"
-            [routerLinkActiveOptions]="{ exact: true }"
-            class="nav-item"
-            (click)="mobileMenuOpen.set(false)"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect width="7" height="9" x="3" y="3" rx="1"/>
-              <rect width="7" height="5" x="14" y="3" rx="1"/>
-              <rect width="7" height="9" x="14" y="12" rx="1"/>
-              <rect width="7" height="5" x="3" y="16" rx="1"/>
-            </svg>
-            <span>Panel General</span>
-          </a>
-
-          @if (auth.hasPermission('GESTION_USUARIOS')) {
             <a
-              routerLink="/dashboard/usuarios"
+              routerLink="/dashboard"
               routerLinkActive="active"
+              [routerLinkActiveOptions]="{ exact: true }"
               class="nav-item"
               (click)="mobileMenuOpen.set(false)"
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
-                <circle cx="9" cy="7" r="4"/>
-                <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
-                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect width="7" height="9" x="3" y="3" rx="1"/>
+                <rect width="7" height="5" x="14" y="3" rx="1"/>
+                <rect width="7" height="9" x="14" y="12" rx="1"/>
+                <rect width="7" height="5" x="3" y="16" rx="1"/>
               </svg>
-              <span>Gestión de Usuarios</span>
+              <span>Panel General</span>
             </a>
+
+            @if (auth.hasPermission('GESTION_USUARIOS')) {
+              <a
+                routerLink="/dashboard/usuarios"
+                routerLinkActive="active"
+                class="nav-item"
+                (click)="mobileMenuOpen.set(false)"
+              >
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                  <circle cx="9" cy="7" r="4"/>
+                  <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                </svg>
+                <span>Gestión de Usuarios</span>
+              </a>
+            }
+
+            @if (auth.hasPermission('GESTION_TRABAJADORES')) {
+              <a
+                routerLink="/dashboard/trabajadores"
+                routerLinkActive="active"
+                class="nav-item"
+                (click)="mobileMenuOpen.set(false)"
+              >
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect width="20" height="14" x="2" y="7" rx="2" ry="2"/>
+                  <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+                </svg>
+                <span>Gestión de Trabajadores</span>
+              </a>
+            }
+
+            @if (auth.hasPermission('INVENTARIO_VER')) {
+              <a
+                routerLink="/dashboard/inventario"
+                routerLinkActive="active"
+                class="nav-item"
+                id="nav-inventario"
+                (click)="mobileMenuOpen.set(false)"
+              >
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/>
+                  <path d="m3.3 7 8.7 5 8.7-5"/>
+                  <path d="M12 22V12"/>
+                </svg>
+                <span>Inventario</span>
+              </a>
+            }
+
+            @if (auth.hasPermission('PLANILLA_VER') || auth.hasPermission('PAGOS_ANTICIPOS_VER') || auth.hasPermission('GESTION_TRABAJADORES')) {
+              <a
+                routerLink="/dashboard/planilla"
+                routerLinkActive="active"
+                class="nav-item"
+                id="nav-planilla"
+                (click)="mobileMenuOpen.set(false)"
+              >
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                  <polyline points="14 2 14 8 20 8"/>
+                  <line x1="16" y1="13" x2="8" y2="13"/>
+                  <line x1="16" y1="17" x2="8" y2="17"/>
+                  <polyline points="10 9 9 9 8 9"/>
+                </svg>
+                <span>Planilla</span>
+              </a>
+            }
+
+            @if (auth.hasPermission('PAGOS_ANTICIPOS_VER') || auth.hasPermission('GESTION_TRABAJADORES')) {
+              <a
+                routerLink="/dashboard/pagos"
+                routerLinkActive="active"
+                class="nav-item"
+                id="nav-pagos-anticipos"
+                (click)="mobileMenuOpen.set(false)"
+              >
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect width="20" height="12" x="2" y="6" rx="2"/>
+                  <circle cx="12" cy="12" r="2"/>
+                  <path d="M6 12h.01M18 12h.01"/>
+                </svg>
+                <span>Pagos y Anticipos</span>
+              </a>
+            }
+
+            @if (auth.hasPermission('PAGOS_ANTICIPOS_VER') || auth.hasPermission('INVENTARIO_VER') || auth.hasPermission('GESTION_USUARIOS')) {
+              <a
+                routerLink="/dashboard/contabilidad"
+                routerLinkActive="active"
+                class="nav-item"
+                id="nav-contabilidad"
+                (click)="mobileMenuOpen.set(false)"
+              >
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="12" y1="1" x2="12" y2="23"/>
+                  <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                </svg>
+                <span>Contabilidad</span>
+              </a>
+            }
+          </div>
+
+          <!-- MÓDULO 2: GANADERÍA (Celeste / Cyan) -->
+          @if (auth.hasPermission('GANADERIA_VER')) {
+            <div class="nav-section-group group-ganaderia">
+              <div class="nav-section-title">
+                <span class="module-dot dot-ganaderia"></span>
+                <span>MÓDULO DE GANADERÍA</span>
+              </div>
+
+              <a
+                routerLink="/dashboard/ganaderia"
+                routerLinkActive="active"
+                class="nav-item"
+                id="nav-ganaderia"
+                (click)="mobileMenuOpen.set(false)"
+              >
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M7 5a2 2 0 0 0-2 2v2a3 3 0 0 0 3 3h8a3 3 0 0 0 3-3V7a2 2 0 0 0-2-2H7z"/>
+                  <path d="M5 7L2 9l2 3"/>
+                  <path d="M19 7l3 2-2 3"/>
+                  <circle cx="9" cy="9" r="1" fill="currentColor"/>
+                  <circle cx="15" cy="9" r="1" fill="currentColor"/>
+                  <path d="M10 16v5M14 16v5M8 21h8"/>
+                </svg>
+                <span>Registro / Identificación del Ganado</span>
+              </a>
+
+              <a
+                routerLink="/dashboard/potreros"
+                routerLinkActive="active"
+                class="nav-item"
+                id="nav-potreros"
+                (click)="mobileMenuOpen.set(false)"
+              >
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/>
+                  <line x1="8" y1="2" x2="8" y2="18"/>
+                  <line x1="16" y1="6" x2="16" y2="22"/>
+                </svg>
+                <span>Gestión de Potreros y Movimientos</span>
+              </a>
+
+              <a
+                routerLink="/dashboard/sanidad"
+                routerLinkActive="active"
+                class="nav-item"
+                id="nav-sanidad"
+                (click)="mobileMenuOpen.set(false)"
+              >
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="m18 2 4 4"/>
+                  <path d="m17 7 3-3"/>
+                  <path d="M19 9 8.7 19.3c-1 1-2.5 1.7-3.7 1.7H3v-2c0-1.2.7-2.7 1.7-3.7L15 5"/>
+                  <path d="m9 11 4 4"/>
+                </svg>
+                <span>Sanidad y Tratamientos</span>
+              </a>
+            </div>
           }
 
-          @if (auth.hasPermission('GESTION_TRABAJADORES')) {
-            <a
-              routerLink="/dashboard/trabajadores"
-              routerLinkActive="active"
-              class="nav-item"
-              (click)="mobileMenuOpen.set(false)"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect width="20" height="14" x="2" y="7" rx="2" ry="2"/>
-                <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
-              </svg>
-              <span>Gestión de Trabajadores</span>
-            </a>
+          <!-- MÓDULO 3: AGRICULTURA (Verde) -->
+          @if (auth.hasPermission('AGRICULTURA_VER') || auth.hasPermission('GANADERIA_VER') || auth.hasPermission('GESTION_USUARIOS')) {
+            <div class="nav-section-group group-agricultura">
+              <div class="nav-section-title">
+                <span class="module-dot dot-agricultura"></span>
+                <span>MÓDULO DE AGRICULTURA</span>
+              </div>
+
+              <a
+                routerLink="/dashboard/agricultura"
+                routerLinkActive="active"
+                class="nav-item"
+                id="nav-agricultura"
+                (click)="mobileMenuOpen.set(false)"
+              >
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M7 20h10"/>
+                  <path d="M10 20c0-3.5 1.5-6.5 4-8.5"/>
+                  <path d="M2 13c3.5 0 6.5-1.5 8.5-4"/>
+                  <path d="M14 11.5c-2-2-2-5.5 0-7.5s5.5-2 7.5 0-2 7.5-7.5 7.5z"/>
+                  <path d="M5.5 14c2-2 5.5-2 7.5 0s2 5.5 0 7.5-7.5-2-7.5-7.5z"/>
+                </svg>
+                <span>Agricultura</span>
+              </a>
+            </div>
           }
 
-          @if (auth.hasPermission('INVENTARIO_VER')) {
-            <a
-              routerLink="/dashboard/inventario"
-              routerLinkActive="active"
-              class="nav-item"
-              id="nav-inventario"
-              (click)="mobileMenuOpen.set(false)"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/>
-                <path d="m3.3 7 8.7 5 8.7-5"/>
-                <path d="M12 22V12"/>
-              </svg>
-              <span>Inventario</span>
-            </a>
-          }
+          <!-- MÓDULO 4: APICULTURA Y AUDITORÍA (Púrpura / Morado) -->
+          @if (auth.hasPermission('VER_BITACORA') || auth.hasPermission('AGRICULTURA_VER') || auth.hasPermission('GANADERIA_VER') || auth.hasPermission('GESTION_USUARIOS')) {
+            <div class="nav-section-group group-apicultura">
+              <div class="nav-section-title">
+                <span class="module-dot dot-apicultura"></span>
+                <span>APICULTURA & AUDITORÍA</span>
+              </div>
 
-          @if (auth.hasPermission('PLANILLA_VER') || auth.hasPermission('PAGOS_ANTICIPOS_VER') || auth.hasPermission('GESTION_TRABAJADORES')) {
-            <a
-              routerLink="/dashboard/planilla"
-              routerLinkActive="active"
-              class="nav-item"
-              id="nav-planilla"
-              (click)="mobileMenuOpen.set(false)"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                <polyline points="14 2 14 8 20 8"/>
-                <line x1="16" y1="13" x2="8" y2="13"/>
-                <line x1="16" y1="17" x2="8" y2="17"/>
-                <polyline points="10 9 9 9 8 9"/>
-              </svg>
-              <span>Planilla</span>
-            </a>
-          }
+              @if (auth.hasPermission('AGRICULTURA_VER') || auth.hasPermission('GANADERIA_VER') || auth.hasPermission('GESTION_USUARIOS')) {
+                <a
+                  routerLink="/dashboard/apicultura"
+                  routerLinkActive="active"
+                  class="nav-item"
+                  id="nav-apicultura"
+                  (click)="mobileMenuOpen.set(false)"
+                >
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="14" r="5"/>
+                    <path d="M12 6v3"/>
+                    <path d="M10 3l2 3 2-3"/>
+                    <path d="M7 14c-2.5 0-4-1.5-4-3.5S4.5 7 7 8.5"/>
+                    <path d="M17 14c2.5 0 4-1.5 4-3.5S19.5 7 17 8.5"/>
+                    <line x1="8" y1="13" x2="16" y2="13"/>
+                    <line x1="8" y1="15" x2="16" y2="15"/>
+                    <line x1="12" y1="19" x2="12" y2="21"/>
+                  </svg>
+                  <span>Apicultura</span>
+                </a>
+              }
 
-          @if (auth.hasPermission('PAGOS_ANTICIPOS_VER') || auth.hasPermission('GESTION_TRABAJADORES')) {
-            <a
-              routerLink="/dashboard/pagos"
-              routerLinkActive="active"
-              class="nav-item"
-              id="nav-pagos-anticipos"
-              (click)="mobileMenuOpen.set(false)"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect width="20" height="12" x="2" y="6" rx="2"/>
-                <circle cx="12" cy="12" r="2"/>
-                <path d="M6 12h.01M18 12h.01"/>
-              </svg>
-              <span>Pagos y Anticipos</span>
-            </a>
-          }
-
-          @if (auth.hasPermission('PAGOS_ANTICIPOS_VER') || auth.hasPermission('INVENTARIO_VER') || auth.hasPermission('GESTION_USUARIOS')) {
-            <a
-              routerLink="/dashboard/contabilidad"
-              routerLinkActive="active"
-              class="nav-item"
-              id="nav-contabilidad"
-              (click)="mobileMenuOpen.set(false)"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="12" y1="1" x2="12" y2="23"/>
-                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-              </svg>
-              <span>Contabilidad</span>
-            </a>
-          }
-
-          @if (auth.hasPermission('VER_BITACORA')) {
-            <a
-              routerLink="/dashboard/bitacora"
-              routerLinkActive="active"
-              class="nav-item"
-              (click)="mobileMenuOpen.set(false)"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M12 8v4l3 3"/>
-                <circle cx="12" cy="12" r="9"/>
-              </svg>
-              <span>Bitácora de Auditoría</span>
-            </a>
+              @if (auth.hasPermission('VER_BITACORA')) {
+                <a
+                  routerLink="/dashboard/bitacora"
+                  routerLinkActive="active"
+                  class="nav-item"
+                  (click)="mobileMenuOpen.set(false)"
+                >
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 8v4l3 3"/>
+                    <circle cx="12" cy="12" r="9"/>
+                  </svg>
+                  <span>Bitácora de Auditoría</span>
+                </a>
+              }
+            </div>
           }
         </nav>
 
@@ -242,6 +366,9 @@ import { ToastService } from '../../core/services/toast.service';
     /* Sidebar */
     .sidebar {
       width: 260px;
+      height: 100vh;
+      position: sticky;
+      top: 0;
       background-color: #ffffff;
       border-right: 1px solid var(--border-default);
       display: flex;
@@ -265,7 +392,7 @@ import { ToastService } from '../../core/services/toast.service';
     }
 
     .sidebar-header {
-      padding: 20px 18px;
+      padding: 18px 16px;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -317,28 +444,84 @@ import { ToastService } from '../../core/services/toast.service';
     }
 
     .sidebar-nav {
-      padding: 18px 12px;
+      padding: 12px 10px;
       flex: 1;
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 6px;
+      overflow-y: auto;
+      overflow-x: hidden;
+
+      &::-webkit-scrollbar {
+        width: 4px;
+      }
+      &::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      &::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+      }
+
+      .nav-section-group {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+
+        & + .nav-section-group {
+          margin-top: 4px;
+          padding-top: 8px;
+          border-top: 1px dashed var(--border-subtle);
+        }
+      }
 
       .nav-section-title {
-        font-size: 0.6875rem;
-        font-weight: 600;
+        font-size: 0.65rem;
+        font-weight: 700;
         text-transform: uppercase;
         color: var(--text-muted);
         letter-spacing: 0.08em;
-        padding: 8px 12px 6px;
+        padding: 4px 10px 4px;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+      }
+
+      .module-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        display: inline-block;
+        flex-shrink: 0;
+
+        &.dot-contable {
+          background-color: #ec4899;
+          box-shadow: 0 0 0 2px rgba(236, 72, 153, 0.25);
+        }
+
+        &.dot-ganaderia {
+          background-color: #06b6d4;
+          box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.25);
+        }
+
+        &.dot-agricultura {
+          background-color: #10b981;
+          box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.25);
+        }
+
+        &.dot-apicultura {
+          background-color: #8b5cf6;
+          box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.25);
+        }
       }
 
       .nav-item {
         display: flex;
         align-items: center;
-        gap: 12px;
-        padding: 9px 14px;
+        gap: 10px;
+        padding: 7.5px 12px;
         color: var(--text-secondary);
-        font-size: 0.875rem;
+        font-size: 0.825rem;
         font-weight: 500;
         border-radius: var(--radius-md);
         text-decoration: none;

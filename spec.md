@@ -861,23 +861,17 @@ La pérdida de peso no deberá considerarse un error automáticamente.
 
 # RF-021 — Ubicación del animal
 
-Cada animal deberá contar con una ubicación actual obligatoria.
+Cada animal deberá contar con una ubicación actual obligatoria asociada a un potrero o corral activo del establecimiento.
 
-La ubicación podrá ser seleccionada o registrada según la estructura del sistema.
+La ubicación se selecciona directamente del catálogo de potreros y corrales configurados y delimitados cartográficamente en el sistema (SPEC-002):
 
-En esta primera versión, la ubicación podrá manejarse mediante un campo configurable o catálogo sencillo.
+- Los formularios de Registro Manual, Nacimiento y Compra consultan la lista en tiempo real de potreros activos (`GET /ganaderia/potreros`).
+- Cada registro sincroniza automáticamente la clave foránea `potrero_id` y el nombre descriptivo `ubicacion`.
+- Al registrarse con un potrero válido, el animal se incorpora y posiciona automáticamente en la cartografía satelital interactiva dentro del polígono perimetral correspondiente.
+- En nacimientos, la cría puede heredar automáticamente el potrero actual de la madre o ser asignada a otro (e.g. Maternidad).
+- En compras masivas, se permite asignar un potrero general a todas las filas con un solo clic.
 
-Ejemplos:
-
-- Potrero 1.
-- Potrero 2.
-- Corral.
-- Zona de cuarentena.
-- Otro.
-
-El sistema deberá permitir cambiar la ubicación de un animal.
-
-Los cambios de ubicación deberán poder conservarse como historial cuando se implemente la gestión de movimientos.
+El sistema permite cambiar la ubicación de un animal tanto por formulario como mediante arrastre interactivo en el mapa satelital, conservando el historial cronológico y trazabilidad completa.
 
 ---
 
@@ -1234,7 +1228,7 @@ Estas decisiones podrán definirse durante la implementación:
 
 ### D-02 — Ubicación
 
-¿La ubicación se manejará inicialmente como un campo de texto/catálogo sencillo o se integrará desde el principio con un módulo de potreros?
+**Resolución:** La ubicación se integra directamente con la entidad relacional `potrero` y el módulo de cartografía satelital (SPEC-002). No se usan listas estáticas cableadas; los selectores consumen los potreros y corrales activos de la base de datos, asegurando que `potrero_id` quede registrado y el animal sea visible en el mapa satelital desde el primer instante.
 
 ### D-03 — Sexo
 

@@ -1,0 +1,1644 @@
+<div class="ganaderia-container">
+  <!-- HEADER & ACCIONES PRINCIPALES -->
+  <header class="page-header">
+    <div class="header-title">
+      <div class="header-icon-box">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M7 5a2 2 0 0 0-2 2v2a3 3 0 0 0 3 3h8a3 3 0 0 0 3-3V7a2 2 0 0 0-2-2H7z"/>
+          <path d="M5 7L2 9l2 3"/>
+          <path d="M19 7l3 2-2 3"/>
+          <circle cx="9" cy="9" r="1" fill="currentColor"/>
+          <circle cx="15" cy="9" r="1" fill="currentColor"/>
+          <path d="M10 16v5M14 16v5M8 21h8"/>
+        </svg>
+      </div>
+      <div>
+        <h1>Módulo de Ganadería</h1>
+        <p class="subtitle">Gestión integral del hato, trazabilidad individual, pesajes y movimientos</p>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      @if (auth.hasPermission('GANADERIA_CREAR')) {
+        <button class="btn btn-primary" (click)="abrirModalNuevoAnimal()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          <span>Nuevo Animal</span>
+        </button>
+
+        <button class="btn btn-secondary" (click)="abrirModalNacimiento()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 21a9 9 0 0 0 9-9c0-4.97-4.03-9-9-9s-9 4.03-9 9a9 9 0 0 0 9 9z"/>
+            <path d="M12 7v5l3 3"/>
+          </svg>
+          <span>Registrar Parto</span>
+        </button>
+      }
+
+      @if (auth.hasPermission('GANADERIA_COMPRAS')) {
+        <button class="btn btn-outline" (click)="abrirModalCompra()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+          </svg>
+          <span>Compra Ganado</span>
+        </button>
+      }
+
+      @if (auth.hasPermission('GANADERIA_VENTAS')) {
+        <button class="btn btn-outline" (click)="abrirModalVenta()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="1" x2="12" y2="23"/>
+            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+          </svg>
+          <span>Venta</span>
+        </button>
+      }
+
+      @if (auth.hasPermission('GANADERIA_BAJAS')) {
+        <button class="btn btn-danger-outline" (click)="abrirModalBaja()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 6L6 18M6 6l12 12"/>
+          </svg>
+          <span>Registrar Baja</span>
+        </button>
+      }
+    </div>
+  </header>
+
+  <!-- KPIS DEL GANADO -->
+  @if (kpis(); as k) {
+    <section class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">TOTAL GANADO</div>
+        <div class="kpi-value">{{ k.total_hato }}</div>
+        <div class="kpi-sub">Total registrados en sistema</div>
+      </div>
+
+      <div class="kpi-card accent-green">
+        <div class="kpi-label">GANADO ACTIVO</div>
+        <div class="kpi-value">{{ k.activos }}</div>
+        <div class="kpi-sub">{{ k.machos }} Machos • {{ k.hembras }} Hembras</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-label">NACIMIENTOS</div>
+        <div class="kpi-value">{{ k.total_nacimientos }}</div>
+        <div class="kpi-sub">Crías paridas en finca</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-label">COMPRAS</div>
+        <div class="kpi-value">{{ k.total_compras }}</div>
+        <div class="kpi-sub">Cabezas adquiridas</div>
+      </div>
+
+      <div class="kpi-card accent-red">
+        <div class="kpi-label">VENTAS / BAJAS</div>
+        <div class="kpi-value">{{ k.vendidos }} <span class="divider">/</span> {{ k.fallecidos_bajas }}</div>
+        <div class="kpi-sub">{{ k.vendidos }} Vendidos • {{ k.fallecidos_bajas }} Bajas</div>
+      </div>
+    </section>
+  }
+
+  <!-- BARRA DE PESTAÑAS (TABS) Y BUSCADOR -->
+  <section class="filter-section">
+    <div class="tabs-bar">
+      <button class="tab-btn" [class.active]="activeTab() === 'TODOS'" (click)="setTab('TODOS')">
+        Todos
+        <span class="chip-count">{{ animales().length }}</span>
+      </button>
+      <button class="tab-btn" [class.active]="activeTab() === 'REGISTRADOS'" (click)="setTab('REGISTRADOS')">
+        Registrados
+      </button>
+      <button class="tab-btn" [class.active]="activeTab() === 'NACIMIENTOS'" (click)="setTab('NACIMIENTOS')">
+        Nacimientos
+        <span class="chip-count">{{ nacimientos().length }}</span>
+      </button>
+      <button class="tab-btn" [class.active]="activeTab() === 'COMPRAS'" (click)="setTab('COMPRAS')">
+        Compras
+        <span class="chip-count">{{ compras().length }}</span>
+      </button>
+      <button class="tab-btn" [class.active]="activeTab() === 'VENTAS'" (click)="setTab('VENTAS')">
+        Ventas
+        <span class="chip-count">{{ ventas().length }}</span>
+      </button>
+      <button class="tab-btn" [class.active]="activeTab() === 'BAJAS'" (click)="setTab('BAJAS')">
+        Bajas
+        <span class="chip-count">{{ bajas().length }}</span>
+      </button>
+    </div>
+
+    <!-- FILTROS REACTIVOS PARA ANIMALES -->
+    @if (activeTab() === 'TODOS' || activeTab() === 'REGISTRADOS' || activeTab() === 'NACIMIENTOS') {
+      <div class="controls-bar">
+        <div class="search-box">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input
+            type="text"
+            placeholder="Buscar por arete, código interno, nombre o raza..."
+            [ngModel]="searchTerm()"
+            (ngModelChange)="searchTerm.set($event)"
+          />
+          @if (searchTerm()) {
+            <button class="btn-clear" (click)="searchTerm.set('')">✕</button>
+          }
+        </div>
+
+        <div class="dropdown-filters">
+          <select [ngModel]="filtroEstado()" (ngModelChange)="filtroEstado.set($event)">
+            <option value="TODOS">Todos los Estados</option>
+            <option value="ACTIVO">Activo</option>
+            <option value="VENDIDO">Vendido</option>
+            <option value="FALLECIDO">Fallecido</option>
+            <option value="DESCARTADO">Descartado</option>
+            <option value="ROBADO">Robado</option>
+            <option value="EXTRAVIADO">Extraviado</option>
+          </select>
+
+          <select [ngModel]="filtroSexo()" (ngModelChange)="filtroSexo.set($event)">
+            <option value="TODOS">Todos los Sexos</option>
+            <option value="MACHO">Macho</option>
+            <option value="HEMBRA">Hembra</option>
+          </select>
+
+          <select [ngModel]="filtroCategoria()" (ngModelChange)="filtroCategoria.set($event)">
+            <option value="TODOS">Todas las Categorías</option>
+            @for (cat of CATEGORIAS; track cat) {
+              <option [value]="cat">{{ cat }}</option>
+            }
+          </select>
+
+          <select [ngModel]="filtroTipoGanado()" (ngModelChange)="filtroTipoGanado.set($event)">
+            <option value="TODOS">Todas las Especies</option>
+            @for (tipo of TIPOS_GANADO; track tipo) {
+              <option [value]="tipo">{{ tipo }}</option>
+            }
+          </select>
+
+          <select [ngModel]="filtroPotrero()" (ngModelChange)="filtroPotrero.set($event)">
+            <option value="TODOS">Todos los Potreros / Corrales</option>
+            @for (p of potreros(); track p.id) {
+              <option [value]="p.id">{{ p.nombre }}</option>
+            }
+          </select>
+        </div>
+      </div>
+    }
+  </section>
+
+  <!-- CONTENIDO PRINCIPAL: VISTA DE ANIMALES -->
+  @if (activeTab() === 'TODOS' || activeTab() === 'REGISTRADOS' || activeTab() === 'NACIMIENTOS') {
+    <section class="data-section">
+      <!-- VISTA DESKTOP / TABLET (TABLA) -->
+      <div class="table-container desktop-view">
+        <table class="modern-table">
+          <thead>
+            <tr>
+              <th class="sticky-col col-code">CÓDIGO</th>
+              <th class="sticky-col col-arete">ARETE</th>
+              <th>NOMBRE / ALIAS</th>
+              <th>ESPECIE / RAZA</th>
+              <th>SEXO</th>
+              <th>CATEGORÍA</th>
+              <th>UBICACIÓN</th>
+              <th>PESO ACTUAL</th>
+              <th>ESTADO</th>
+              <th class="text-right">ACCIONES</th>
+            </tr>
+          </thead>
+          <tbody>
+            @if (loading()) {
+              <tr>
+                <td colspan="10" class="text-center py-8">
+                  <div class="spinner"></div>
+                  <p class="text-muted mt-2">Cargando ganado...</p>
+                </td>
+              </tr>
+            } @else if (animalesFiltrados().length === 0) {
+              <tr>
+                <td colspan="10" class="text-center py-8 empty-row">
+                  <p class="empty-title">No se encontraron animales registrados</p>
+                  <p class="text-muted">Pruebe ajustando los filtros de búsqueda o registre una nueva cabeza.</p>
+                </td>
+              </tr>
+            } @else {
+              @for (animal of animalesFiltrados(); track animal.id) {
+                <tr class="row-hover">
+                  <td class="sticky-col col-code font-bold">{{ animal.codigo_interno }}</td>
+                  <td class="sticky-col col-arete">
+                    @if (animal.numero_arete) {
+                      <span class="badge badge-arete">{{ animal.numero_arete }}</span>
+                    } @else {
+                      <span class="badge badge-muted">S/N</span>
+                    }
+                  </td>
+                  <td>
+                    <span class="animal-name">{{ animal.nombre || '—' }}</span>
+                  </td>
+                  <td>
+                    <div class="raza-info">
+                      <span class="raza-name">{{ animal.raza }}</span>
+                      <span class="tipo-tag">{{ animal.tipo_ganado }}</span>
+                    </div>
+                  </td>
+                  <td>
+                    @if (animal.sexo === 'MACHO') {
+                      <span class="badge badge-macho">♂ Macho</span>
+                    } @else {
+                      <span class="badge badge-hembra">♀ Hembra</span>
+                    }
+                  </td>
+                  <td>{{ animal.categoria || '—' }}</td>
+                  <td>
+                    <span class="location-tag">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                        <circle cx="12" cy="10" r="3"/>
+                      </svg>
+                      {{ animal.ubicacion }}
+                    </span>
+                  </td>
+                  <td>
+                    <div class="weight-cell">
+                      <span class="weight-val">{{ animal.peso_actual ? (animal.peso_actual | number:'1.1-1') + ' kg' : '—' }}</span>
+                      @if (animal.fecha_ultimo_pesaje) {
+                        <span class="weight-date">{{ animal.fecha_ultimo_pesaje }}</span>
+                      }
+                    </div>
+                  </td>
+                  <td>
+                    <span class="badge" [ngClass]="{
+                      'badge-activo': animal.estado === 'ACTIVO',
+                      'badge-vendido': animal.estado === 'VENDIDO',
+                      'badge-baja': animal.estado === 'FALLECIDO' || animal.estado === 'DESCARTADO' || animal.estado === 'ROBADO' || animal.estado === 'EXTRAVIADO'
+                    }">
+                      {{ animal.estado }}
+                    </span>
+                  </td>
+                  <td class="text-right actions-cell">
+                    <button class="btn-icon" title="Ver Perfil 360°" (click)="verPerfilAnimal(animal.id)">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                      </svg>
+                    </button>
+
+                    @if (auth.hasPermission('GANADERIA_PESAJES') && animal.estado === 'ACTIVO') {
+                      <button class="btn-icon" title="Registrar Pesaje" (click)="abrirModalPesaje(animal)">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <circle cx="12" cy="12" r="8"/>
+                          <line x1="12" y1="12" x2="12" y2="8"/>
+                          <line x1="12" y1="12" x2="15" y2="15"/>
+                        </svg>
+                      </button>
+                    }
+
+                    @if (auth.hasPermission('GANADERIA_EDITAR')) {
+                      <button class="btn-icon" title="Editar Animal" (click)="abrirModalEditarAnimal(animal)">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                        </svg>
+                      </button>
+                    }
+                  </td>
+                </tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- VISTA MÓVIL (< 768px): TARJETAS TÁCTILES -->
+      <div class="mobile-view mobile-cards-grid">
+        @if (loading()) {
+          <div class="text-center py-6">
+            <div class="spinner"></div>
+            <p class="text-muted mt-2">Cargando ganado...</p>
+          </div>
+        } @else if (animalesFiltrados().length === 0) {
+          <div class="empty-card">
+            <p class="empty-title">Sin animales encontrados</p>
+            <p class="text-muted">Ajuste los filtros o registre un animal.</p>
+          </div>
+        } @else {
+          @for (animal of animalesFiltrados(); track animal.id) {
+            <div class="animal-card" (click)="verPerfilAnimal(animal.id)">
+              <div class="card-header">
+                <div class="card-identifiers">
+                  <span class="card-code">{{ animal.codigo_interno }}</span>
+                  @if (animal.numero_arete) {
+                    <span class="badge badge-arete">Arete: {{ animal.numero_arete }}</span>
+                  } @else {
+                    <span class="badge badge-muted">S/N</span>
+                  }
+                </div>
+                <span class="badge" [ngClass]="{
+                  'badge-activo': animal.estado === 'ACTIVO',
+                  'badge-vendido': animal.estado === 'VENDIDO',
+                  'badge-baja': animal.estado === 'FALLECIDO' || animal.estado === 'DESCARTADO'
+                }">
+                  {{ animal.estado }}
+                </span>
+              </div>
+
+              <div class="card-body">
+                <div class="card-main-title">
+                  <h3>{{ animal.nombre || animal.raza }}</h3>
+                  <span class="card-raza-info">{{ animal.raza }} • {{ animal.tipo_ganado }}</span>
+                </div>
+
+                <div class="card-meta-row">
+                  <span class="meta-item">
+                    @if (animal.sexo === 'MACHO') {
+                      <span class="badge badge-macho">♂ Macho</span>
+                    } @else {
+                      <span class="badge badge-hembra">♀ Hembra</span>
+                    }
+                  </span>
+                  <span class="meta-item location-tag">📍 {{ animal.ubicacion }}</span>
+                  <span class="meta-item font-bold weight-chip">
+                    ⚖️ {{ animal.peso_actual ? (animal.peso_actual | number:'1.1-1') + ' kg' : 'S/P' }}
+                  </span>
+                </div>
+              </div>
+
+              <div class="card-footer" (click)="$event.stopPropagation()">
+                <button class="btn-card-action" (click)="verPerfilAnimal(animal.id)">
+                  Ver Perfil 360°
+                </button>
+                @if (auth.hasPermission('GANADERIA_PESAJES') && animal.estado === 'ACTIVO') {
+                  <button class="btn-card-action btn-pesaje-action" (click)="abrirModalPesaje(animal)">
+                    + Pesar
+                  </button>
+                }
+              </div>
+            </div>
+          }
+        }
+      </div>
+    </section>
+  }
+
+  <!-- TAB COMPRAS -->
+  @if (activeTab() === 'COMPRAS') {
+    <section class="data-section">
+      <div class="section-top-info">
+        <h3>Historial de Compras de Ganado</h3>
+        <p class="text-muted">Registro consolidado de compras, cabezas incorporadas y valores</p>
+      </div>
+
+      <div class="table-container">
+        <table class="modern-table">
+          <thead>
+            <tr>
+              <th>COMPROBANTE</th>
+              <th>PROVEEDOR</th>
+              <th>FECHA</th>
+              <th>CABEZAS</th>
+              <th>TRANSPORTE</th>
+              <th>TOTAL COMPRA</th>
+              <th>REGISTRADO POR</th>
+            </tr>
+          </thead>
+          <tbody>
+            @if (compras().length === 0) {
+              <tr><td colspan="7" class="text-center py-6 text-muted">No hay compras registradas.</td></tr>
+            } @else {
+              @for (c of compras(); track c.id) {
+                <tr>
+                  <td class="font-bold">{{ c.numero_comprobante }}</td>
+                  <td>{{ c.proveedor }}</td>
+                  <td>{{ c.fecha_compra }}</td>
+                  <td><span class="badge badge-macho">{{ c.cantidad_cabezas }} cabezas</span></td>
+                  <td>Bs {{ c.costo_transporte | number:'1.2-2' }}</td>
+                  <td class="font-bold text-success">Bs {{ c.total_compra | number:'1.2-2' }}</td>
+                  <td>{{ c.usuario_nombre || 'Sistema' }}</td>
+                </tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  }
+
+  <!-- TAB VENTAS -->
+  @if (activeTab() === 'VENTAS') {
+    <section class="data-section">
+      <div class="section-top-info">
+        <h3>Historial de Ventas de Ganado</h3>
+        <p class="text-muted">Ventas formalizadas, liquidaciones de salida y estado</p>
+      </div>
+
+      <div class="table-container">
+        <table class="modern-table">
+          <thead>
+            <tr>
+              <th>COMPROBANTE</th>
+              <th>CLIENTE</th>
+              <th>FECHA</th>
+              <th>CABEZAS</th>
+              <th>MODALIDAD</th>
+              <th>TOTAL NETO</th>
+              <th>ESTADO</th>
+              <th class="text-right">ACCIONES</th>
+            </tr>
+          </thead>
+          <tbody>
+            @if (ventas().length === 0) {
+              <tr><td colspan="8" class="text-center py-6 text-muted">No hay ventas registradas.</td></tr>
+            } @else {
+              @for (v of ventas(); track v.id) {
+                <tr>
+                  <td class="font-bold">{{ v.numero_comprobante }}</td>
+                  <td>{{ v.cliente }}</td>
+                  <td>{{ v.fecha_venta }}</td>
+                  <td><span class="badge badge-arete">{{ v.cantidad_cabezas }} cabezas</span></td>
+                  <td>{{ v.modalidad_venta }}</td>
+                  <td class="font-bold text-success">Bs {{ v.total_neto | number:'1.2-2' }}</td>
+                  <td>
+                    <span class="badge" [class.badge-activo]="v.estado === 'CONFIRMADA'" [class.badge-baja]="v.estado === 'ANULADA'">
+                      {{ v.estado }}
+                    </span>
+                  </td>
+                  <td class="text-right">
+                    @if (v.estado === 'CONFIRMADA' && auth.hasPermission('GANADERIA_VENTAS')) {
+                      <button class="btn btn-danger-sm" (click)="abrirModalAnular('VENTA', v.id)">
+                        Anular
+                      </button>
+                    }
+                  </td>
+                </tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  }
+
+  <!-- TAB BAJAS -->
+  @if (activeTab() === 'BAJAS') {
+    <section class="data-section">
+      <div class="section-top-info">
+        <h3>Actas de Baja y Descarte de Ganado</h3>
+        <p class="text-muted">Registro de pérdidas, fallecimientos, sacrificios de emergencia y necropsias</p>
+      </div>
+
+      <div class="table-container">
+        <table class="modern-table">
+          <thead>
+            <tr>
+              <th>ACTA</th>
+              <th>ANIMAL</th>
+              <th>ARETE</th>
+              <th>FECHA</th>
+              <th>TIPO BAJA</th>
+              <th>DIAGNÓSTICO / CAUSA</th>
+              <th>NECROPSIA</th>
+              <th>VALOR PÉRDIDA</th>
+              <th>ESTADO</th>
+              <th class="text-right">ACCIONES</th>
+            </tr>
+          </thead>
+          <tbody>
+            @if (bajas().length === 0) {
+              <tr><td colspan="10" class="text-center py-6 text-muted">No hay actas de baja registradas.</td></tr>
+            } @else {
+              @for (b of bajas(); track b.id) {
+                <tr>
+                  <td class="font-bold">{{ b.numero_acta }}</td>
+                  <td>{{ b.animal_codigo }}</td>
+                  <td><span class="badge badge-arete">{{ b.animal_arete || 'S/N' }}</span></td>
+                  <td>{{ b.fecha_baja }}</td>
+                  <td><span class="badge badge-baja">{{ b.tipo_baja }}</span></td>
+                  <td>{{ b.causa_diagnostico || 'No especificada' }}</td>
+                  <td>
+                    <span class="badge" [class.badge-activo]="b.necropsia_realizada" [class.badge-muted]="!b.necropsia_realizada">
+                      {{ b.necropsia_realizada ? 'Sí' : 'No' }}
+                    </span>
+                  </td>
+                  <td class="text-danger font-bold">Bs {{ b.valor_estimado_perdida | number:'1.2-2' }}</td>
+                  <td>
+                    <span class="badge" [class.badge-baja]="b.estado === 'CONFIRMADA'" [class.badge-muted]="b.estado === 'ANULADA'">
+                      {{ b.estado }}
+                    </span>
+                  </td>
+                  <td class="text-right">
+                    @if (b.estado === 'CONFIRMADA' && auth.hasPermission('GANADERIA_BAJAS')) {
+                      <button class="btn btn-danger-sm" (click)="abrirModalAnular('BAJA', b.id)">
+                        Anular
+                      </button>
+                    }
+                  </td>
+                </tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  }
+</div>
+
+<!-- ========================================================== -->
+<!-- MODAL PERFIL 360° DEL ANIMAL                               -->
+<!-- ========================================================== -->
+@if (showPerfilModal() && selectedAnimalPerfil(); as perfil) {
+  <div class="modal-overlay" (click)="cerrarPerfil()">
+    <div class="modal-container modal-xl" (click)="$event.stopPropagation()">
+      <div class="modal-header perfil-header">
+        <div class="perfil-hero">
+          <div class="avatar-ganado">
+            <span>{{ perfil.animal.sexo === 'MACHO' ? '🐂' : '🐄' }}</span>
+          </div>
+          <div>
+            <div class="perfil-code-row">
+              <h2>{{ perfil.animal.codigo_interno }}</h2>
+              @if (perfil.animal.numero_arete) {
+                <span class="badge badge-arete-lg">Arete: {{ perfil.animal.numero_arete }}</span>
+              } @else {
+                <span class="badge badge-muted">Sin Arete Oficial</span>
+              }
+              <span class="badge" [ngClass]="{
+                'badge-activo': perfil.animal.estado === 'ACTIVO',
+                'badge-vendido': perfil.animal.estado === 'VENDIDO',
+                'badge-baja': perfil.animal.estado === 'FALLECIDO' || perfil.animal.estado === 'DESCARTADO'
+              }">
+                {{ perfil.animal.estado }}
+              </span>
+            </div>
+            <p class="perfil-sub">
+              {{ perfil.animal.nombre ? '"' + perfil.animal.nombre + '" • ' : '' }}
+              {{ perfil.animal.raza }} • {{ perfil.animal.tipo_ganado }} • {{ perfil.animal.sexo }}
+            </p>
+          </div>
+        </div>
+        <button class="btn-close" (click)="cerrarPerfil()">✕</button>
+      </div>
+
+      <!-- PESTAÑAS DEL PERFIL -->
+      <div class="perfil-tabs-nav">
+        <button [class.active]="activePerfilTab() === 'general'" (click)="activePerfilTab.set('general')">Información General</button>
+        <button [class.active]="activePerfilTab() === 'pesajes'" (click)="activePerfilTab.set('pesajes')">Pesajes ({{ perfil.pesajes.length }})</button>
+        <button [class.active]="activePerfilTab() === 'genealogia'" (click)="activePerfilTab.set('genealogia')">Genealogía & Crías</button>
+        <button [class.active]="activePerfilTab() === 'procedencia'" (click)="activePerfilTab.set('procedencia')">Procedencia & Historial</button>
+        <button [class.active]="activePerfilTab() === 'historial_aretes'" (click)="activePerfilTab.set('historial_aretes')">Trazabilidad Aretes ({{ perfil.historial_aretes.length }})</button>
+        <button [class.active]="activePerfilTab() === 'sanidad'" (click)="activePerfilTab.set('sanidad')">
+          💉 Sanidad & Retiro
+          @if (historialSanitarioAnimal()?.en_retiro_carne) {
+            <span class="badge badge-danger" style="margin-left: 0.3rem; font-size: 0.65rem;">En Retiro</span>
+          }
+        </button>
+      </div>
+
+      <div class="modal-body perfil-body">
+        <!-- TAB GENERAL -->
+        @if (activePerfilTab() === 'general') {
+          <div class="grid-2-cols">
+            <div class="data-group-card">
+              <h4>Datos Biométricos</h4>
+              <div class="data-item">
+                <span class="label">Peso Inicial:</span>
+                <span class="val">{{ perfil.animal.peso_inicial ? perfil.animal.peso_inicial + ' kg' : 'No registrado' }}</span>
+              </div>
+              <div class="data-item">
+                <span class="label">Peso Actual:</span>
+                <span class="val font-bold text-success">{{ perfil.animal.peso_actual ? perfil.animal.peso_actual + ' kg' : 'Sin pesaje' }}</span>
+              </div>
+              <div class="data-item">
+                <span class="label">Último Pesaje:</span>
+                <span class="val">{{ perfil.animal.fecha_ultimo_pesaje || '—' }}</span>
+              </div>
+              <div class="data-item">
+                <span class="label">Categoría:</span>
+                <span class="val">{{ perfil.animal.categoria || 'Sin categoría' }}</span>
+              </div>
+              <div class="data-item">
+                <span class="label">Edad Estimada:</span>
+                <span class="val">{{ perfil.animal.edad_estimada_meses ? perfil.animal.edad_estimada_meses + ' meses' : '—' }}</span>
+              </div>
+              <div class="data-item">
+                <span class="label">Fecha Nacimiento:</span>
+                <span class="val">{{ perfil.animal.fecha_nacimiento || '—' }}</span>
+              </div>
+            </div>
+
+            <div class="data-group-card">
+              <h4>Ubicación y Finca</h4>
+              <div class="data-item">
+                <span class="label">Ubicación Actual:</span>
+                <span class="val font-bold">📍 {{ perfil.animal.ubicacion }}</span>
+              </div>
+              <div class="data-item">
+                <span class="label">Procedencia:</span>
+                <span class="val"><span class="badge badge-macho">{{ perfil.animal.procedencia }}</span></span>
+              </div>
+              <div class="data-item">
+                <span class="label">Fecha Ingreso:</span>
+                <span class="val">{{ perfil.animal.fecha_registro | date:'mediumDate' }}</span>
+              </div>
+              <div class="data-item full-width">
+                <span class="label">Observaciones:</span>
+                <p class="obs-box">{{ perfil.animal.observaciones || 'Ninguna observación registrada.' }}</p>
+              </div>
+            </div>
+          </div>
+        }
+
+        <!-- TAB PESAJES -->
+        @if (activePerfilTab() === 'pesajes') {
+          <div>
+            <div class="flex-between mb-4">
+              <h4>Evolución y Ganancia de Peso</h4>
+              @if (auth.hasPermission('GANADERIA_PESAJES') && perfil.animal.estado === 'ACTIVO') {
+                <button class="btn btn-primary-sm" (click)="abrirModalPesaje(perfil.animal)">
+                  + Nuevo Pesaje
+                </button>
+              }
+            </div>
+
+            <div class="table-container">
+              <table class="modern-table">
+                <thead>
+                  <tr>
+                    <th>FECHA</th>
+                    <th>PESO (KG)</th>
+                    <th>VARIACIÓN</th>
+                    <th>NOTAS</th>
+                    <th>REGISTRADOR</th>
+                    <th class="text-right">ACCIONES</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @if (perfil.pesajes.length === 0) {
+                    <tr><td colspan="6" class="text-center py-6 text-muted">No existen pesajes registrados para este animal.</td></tr>
+                  } @else {
+                    @for (p of perfil.pesajes; track p.id; let i = $index) {
+                      <tr>
+                        <td class="font-bold">{{ p.fecha_pesaje }}</td>
+                        <td class="font-bold">{{ p.peso | number:'1.1-1' }} kg</td>
+                        <td>
+                          @if (i < perfil.pesajes.length - 1) {
+                            @let diff = p.peso - perfil.pesajes[i + 1].peso;
+                            <span [ngClass]="diff >= 0 ? 'text-success' : 'text-danger'">
+                              {{ diff >= 0 ? '+' : '' }}{{ diff | number:'1.1-1' }} kg
+                            </span>
+                          } @else {
+                            <span class="text-muted">Línea base</span>
+                          }
+                        </td>
+                        <td>{{ p.notas || '—' }}</td>
+                        <td>{{ p.usuario_nombre || 'Sistema' }}</td>
+                        <td class="text-right">
+                          @if (auth.hasPermission('GANADERIA_PESAJES')) {
+                            <button class="btn-icon text-danger" title="Eliminar pesaje" (click)="eliminarPesaje(p.id)">
+                              🗑️
+                            </button>
+                          }
+                        </td>
+                      </tr>
+                    }
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        }
+
+        <!-- TAB GENEALOGÍA -->
+        @if (activePerfilTab() === 'genealogia') {
+          <div class="genealogia-view">
+            <div class="parents-grid">
+              <div class="parent-card">
+                <span class="parent-role">MADRE</span>
+                @if (perfil.madre) {
+                  <h4>{{ perfil.madre.codigo_interno }}</h4>
+                  <p>{{ perfil.madre.numero_arete ? 'Arete: ' + perfil.madre.numero_arete : 'S/N' }} • {{ perfil.madre.raza }}</p>
+                  <button class="btn btn-outline-sm mt-2" (click)="verPerfilAnimal(perfil.madre.id)">Ver Ficha Madre</button>
+                } @else if (perfil.animal.madre_codigo) {
+                  <h4>{{ perfil.animal.madre_codigo }}</h4>
+                  <p class="text-muted">Registro externo / no enlazado</p>
+                } @else {
+                  <p class="text-muted">Madre desconocida / no asignada</p>
+                }
+              </div>
+
+              <div class="parent-card">
+                <span class="parent-role">PADRE</span>
+                @if (perfil.padre) {
+                  <h4>{{ perfil.padre.codigo_interno }}</h4>
+                  <p>{{ perfil.padre.numero_arete ? 'Arete: ' + perfil.padre.numero_arete : 'S/N' }} • {{ perfil.padre.raza }}</p>
+                  <button class="btn btn-outline-sm mt-2" (click)="verPerfilAnimal(perfil.padre.id)">Ver Ficha Padre</button>
+                } @else if (perfil.animal.padre_codigo) {
+                  <h4>{{ perfil.animal.padre_codigo }}</h4>
+                  <p class="text-muted">Registro externo / no enlazado</p>
+                } @else {
+                  <p class="text-muted">Padre desconocido / no asignado</p>
+                }
+              </div>
+            </div>
+
+            <!-- CRÍAS PRODUCIDAS -->
+            <div class="mt-6">
+              <h4>Crías / Descendencia ({{ perfil.hijos.length }})</h4>
+              @if (perfil.hijos.length === 0) {
+                <p class="text-muted mt-2">No se han registrado partos ni crías descendientes para este ejemplar.</p>
+              } @else {
+                <div class="hijos-grid mt-3">
+                  @for (hijo of perfil.hijos; track hijo.id) {
+                    <div class="hijo-mini-card" (click)="verPerfilAnimal(hijo.id)">
+                      <span class="font-bold">{{ hijo.codigo_interno }}</span>
+                      <span>{{ hijo.numero_arete ? 'Arete: ' + hijo.numero_arete : 'S/N' }}</span>
+                      <span class="badge" [class.badge-macho]="hijo.sexo === 'MACHO'" [class.badge-hembra]="hijo.sexo === 'HEMBRA'">
+                        {{ hijo.sexo }}
+                      </span>
+                      <span>{{ hijo.raza }}</span>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          </div>
+        }
+
+        <!-- TAB PROCEDENCIA -->
+        @if (activePerfilTab() === 'procedencia') {
+          <div class="procedencia-info">
+            <h4>Origen: {{ perfil.animal.procedencia }}</h4>
+            @if (perfil.detalles_compra) {
+              <div class="data-group-card mt-3">
+                <h5>Datos de la Adquisición</h5>
+                <div class="data-item"><span class="label">Precio Compra:</span><span class="val font-bold">Bs {{ perfil.detalles_compra.precio_unitario | number:'1.2-2' }}</span></div>
+                <div class="data-item"><span class="label">Modalidad:</span><span class="val">{{ perfil.detalles_compra.modalidad_precio }}</span></div>
+                <div class="data-item"><span class="label">Peso al comprar:</span><span class="val">{{ perfil.detalles_compra.peso_compra ? perfil.detalles_compra.peso_compra + ' kg' : '—' }}</span></div>
+              </div>
+            }
+
+            @if (perfil.detalles_venta) {
+              <div class="data-group-card mt-3 accent-blue">
+                <h5>Datos de Venta / Liquidación</h5>
+                <div class="data-item"><span class="label">Precio Venta:</span><span class="val font-bold">Bs {{ perfil.detalles_venta.precio_unitario | number:'1.2-2' }}</span></div>
+                <div class="data-item"><span class="label">Peso Venta:</span><span class="val">{{ perfil.detalles_venta.peso_venta }} kg</span></div>
+              </div>
+            }
+
+            @if (perfil.detalles_baja) {
+              <div class="data-group-card mt-3 accent-red">
+                <h5>Acta de Baja: {{ perfil.detalles_baja.numero_acta }}</h5>
+                <div class="data-item"><span class="label">Tipo de Baja:</span><span class="val">{{ perfil.detalles_baja.tipo_baja }}</span></div>
+                <div class="data-item"><span class="label">Diagnóstico:</span><span class="val">{{ perfil.detalles_baja.causa_diagnostico || '—' }}</span></div>
+                <div class="data-item"><span class="label">Pérdida Estimada:</span><span class="val font-bold">Bs {{ perfil.detalles_baja.valor_estimado_perdida | number:'1.2-2' }}</span></div>
+              </div>
+            }
+          </div>
+        }
+
+        <!-- TAB HISTORIAL DE ARETES -->
+        @if (activePerfilTab() === 'historial_aretes') {
+          <div>
+            <div class="callout-info mb-4">
+              <strong>Regla de Trazabilidad RF-002:</strong> Los números de arete son globalmente únicos y perpetuos. Cada modificación registra una pista inmutable de auditoría.
+            </div>
+
+            <div class="timeline">
+              @if (perfil.historial_aretes.length === 0) {
+                <p class="text-muted">No se registran reemplazos ni cambios de arete para este animal.</p>
+              } @else {
+                @for (h of perfil.historial_aretes; track h.id) {
+                  <div class="timeline-item">
+                    <div class="timeline-dot"></div>
+                    <div class="timeline-content">
+                      <span class="timeline-date">{{ h.fecha_cambio | date:'medium' }}</span>
+                      <h5>Arete Anterior: {{ h.arete_anterior || 'SIN ARETE' }} ➔ Nuevo: {{ h.arete_nuevo }}</h5>
+                      <p class="text-muted">Motivo: {{ h.motivo || 'No indicado' }}</p>
+                      <span class="text-xs text-muted">Operador: {{ h.usuario_nombre || 'Sistema' }}</span>
+                    </div>
+                  </div>
+                }
+              }
+            </div>
+          </div>
+        }
+
+        <!-- TAB SANIDAD Y RETIRO (SPEC-003) -->
+        @if (activePerfilTab() === 'sanidad') {
+          <div class="data-group-card">
+            <h4>Control Sanitario y Período de Retiro</h4>
+
+            @if (historialSanitarioAnimal()?.en_retiro_carne) {
+              <div class="alert-box alert-danger" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; margin-bottom: 1rem;">
+                <span style="font-size: 1.5rem;">⚠️</span>
+                <div>
+                  <strong style="color: #991b1b; display: block;">ANIMAL EN PERÍODO DE RETIRO DE CARNE ACTIVO</strong>
+                  <span style="font-size: 0.85rem; color: #b91c1c;">
+                    Retiro vigente hasta el <strong>{{ historialSanitarioAnimal()?.fecha_fin_retiro_carne }}</strong> (restan {{ historialSanitarioAnimal()?.dias_restantes_retiro_carne }} días). Prohibido faeneo o venta para abasto.
+                  </span>
+                </div>
+              </div>
+            }
+
+            @if (historialSanitarioAnimal()?.en_retiro_leche) {
+              <div class="alert-box alert-warning" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; margin-bottom: 1rem;">
+                <span style="font-size: 1.5rem;">🥛</span>
+                <div>
+                  <strong style="color: #92400e; display: block;">EN PERÍODO DE RETIRO DE LECHE</strong>
+                  <span style="font-size: 0.85rem; color: #b45309;">
+                    Retiro vigente hasta el <strong>{{ historialSanitarioAnimal()?.fecha_fin_retiro_leche }}</strong> (restan {{ historialSanitarioAnimal()?.dias_restantes_retiro_leche }} días).
+                  </span>
+                </div>
+              </div>
+            }
+
+            <!-- VACUNACIONES RECIBIDAS -->
+            <h5 style="margin: 1rem 0 0.5rem 0; font-size: 0.9rem; color: #1e293b; font-weight: 700;">💉 Vacunaciones Registradas:</h5>
+            @if (!historialSanitarioAnimal()?.vacunaciones || historialSanitarioAnimal()!.vacunaciones.length === 0) {
+              <p class="text-muted" style="font-size: 0.85rem;">No se registran vacunaciones previas para este animal.</p>
+            } @else {
+              <div class="table-responsive" style="margin-bottom: 1rem;">
+                <table class="table-simple" style="width: 100%; font-size: 0.8rem; border-collapse: collapse;">
+                  <thead>
+                    <tr style="background: #f8fafc; border-bottom: 1px solid #e2e8f0; text-align: left;">
+                      <th style="padding: 0.4rem 0.5rem;">DOSIS</th>
+                      <th style="padding: 0.4rem 0.5rem;">ESTADO</th>
+                      <th style="padding: 0.4rem 0.5rem;">FIN RETIRO</th>
+                      <th style="padding: 0.4rem 0.5rem;">REACCIÓN</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (v of historialSanitarioAnimal()!.vacunaciones; track v.id) {
+                      <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 0.4rem 0.5rem;"><strong>{{ v.dosis_aplicada }} {{ v.unidad_medida }}</strong></td>
+                        <td style="padding: 0.4rem 0.5rem;"><span class="badge badge-success">{{ v.estado_aplicacion }}</span></td>
+                        <td style="padding: 0.4rem 0.5rem;">{{ v.fecha_fin_retiro_carne || 'Sin retiro' }}</td>
+                        <td style="padding: 0.4rem 0.5rem;">{{ v.reaccion_adversa || 'Normal' }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
+
+            <!-- TRATAMIENTOS CLÍNICOS RECIBIDOS -->
+            <h5 style="margin: 1rem 0 0.5rem 0; font-size: 0.9rem; color: #1e293b; font-weight: 700;">💊 Tratamientos Clínicos:</h5>
+            @if (!historialSanitarioAnimal()?.tratamientos || historialSanitarioAnimal()!.tratamientos.length === 0) {
+              <p class="text-muted" style="font-size: 0.85rem;">No registra tratamientos clínicos por enfermedad.</p>
+            } @else {
+              <div class="table-responsive">
+                <table class="table-simple" style="width: 100%; font-size: 0.8rem; border-collapse: collapse;">
+                  <thead>
+                    <tr style="background: #f8fafc; border-bottom: 1px solid #e2e8f0; text-align: left;">
+                      <th style="padding: 0.4rem 0.5rem;">DOSIS</th>
+                      <th style="padding: 0.4rem 0.5rem;">ESTADO</th>
+                      <th style="padding: 0.4rem 0.5rem;">FIN RETIRO</th>
+                      <th style="padding: 0.4rem 0.5rem;">NOTAS</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (t of historialSanitarioAnimal()!.tratamientos; track t.id) {
+                      <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 0.4rem 0.5rem;"><strong>{{ t.dosis_aplicada }} {{ t.unidad_medida }}</strong></td>
+                        <td style="padding: 0.4rem 0.5rem;"><span class="badge badge-warning">{{ t.estado_aplicacion }}</span></td>
+                        <td style="padding: 0.4rem 0.5rem;">
+                          @if (t.en_retiro_carne) {
+                            <strong style="color: #dc2626;">{{ t.fecha_fin_retiro_carne }} ({{ t.dias_restantes_retiro_carne }}d)</strong>
+                          } @else {
+                            <span>{{ t.fecha_fin_retiro_carne || 'Apto' }}</span>
+                          }
+                        </td>
+                        <td style="padding: 0.4rem 0.5rem;">{{ t.observaciones || '—' }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-outline" (click)="cerrarPerfil()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ========================================================== -->
+<!-- MODAL REGISTRAR / EDITAR ANIMAL                           -->
+<!-- ========================================================== -->
+@if (showAnimalModal()) {
+  <div class="modal-overlay" (click)="showAnimalModal.set(false)">
+    <div class="modal-container modal-lg" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>{{ isEditingAnimal() ? 'Editar Datos del Animal' : 'Registrar Nuevo Animal' }}</h3>
+        <button class="btn-close" (click)="showAnimalModal.set(false)">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <form (ngSubmit)="guardarAnimal()">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Número de Arete (Opcional según RF-002)</label>
+              <input
+                type="text"
+                class="form-control"
+                placeholder="Ej. BOB-1092"
+                [(ngModel)]="animalForm.numero_arete"
+                name="numero_arete"
+              />
+              <small class="form-hint">Una vez asignado es único en todo el hato histórico.</small>
+            </div>
+
+            @if (isEditingAnimal() && originalArete() !== animalForm.numero_arete) {
+              <div class="form-group full-width">
+                <label class="text-danger font-bold">Motivo de Reemplazo de Arete (Obligatorio al cambiar)</label>
+                <input
+                  type="text"
+                  class="form-control border-danger"
+                  placeholder="Ej. Arete original extraviado en manga, reidentificación..."
+                  [(ngModel)]="animalForm.motivo_cambio_arete"
+                  name="motivo_cambio_arete"
+                  required
+                />
+              </div>
+            }
+
+            <div class="form-group">
+              <label>Nombre / Alias (Opcional)</label>
+              <input
+                type="text"
+                class="form-control"
+                placeholder="Ej. Campeón, Princesa..."
+                [(ngModel)]="animalForm.nombre"
+                name="nombre"
+              />
+            </div>
+
+            <div class="form-group">
+              <label>Especie / Tipo de Ganado *</label>
+              <select class="form-control" [(ngModel)]="animalForm.tipo_ganado" name="tipo_ganado" required>
+                @for (tipo of TIPOS_GANADO; track tipo) {
+                  <option [value]="tipo">{{ tipo }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Raza *</label>
+              <input
+                type="text"
+                class="form-control"
+                placeholder="Ej. NELORE, BRAHMAN, BRANGUS..."
+                [(ngModel)]="animalForm.raza"
+                name="raza"
+                required
+              />
+            </div>
+
+            <div class="form-group">
+              <label>Sexo *</label>
+              <select class="form-control" [(ngModel)]="animalForm.sexo" name="sexo" required>
+                <option value="HEMBRA">♀ Hembra</option>
+                <option value="MACHO">♂ Macho</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Categoría</label>
+              <select class="form-control" [(ngModel)]="animalForm.categoria" name="categoria">
+                @for (c of CATEGORIAS; track c) {
+                  <option [value]="c">{{ c }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Fecha de Nacimiento</label>
+              <input
+                type="date"
+                class="form-control"
+                [(ngModel)]="animalForm.fecha_nacimiento"
+                name="fecha_nacimiento"
+              />
+            </div>
+
+            <div class="form-group">
+              <label>Edad Estimada (Meses)</label>
+              <input
+                type="number"
+                class="form-control"
+                placeholder="Ej. 18"
+                [(ngModel)]="animalForm.edad_estimada_meses"
+                name="edad_estimada_meses"
+              />
+            </div>
+
+            @if (!isEditingAnimal()) {
+              <div class="form-group">
+                <label>Peso Inicial (kg)</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  class="form-control"
+                  placeholder="Ej. 240.5"
+                  [(ngModel)]="animalForm.peso_inicial"
+                  name="peso_inicial"
+                />
+              </div>
+            }
+
+            <div class="form-group">
+              <label>Ubicación Actual (Potrero / Corral) *</label>
+              <select class="form-control" [ngModel]="animalForm.potrero_id" (ngModelChange)="onPotreroSeleccionado($event)" name="potrero_id" required>
+                <option [ngValue]="null" disabled>-- Seleccione Potrero o Corral --</option>
+                @for (p of potreros(); track p.id) {
+                  <option [ngValue]="p.id">
+                    {{ p.nombre }} ({{ p.tipo_area }} - {{ p.total_animales || 0 }}/{{ p.capacidad_cabezas }} cab.)
+                  </option>
+                }
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Madre (Genética)</label>
+              <select class="form-control" [(ngModel)]="animalForm.madre_id" name="madre_id">
+                <option [ngValue]="null">-- Sin madre registrada --</option>
+                @for (m of madresDisponibles(); track m.id) {
+                  <option [value]="m.id">{{ m.codigo_interno }} ({{ m.numero_arete || 'S/N' }} - {{ m.raza }})</option>
+                }
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Padre (Genética)</label>
+              <select class="form-control" [(ngModel)]="animalForm.padre_id" name="padre_id">
+                <option [ngValue]="null">-- Sin padre registrado --</option>
+                @for (p of padresDisponibles(); track p.id) {
+                  <option [value]="p.id">{{ p.codigo_interno }} ({{ p.numero_arete || 'S/N' }} - {{ p.raza }})</option>
+                }
+              </select>
+            </div>
+
+            <div class="form-group full-width">
+              <label>Observaciones / Marcas Particulares</label>
+              <textarea
+                class="form-control"
+                rows="2"
+                placeholder="Señas particulares, color de pelaje, cicatrices..."
+                [(ngModel)]="animalForm.observaciones"
+                name="observaciones"
+              ></textarea>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline" (click)="showAnimalModal.set(false)">Cancelar</button>
+            <button type="submit" class="btn btn-primary" [disabled]="loading()">
+              {{ loading() ? 'Guardando...' : (isEditingAnimal() ? 'Actualizar Animal' : 'Registrar Animal') }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ========================================================== -->
+<!-- MODAL REGISTRAR PESAJE                                     -->
+<!-- ========================================================== -->
+@if (showPesajeModal() && targetAnimalPesaje(); as a) {
+  <div class="modal-overlay" (click)="showPesajeModal.set(false)">
+    <div class="modal-container modal-sm" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div>
+          <h3>Registrar Pesaje</h3>
+          <p class="subtitle">{{ a.codigo_interno }} • {{ a.numero_arete ? 'Arete: ' + a.numero_arete : 'S/N' }}</p>
+        </div>
+        <button class="btn-close" (click)="showPesajeModal.set(false)">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <form (ngSubmit)="guardarPesaje()">
+          <div class="form-group">
+            <label>Fecha de Pesaje *</label>
+            <input type="date" class="form-control" [(ngModel)]="pesajeForm.fecha_pesaje" name="fecha_pesaje" required />
+            <small class="form-hint">Se permiten fechas históricas según RF-005.</small>
+          </div>
+
+          <div class="form-group">
+            <label>Peso Registrado (kg) *</label>
+            <input
+              type="number"
+              step="0.1"
+              min="1"
+              class="form-control text-lg font-bold"
+              placeholder="0.0"
+              [(ngModel)]="pesajeForm.peso"
+              name="peso"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label>Notas / Condición Corporal</label>
+            <input
+              type="text"
+              class="form-control"
+              placeholder="Ej. Pesaje mensual, buena ganancia..."
+              [(ngModel)]="pesajeForm.notas"
+              name="notas"
+            />
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline" (click)="showPesajeModal.set(false)">Cancelar</button>
+            <button type="submit" class="btn btn-primary" [disabled]="loading()">Guardar Pesaje</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ========================================================== -->
+<!-- MODAL REGISTRAR NACIMIENTO / PARTO                         -->
+<!-- ========================================================== -->
+@if (showNacimientoModal()) {
+  <div class="modal-overlay" (click)="showNacimientoModal.set(false)">
+    <div class="modal-container modal-lg" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Registrar Parto / Nacimiento</h3>
+        <button class="btn-close" (click)="showNacimientoModal.set(false)">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <form (ngSubmit)="guardarNacimiento()">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Madre del Parto *</label>
+              <select class="form-control" [(ngModel)]="nacimientoForm.madre_id" (ngModelChange)="onMadreSeleccionada()" name="madre_id" required>
+                <option [value]="0">-- Seleccione la Madre --</option>
+                @for (m of madresDisponibles(); track m.id) {
+                  <option [value]="m.id">{{ m.codigo_interno }} ({{ m.numero_arete || 'S/N' }} - {{ m.raza }} - 📍 {{ m.ubicacion }})</option>
+                }
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Padre / Reproductor (Opcional)</label>
+              <select class="form-control" [(ngModel)]="nacimientoForm.padre_id" name="padre_id">
+                <option [ngValue]="null">-- Inseminación / Desconocido --</option>
+                @for (p of padresDisponibles(); track p.id) {
+                  <option [value]="p.id">{{ p.codigo_interno }} ({{ p.numero_arete || 'S/N' }} - {{ p.raza }})</option>
+                }
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Fecha de Parto *</label>
+              <input type="date" class="form-control" [(ngModel)]="nacimientoForm.fecha_parto" name="fecha_parto" required />
+            </div>
+
+            <div class="form-group">
+              <label>Condición de la Cría *</label>
+              <select class="form-control" [(ngModel)]="nacimientoForm.condicion_cria" name="condicion_cria" required>
+                <option value="VIVA">Cría Viva (Se incorpora al hato)</option>
+                <option value="MUERTA">Cría Muerta / Aborto (Solo registro histórico)</option>
+              </select>
+            </div>
+
+            @if (nacimientoForm.condicion_cria === 'VIVA') {
+              <div class="form-group">
+                <label>Sexo de la Cría *</label>
+                <select class="form-control" [(ngModel)]="nacimientoForm.cria_sexo" name="cria_sexo">
+                  <option value="HEMBRA">♀ Hembra</option>
+                  <option value="MACHO">♂ Macho</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label>Raza de la Cría</label>
+                <input type="text" class="form-control" [(ngModel)]="nacimientoForm.cria_raza" name="cria_raza" />
+              </div>
+
+              <div class="form-group">
+                <label>Peso al Nacer (kg)</label>
+                <input type="number" step="0.1" class="form-control" placeholder="Ej. 32.5" [(ngModel)]="nacimientoForm.cria_peso_nacer" name="cria_peso_nacer" />
+              </div>
+
+              <div class="form-group">
+                <label>Número de Arete Inicial (Opcional)</label>
+                <input type="text" class="form-control" placeholder="Arete provisorio o definitivo" [(ngModel)]="nacimientoForm.cria_numero_arete" name="cria_numero_arete" />
+              </div>
+
+              <div class="form-group">
+                <label>Ubicación de Destino (Potrero / Corral)</label>
+                <select class="form-control" [ngModel]="nacimientoForm.cria_potrero_id" (ngModelChange)="onCriaPotreroSeleccionado($event)" name="cria_potrero_id">
+                  <option [ngValue]="null">-- Mismo potrero de la Madre --</option>
+                  @for (p of potreros(); track p.id) {
+                    <option [ngValue]="p.id">{{ p.nombre }} ({{ p.tipo_area }})</option>
+                  }
+                </select>
+              </div>
+            }
+
+            <div class="form-group full-width">
+              <label>Observaciones del Parto</label>
+              <textarea class="form-control" rows="2" placeholder="Parto distócico, natural, asistencia..." [(ngModel)]="nacimientoForm.observaciones" name="observaciones"></textarea>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline" (click)="showNacimientoModal.set(false)">Cancelar</button>
+            <button type="submit" class="btn btn-primary" [disabled]="loading()">Registrar Parto</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ========================================================== -->
+<!-- MODAL COMPRA DE GANADO                                     -->
+<!-- ========================================================== -->
+@if (showCompraModal()) {
+  <div class="modal-overlay" (click)="showCompraModal.set(false)">
+    <div class="modal-container modal-xl" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div>
+          <h3>Registrar Compra de Ganado</h3>
+          <p class="subtitle">Adquisición colectiva de animales con asignación individual de cabezas</p>
+        </div>
+        <button class="btn-close" (click)="showCompraModal.set(false)">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <form (ngSubmit)="guardarCompra()">
+          <div class="form-grid mb-4">
+            <div class="form-group">
+              <label>Proveedor / Vendedor *</label>
+              <input type="text" class="form-control" placeholder="Nombre o Hacienda proveedora" [(ngModel)]="compraCabecera.proveedor" name="proveedor" required />
+            </div>
+
+            <div class="form-group">
+              <label>Fecha de Compra *</label>
+              <input type="date" class="form-control" [(ngModel)]="compraCabecera.fecha_compra" name="fecha_compra" required />
+            </div>
+
+            <div class="form-group">
+              <label>N° Guía / Factura</label>
+              <input type="text" class="form-control" placeholder="Doc. respaldo" [(ngModel)]="compraCabecera.numero_documento" name="numero_documento" />
+            </div>
+
+            <div class="form-group">
+              <label>Costo de Transporte (Bs)</label>
+              <input type="number" step="0.1" class="form-control" [(ngModel)]="compraCabecera.costo_transporte" name="costo_transporte" />
+            </div>
+
+            <div class="form-group">
+              <label>Otros Costos Adicionales (Bs)</label>
+              <input type="number" step="0.1" class="form-control" [(ngModel)]="compraCabecera.costos_adicionales" name="costos_adicionales" />
+            </div>
+
+            <div class="form-group full-width">
+              <label>Observaciones de la Compra</label>
+              <input type="text" class="form-control" placeholder="Detalles de negociación..." [(ngModel)]="compraCabecera.observaciones" name="observaciones" />
+            </div>
+          </div>
+
+          <!-- DETALLE DE ANIMALES DE LA COMPRA -->
+          <div class="flex-between mb-2" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+            <h4>Animales Adquiridos ({{ compraDetalles.length }} Cabezas)</h4>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              @if (compraDetalles.length > 1) {
+                <div style="display: flex; align-items: center; gap: 0.25rem;">
+                  <select class="form-control-sm" [(ngModel)]="potreroMasivoCompra" name="potreroMasivoCompra">
+                    <option [ngValue]="null">-- Potrero para todos --</option>
+                    @for (p of potreros(); track p.id) {
+                      <option [ngValue]="p.id">{{ p.nombre }}</option>
+                    }
+                  </select>
+                  <button type="button" class="btn btn-sm btn-outline" (click)="aplicarPotreroMasivo()" [disabled]="!potreroMasivoCompra()" style="padding: 0.2rem 0.5rem; font-size: 0.75rem;">
+                    Aplicar a todos
+                  </button>
+                </div>
+              }
+              <button type="button" class="btn btn-outline-sm" (click)="agregarFilaCompra()">+ Agregar Animal</button>
+            </div>
+          </div>
+
+          <div class="table-container mb-4">
+            <table class="modern-table">
+              <thead>
+                <tr>
+                  <th>RAZA</th>
+                  <th>SEXO</th>
+                  <th>ARETE (OPC)</th>
+                  <th>PESO (KG)</th>
+                  <th>PRECIO (BS)</th>
+                  <th>POTRERO / UBICACIÓN</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (d of compraDetalles; track $index; let i = $index) {
+                  <tr>
+                    <td><input type="text" class="form-control-sm" [(ngModel)]="d.raza" [name]="'raza_' + i" required /></td>
+                    <td>
+                      <select class="form-control-sm" [(ngModel)]="d.sexo" [name]="'sexo_' + i">
+                        <option value="HEMBRA">Hembra</option>
+                        <option value="MACHO">Macho</option>
+                      </select>
+                    </td>
+                    <td><input type="text" class="form-control-sm" placeholder="Arete opc." [(ngModel)]="d.numero_arete" [name]="'arete_' + i" /></td>
+                    <td><input type="number" step="0.1" class="form-control-sm" [(ngModel)]="d.peso" [name]="'peso_' + i" /></td>
+                    <td><input type="number" step="0.1" class="form-control-sm" [(ngModel)]="d.precio_compra" [name]="'precio_' + i" required /></td>
+                    <td>
+                      <select class="form-control-sm" [ngModel]="d.potrero_id" (ngModelChange)="onCompraItemPotreroChange(d, $event)" [name]="'potrero_' + i">
+                        @for (p of potreros(); track p.id) {
+                          <option [ngValue]="p.id">{{ p.nombre }}</option>
+                        }
+                      </select>
+                    </td>
+                    <td>
+                      <button type="button" class="btn-icon text-danger" (click)="removerFilaCompra(i)" [disabled]="compraDetalles.length <= 1">✕</button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+          <div class="compra-total-banner">
+            <span>Total Liquidado: <strong>Bs {{ totalCompraCalculado() | number:'1.2-2' }}</strong></span>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline" (click)="showCompraModal.set(false)">Cancelar</button>
+            <button type="submit" class="btn btn-primary" [disabled]="loading()">Guardar Compra</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ========================================================== -->
+<!-- MODAL VENTA DE GANADO                                      -->
+<!-- ========================================================== -->
+@if (showVentaModal()) {
+  <div class="modal-overlay" (click)="showVentaModal.set(false)">
+    <div class="modal-container modal-xl" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div>
+          <h3>Registrar Venta de Ganado</h3>
+          <p class="subtitle">Liquidación de salida. Obligatorio: Animales con arete oficial (RF-010)</p>
+        </div>
+        <button class="btn-close" (click)="showVentaModal.set(false)">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <form (ngSubmit)="guardarVenta()">
+          <div class="form-grid mb-4">
+            <div class="form-group">
+              <label>Cliente / Comprador *</label>
+              <input type="text" class="form-control" placeholder="Nombre o Matadero..." [(ngModel)]="ventaCabecera.cliente" name="cliente" required />
+            </div>
+
+            <div class="form-group">
+              <label>Fecha de Venta *</label>
+              <input type="date" class="form-control" [(ngModel)]="ventaCabecera.fecha_venta" name="fecha_venta" required />
+            </div>
+
+            <div class="form-group">
+              <label>Modalidad de Venta *</label>
+              <select class="form-control" [(ngModel)]="ventaCabecera.modalidad_venta" name="modalidad_venta">
+                <option value="POR_ANIMAL">Por Cabeza (Precio Fijo)</option>
+                <option value="POR_KG">Por Kilogramo en Pie</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Método de Pago</label>
+              <select class="form-control" [(ngModel)]="ventaCabecera.metodo_pago" name="metodo_pago">
+                <option value="EFECTIVO">Efectivo</option>
+                <option value="TRANSFERENCIA">Transferencia Bancaria</option>
+                <option value="CHEQUE">Cheque</option>
+                <option value="CREDITO">Crédito / Cuenta por Cobrar</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Descuento Comercial (Bs)</label>
+              <input type="number" step="0.1" class="form-control" [(ngModel)]="ventaCabecera.descuento" name="descuento" />
+            </div>
+
+            <div class="form-group">
+              <label>Flete / Transporte (Bs)</label>
+              <input type="number" step="0.1" class="form-control" [(ngModel)]="ventaCabecera.costo_transporte" name="costo_transporte" />
+            </div>
+          </div>
+
+          <!-- SELECCIÓN DE ANIMALES PARA VENTA -->
+          <h4>Seleccionar Animales para Vender (Disponibles con Arete: {{ animalesAptosParaSalida().length }})</h4>
+          <p class="text-sm text-muted mb-3">Haga clic en los animales que integrarán la venta:</p>
+
+          <div class="animal-picker-grid mb-4">
+            @for (a of animalesAptosParaSalida(); track a.id) {
+              <div
+                class="picker-item"
+                [class.selected]="isAnimalSeleccionadoVenta(a.id)"
+                (click)="toggleAnimalEnVenta(a)"
+              >
+                <div class="picker-checkbox">
+                  <input type="checkbox" [checked]="isAnimalSeleccionadoVenta(a.id)" (click)="$event.stopPropagation()" (change)="toggleAnimalEnVenta(a)" />
+                </div>
+                <div class="picker-info">
+                  <div class="font-bold">{{ a.codigo_interno }}</div>
+                  <div class="badge badge-arete">Arete: {{ a.numero_arete }}</div>
+                  <div class="text-xs text-muted">{{ a.raza }} • {{ a.sexo }} • {{ a.peso_actual || 'S/P' }} kg</div>
+                </div>
+              </div>
+            }
+          </div>
+
+          <!-- PRECIOS POR ANIMAL SELECCIONADO -->
+          @if (ventaItems.length > 0) {
+            <h4>Precios de Venta por Cabeza</h4>
+            <div class="table-container mb-4">
+              <table class="modern-table">
+                <thead>
+                  <tr>
+                    <th>CÓDIGO</th>
+                    <th>ARETE</th>
+                    <th>RAZA</th>
+                    <th>PESO ACTUAL</th>
+                    <th>PRECIO VENTA (BS)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (it of ventaItems; track it.animal_id; let idx = $index) {
+                    <tr>
+                      <td class="font-bold">{{ it.animal?.codigo_interno }}</td>
+                      <td><span class="badge badge-arete">{{ it.animal?.numero_arete }}</span></td>
+                      <td>{{ it.animal?.raza }}</td>
+                      <td>{{ it.animal?.peso_actual || '—' }} kg</td>
+                      <td>
+                        <input
+                          type="number"
+                          step="0.1"
+                          class="form-control-sm font-bold"
+                          [(ngModel)]="it.precio"
+                          [name]="'venta_precio_' + idx"
+                          required
+                        />
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+
+            <div class="compra-total-banner">
+              <span>Total Neto a Cobrar: <strong>Bs {{ totalVentaCalculado() | number:'1.2-2' }}</strong></span>
+            </div>
+          }
+
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline" (click)="showVentaModal.set(false)">Cancelar</button>
+            <button type="submit" class="btn btn-primary" [disabled]="loading() || ventaItems.length === 0">Confirmar Venta</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ========================================================== -->
+<!-- MODAL REGISTRAR BAJA DE GANADO                             -->
+<!-- ========================================================== -->
+@if (showBajaModal()) {
+  <div class="modal-overlay" (click)="showBajaModal.set(false)">
+    <div class="modal-container modal-md" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div>
+          <h3>Registrar Acta de Baja</h3>
+          <p class="subtitle">Obligatorio según RF-010: El animal debe poseer arete oficial</p>
+        </div>
+        <button class="btn-close" (click)="showBajaModal.set(false)">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <form (ngSubmit)="guardarBaja()">
+          <div class="form-group">
+            <label>Seleccionar Animal con Arete *</label>
+            <select class="form-control" [(ngModel)]="bajaForm.animal_id" name="animal_id" required>
+              <option [value]="0">-- Seleccione el animal --</option>
+              @for (a of animalesAptosParaSalida(); track a.id) {
+                <option [value]="a.id">{{ a.codigo_interno }} (Arete: {{ a.numero_arete }} - {{ a.raza }} - {{ a.ubicacion }})</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Tipo de Baja *</label>
+              <select class="form-control" [(ngModel)]="bajaForm.tipo_baja" name="tipo_baja" required>
+                @for (t of TIPOS_BAJA; track t) {
+                  <option [value]="t">{{ t }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Fecha del Suceso *</label>
+              <input type="date" class="form-control" [(ngModel)]="bajaForm.fecha_baja" name="fecha_baja" required />
+            </div>
+
+            <div class="form-group full-width">
+              <label>Causa / Diagnóstico Presuntivo</label>
+              <input type="text" class="form-control" placeholder="Ej. Timpanismo agudo, picadura de víbora, neumonía..." [(ngModel)]="bajaForm.causa_diagnostico" name="causa_diagnostico" />
+            </div>
+
+            <div class="form-group">
+              <label>Destino del Cuerpo</label>
+              <select class="form-control" [(ngModel)]="bajaForm.destino_cuerpo" name="destino_cuerpo">
+                <option value="ENTIERRO">Entierro en fosa sanitaria</option>
+                <option value="INCINERACION">Incineración</option>
+                <option value="CONSUMO_INTERNO">Consumo del personal</option>
+                <option value="VENTA_DESPOJO">Venta de cuero/despojo</option>
+                <option value="NO_APLICA">No aplica (Robo/Extravío)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Pérdida Estimada (Bs)</label>
+              <input type="number" step="0.1" class="form-control" placeholder="0.00" [(ngModel)]="bajaForm.valor_estimado_perdida" name="valor_estimado_perdida" />
+            </div>
+
+            <div class="form-group full-width">
+              <label class="checkbox-label">
+                <input type="checkbox" [(ngModel)]="bajaForm.necropsia_realizada" name="necropsia_realizada" />
+                <span>¿Se realizó necropsia veterinaria?</span>
+              </label>
+            </div>
+
+            <div class="form-group full-width">
+              <label>Observaciones Adicionales</label>
+              <textarea class="form-control" rows="2" [(ngModel)]="bajaForm.observaciones" name="observaciones"></textarea>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline" (click)="showBajaModal.set(false)">Cancelar</button>
+            <button type="submit" class="btn btn-danger" [disabled]="loading()">Confirmar Baja</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ========================================================== -->
+<!-- MODAL ANULACIÓN DE OPERACIÓN                               -->
+<!-- ========================================================== -->
+@if (showAnularModal()) {
+  <div class="modal-overlay" (click)="showAnularModal.set(false)">
+    <div class="modal-container modal-sm" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Anular {{ anularTipo() === 'VENTA' ? 'Venta de Ganado' : 'Acta de Baja' }}</h3>
+        <button class="btn-close" (click)="showAnularModal.set(false)">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <p class="text-muted mb-3">
+          Al anular esta operación, el o los animales involucrados retornarán de inmediato al estado <strong>ACTIVO</strong> dentro del hato.
+        </p>
+
+        <div class="form-group">
+          <label>Motivo de la Anulación *</label>
+          <textarea
+            class="form-control"
+            rows="3"
+            placeholder="Explique el motivo justificado de la anulación..."
+            [(ngModel)]="anularMotivo"
+          ></textarea>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" (click)="showAnularModal.set(false)">Cancelar</button>
+          <button type="button" class="btn btn-danger" (click)="confirmarAnulacion()" [disabled]="loading()">
+            Confirmar Anulación
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+}

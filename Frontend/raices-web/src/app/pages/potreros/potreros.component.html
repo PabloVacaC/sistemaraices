@@ -1,0 +1,1128 @@
+<div class="potreros-page-wrapper">
+  <!-- ENCABEZADO SUPERIOR -->
+  <header class="page-header">
+    <div class="header-left">
+      <div class="header-badge">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/>
+          <line x1="8" y1="2" x2="8" y2="18"/>
+          <line x1="16" y1="6" x2="16" y2="22"/>
+        </svg>
+        <span>Módulo de Ganadería</span>
+      </div>
+      <h1 class="page-title">Gestión de Potreros y Movimiento de Ganado</h1>
+      <p class="page-subtitle">
+        Cartografía satelital interactiva, delimitación poligonal de áreas y control de traslados en tiempo real.
+      </p>
+    </div>
+
+    <div class="header-actions">
+      @if (!modoDibujoActivo()) {
+        <button
+          class="btn btn-outline"
+          (click)="abrirHistorialMovimientos()"
+          title="Ver registro cronológico de traslados"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 8v4l3 3"/>
+            <circle cx="12" cy="12" r="9"/>
+          </svg>
+          Historial de Movimientos
+        </button>
+
+        <button
+          class="btn btn-primary"
+          (click)="iniciarDelimitacionNuevoPotrero()"
+          title="Trazar nuevo potrero o corral sobre el mapa satelital"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          Delimitar Potrero / Corral
+        </button>
+      }
+    </div>
+  </header>
+
+  <!-- BARRA FLOTANTE DE MODO DIBUJO DE POLÍGONOS -->
+  @if (modoDibujoActivo()) {
+    <div class="drawing-banner animate-fade-in">
+      <div class="banner-content">
+        <span class="pulsing-record-dot"></span>
+        <div>
+          <strong>Modo Delimitación de Área Activo</strong>
+          <p>
+            Haga clic sobre el mapa satelital para marcar los vértices perimetrales del potrero o corral.
+            (Vértices trazados: <strong>{{ verticesDibujados().length }}</strong>
+            @if (verticesDibujados().length < 3) {
+              <span class="text-hint"> - marque al menos 3</span>
+            } @else {
+              <span class="text-ready"> - ¡Polígono listo para guardar!</span>
+            })
+          </p>
+        </div>
+      </div>
+      <div class="banner-actions">
+        <button
+          type="button"
+          class="btn btn-sm btn-outline-light"
+          (click)="deshacerUltimoVertice()"
+          [disabled]="verticesDibujados().length === 0"
+        >
+          Deshacer vértice
+        </button>
+        <button
+          type="button"
+          class="btn btn-sm"
+          [ngClass]="verticesDibujados().length >= 3 ? 'btn-success-active pulse-ready' : 'btn-light btn-disabled-custom'"
+          (click)="finalizarTrazadoYCompletarFormulario()"
+          [disabled]="verticesDibujados().length < 3"
+        >
+          @if (verticesDibujados().length >= 3) {
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+          }
+          Finalizar y Asignar Datos
+        </button>
+        <button type="button" class="btn btn-sm btn-danger-soft" (click)="cancelarDibujo()">
+          Cancelar
+        </button>
+      </div>
+    </div>
+  }
+
+  <!-- CONTENEDOR PRINCIPAL: MAPA SATELITAL Y DRAWER LATERAL -->
+  <div class="map-workspace" [class.drawer-open]="potreroSeleccionado() !== null">
+    <!-- MAPA LEAFLET -->
+    <div #mapContainer class="leaflet-map-host" id="map"></div>
+
+    <!-- TARJETA FLOTANTE DE RESUMEN EJECUTIVO (SUPERIOR DERECHA) -->
+    <div class="map-floating-summary">
+      <div class="summary-pill">
+        <span class="pill-label">Áreas delimitadas</span>
+        <span class="pill-value">{{ potreros().length }}</span>
+      </div>
+      <div class="summary-pill highlight">
+        <span class="pill-label">Cabezas activas</span>
+        <span class="pill-value">{{ totalCabezasActivas() }}</span>
+      </div>
+      <div class="satellite-layer-switcher">
+        <button
+          type="button"
+          class="switch-btn"
+          [class.active]="capaSatelitalSeleccionada() === 'google'"
+          (click)="cambiarCapaSatelital('google')"
+          title="Google Satélite Híbrido (imágenes con caminos y referencias)"
+        >
+          Google Satélite
+        </button>
+        <button
+          type="button"
+          class="switch-btn"
+          [class.active]="capaSatelitalSeleccionada() === 'esri'"
+          (click)="cambiarCapaSatelital('esri')"
+          title="Esri World Imagery (imágenes globales)"
+        >
+          Esri Satélite
+        </button>
+      </div>
+    </div>
+
+    <!-- INSTRUCCIONES RÁPIDAS FLOTANTES (INFERIOR IZQUIERDA) -->
+    <div class="map-drag-helper">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="16" x2="12" y2="12"/>
+        <line x1="12" y1="8" x2="12.01" y2="8"/>
+      </svg>
+      <span>
+        Arrastre cualquier punto de animal sobre otro potrero para trasladarlo, o seleccione un potrero para ver su lote.
+      </span>
+    </div>
+
+    <!-- DRAWER LATERAL DERECHO: DETALLE DE POTRERO Y ANIMALES -->
+    @if (potreroSeleccionado()) {
+      <aside class="potrero-drawer animate-slide-left">
+        <!-- CABECERA DEL DRAWER -->
+        <div class="drawer-header">
+          <div class="drawer-title-group">
+            <span
+              class="area-color-indicator"
+              [style.background-color]="potreroSeleccionado()!.color_hex"
+            ></span>
+            <div>
+              <div class="drawer-code">{{ potreroSeleccionado()!.codigo }}</div>
+              <h2 class="drawer-name">{{ potreroSeleccionado()!.nombre }}</h2>
+            </div>
+          </div>
+          <button class="btn-icon-close" (click)="cerrarDrawerPotrero()" title="Cerrar panel">
+            ✕
+          </button>
+        </div>
+
+        <!-- INDICADORES CLAVE DEL ÁREA -->
+        <div class="drawer-stats-grid">
+          <div class="stat-card">
+            <span class="stat-label">Tipo de Área</span>
+            <span class="badge-tipo-area" [class]="potreroSeleccionado()!.tipo_area.toLowerCase()">
+              {{ potreroSeleccionado()!.tipo_area }}
+            </span>
+          </div>
+
+          <div class="stat-card">
+            <span class="stat-label">Superficie</span>
+            <span class="stat-value">
+              {{ potreroSeleccionado()!.superficie_ha ? potreroSeleccionado()!.superficie_ha + ' ha' : 'N/A' }}
+            </span>
+          </div>
+
+          <div class="stat-card">
+            <span class="stat-label">Carga Actual</span>
+            <span class="stat-value highlight">
+              {{ potreroSeleccionado()!.total_animales }} / {{ potreroSeleccionado()!.capacidad_cabezas }} cab.
+            </span>
+          </div>
+        </div>
+
+        <!-- BARRA DE OCUPACIÓN -->
+        <div class="capacity-gauge">
+          <div class="gauge-header">
+            <span>Ocupación de carga</span>
+            <span>
+              {{ ((potreroSeleccionado()!.total_animales / potreroSeleccionado()!.capacidad_cabezas) * 100).toFixed(0) }}%
+            </span>
+          </div>
+          <div class="gauge-track">
+            <div
+              class="gauge-bar"
+              [style.width.%]="Math.min(100, (potreroSeleccionado()!.total_animales / potreroSeleccionado()!.capacidad_cabezas) * 100)"
+              [class.warning]="potreroSeleccionado()!.total_animales >= potreroSeleccionado()!.capacidad_cabezas * 0.9"
+              [class.danger]="potreroSeleccionado()!.total_animales > potreroSeleccionado()!.capacidad_cabezas"
+            ></div>
+          </div>
+        </div>
+
+        <!-- ACCIONES RÁPIDAS DEL POTRERO -->
+        <div class="drawer-quick-actions">
+          <button class="btn-action-pill" (click)="centrarEnPotrero(potreroSeleccionado()!)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/>
+            </svg>
+            Centrar Mapa
+          </button>
+
+          <button class="btn-action-pill" (click)="abrirModalEditarPotrero(potreroSeleccionado()!)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 20h9"/>
+              <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+            </svg>
+            Editar Datos
+          </button>
+
+          <button
+            class="btn-action-pill danger"
+            (click)="desactivarPotrero(potreroSeleccionado()!)"
+            [disabled]="potreroSeleccionado()!.total_animales > 0"
+            [title]="potreroSeleccionado()!.total_animales > 0 ? 'No se puede desactivar con animales dentro' : 'Desactivar potrero'"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+            </svg>
+            Desactivar
+          </button>
+        </div>
+
+        <!-- LISTADO DE ANIMALES PRESENTES -->
+        <div class="drawer-animals-section">
+          <div class="animals-section-header">
+            <h3 class="section-title">
+              Animales en este Potrero
+              <span class="count-pill">{{ animalesPotreroSeleccionado().length }}</span>
+            </h3>
+
+            <!-- BUSCADOR INTERNO -->
+            <div class="search-mini-box">
+              <input
+                type="text"
+                placeholder="Buscar por arete, código o raza..."
+                [ngModel]="filtroAnimalesTexto()"
+                (ngModelChange)="filtroAnimalesTexto.set($event)"
+              />
+            </div>
+          </div>
+
+          <!-- SELECCIONADOR MASIVO -->
+          @if (animalesPotreroFiltrados().length > 0) {
+            <div class="bulk-selector-bar">
+              <label class="checkbox-container">
+                <input
+                  type="checkbox"
+                  [checked]="animalesSeleccionadosIds().length === animalesPotreroFiltrados().length && animalesPotreroFiltrados().length > 0"
+                  (change)="toggleSeleccionarTodos()"
+                />
+                <span class="checkmark"></span>
+                <span class="checkbox-label">
+                  Seleccionar todos ({{ animalesPotreroFiltrados().length }})
+                </span>
+              </label>
+
+              @if (animalesSeleccionadosIds().length > 0) {
+                <span class="selected-counter">
+                  {{ animalesSeleccionadosIds().length }} seleccionado(s)
+                </span>
+              }
+            </div>
+          }
+
+          <!-- LISTA SCROLLABLE DE ANIMALES -->
+          <div class="animals-scroll-list">
+            @if (cargandoAnimalesPotrero()) {
+              <div class="loading-state">
+                <div class="spinner-sm"></div>
+                <span>Cargando animales...</span>
+              </div>
+            } @else if (animalesPotreroFiltrados().length === 0) {
+              <div class="empty-state-drawer">
+                <p>No se encontraron animales activos en este potrero.</p>
+              </div>
+            } @else {
+              @for (animal of animalesPotreroFiltrados(); track animal.id) {
+                <div
+                  class="animal-row-item"
+                  [class.selected]="animalesSeleccionadosIds().includes(animal.id)"
+                >
+                  <label class="checkbox-container">
+                    <input
+                      type="checkbox"
+                      [checked]="animalesSeleccionadosIds().includes(animal.id)"
+                      (change)="toggleSeleccionAnimal(animal.id)"
+                    />
+                    <span class="checkmark"></span>
+                  </label>
+
+                  <span class="sex-icon" [class]="animal.sexo.toLowerCase()">
+                    {{ animal.sexo === 'MACHO' ? '🐂' : '🐄' }}
+                  </span>
+
+                  <div class="animal-info">
+                    <div class="animal-tags">
+                      <span class="code-tag">{{ animal.codigo_interno }}</span>
+                      @if (animal.numero_arete) {
+                        <span class="arete-tag">{{ animal.numero_arete }}</span>
+                      } @else {
+                        <span class="no-arete-tag">Sin Arete</span>
+                      }
+                    </div>
+                    <div class="animal-sub">
+                      <span>{{ animal.raza }}</span>
+                      <span>•</span>
+                      <span>{{ animal.peso_actual ? animal.peso_actual + ' kg' : 'Sin peso' }}</span>
+                      @if (animal.nombre) {
+                        <span>• "{{ animal.nombre }}"</span>
+                      }
+                    </div>
+                  </div>
+
+                  <div class="animal-actions">
+                    <button
+                      class="btn-icon-subtle"
+                      (click)="abrirPerfilAnimal(animal.id)"
+                      title="Ver Perfil 360°"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              }
+            }
+          </div>
+
+          <!-- BOTÓN TRASLADAR LOTE EN FOOTER DEL DRAWER -->
+          <div class="drawer-footer">
+            <button
+              class="btn btn-primary btn-block"
+              [disabled]="animalesSeleccionadosIds().length === 0"
+              (click)="abrirModalMovimientoMasivo()"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="13 17 18 12 13 7"/>
+                <polyline points="6 17 11 12 6 7"/>
+              </svg>
+              Trasladar Seleccionados ({{ animalesSeleccionadosIds().length }})
+            </button>
+          </div>
+        </div>
+      </aside>
+    }
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- MODAL: CONFIRMACIÓN DE TRASLADO (ARRASTRE O MASIVO)                   -->
+  <!-- ===================================================================== -->
+  @if (modalMovimientoAbierto()) {
+    <div class="modal-backdrop animate-fade-in" (click)="cancelarMovimiento()">
+      <div class="modal-card modal-lg" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title-group">
+            <div class="modal-icon-badge">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M5 12h14"/>
+                <path d="m12 5 7 7-7 7"/>
+              </svg>
+            </div>
+            <div>
+              <h3 class="modal-title">Confirmar Movimiento de Ganado</h3>
+              <p class="modal-subtitle">
+                {{ movimientoData.tipo_operacion === 'ARRASTRE_MAPA' ? 'Traslado individual detectado por arrastre en mapa satelital' : 'Traslado manual administrativo por lote' }}
+              </p>
+            </div>
+          </div>
+          <button class="btn-icon-close" (click)="cancelarMovimiento()">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <!-- TARJETA RUTA ORIGEN -> DESTINO -->
+          <div class="transfer-route-card">
+            <div class="route-point origin">
+              <span class="route-label">POTRERO DE ORIGEN</span>
+              <span class="route-name">{{ movimientoData.potrero_origen_nombre }}</span>
+            </div>
+
+            <div class="route-arrow">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="5" y1="12" x2="19" y2="12"/>
+                <polyline points="12 5 19 12 12 19"/>
+              </svg>
+              <span class="transfer-count-pill">{{ movimientoData.animales.length }} cab.</span>
+            </div>
+
+            <div class="route-point destination">
+              <span class="route-label">POTRERO DE DESTINO</span>
+              @if (movimientoData.potrero_destino_id && movimientoData.potrero_destino_nombre) {
+                <span class="route-name text-emerald">{{ movimientoData.potrero_destino_nombre }}</span>
+              } @else {
+                <select
+                  class="form-control"
+                  [(ngModel)]="movimientoData.potrero_destino_id"
+                  name="potreroDestino"
+                >
+                  <option [ngValue]="0" disabled>-- Seleccione potrero destino --</option>
+                  @for (pot of potreros(); track pot.id) {
+                    @if (pot.id !== movimientoData.potrero_origen_id) {
+                      <option [ngValue]="pot.id">{{ pot.nombre }} ({{ pot.total_animales }}/{{ pot.capacidad_cabezas }} cab.)</option>
+                    }
+                  }
+                </select>
+              }
+            </div>
+          </div>
+
+          <!-- ALERTA DE SOBRECAPACIDAD NO BLOQUEANTE (RF-032) -->
+          @if (sobrecapacidadDestino()) {
+            <div class="warning-alert-box animate-fade-in">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+                <line x1="12" y1="9" x2="12" y2="13"/>
+                <line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>
+              <div>
+                <strong>Advertencia de Carga:</strong>
+                <p>
+                  El potrero destino tiene una capacidad recomendada de
+                  <strong>{{ sobrecapacidadDestino()!.capacidad }} cabezas</strong>
+                  y con este movimiento pasará a tener
+                  <strong>{{ sobrecapacidadDestino()!.resultante }} cabezas</strong>
+                  (exceso de +{{ sobrecapacidadDestino()!.exceso }}).
+                  Puede confirmar la operación si el sobrepastoreo es deliberado.
+                </p>
+              </div>
+            </div>
+          }
+
+          <!-- LISTA DE ANIMALES PARTICIPANTES -->
+          <div class="transfer-animals-summary">
+            <span class="summary-label">Animales que serán trasladados:</span>
+            <div class="animal-chips-cloud">
+              @for (an of movimientoData.animales; track an.id) {
+                <span class="animal-chip">
+                  <strong>{{ an.codigo }}</strong>
+                  @if (an.arete) {
+                    <span>({{ an.arete }})</span>
+                  }
+                </span>
+              }
+            </div>
+          </div>
+
+          <!-- METADATOS DEL MOVIMIENTO (FORMULARIO) -->
+          <div class="form-grid-two">
+            <div class="form-group">
+              <label>Fecha de Movimiento *</label>
+              <input
+                type="date"
+                class="form-control"
+                [(ngModel)]="movimientoData.fecha_movimiento"
+                name="fechaMovimiento"
+              />
+            </div>
+
+            <div class="form-group">
+              <label>Motivo del Traslado</label>
+              <select
+                class="form-control"
+                [(ngModel)]="movimientoData.motivo"
+                name="motivoMovimiento"
+              >
+                @for (m of motivosPredefinidos; track m) {
+                  <option [value]="m">{{ m }}</option>
+                }
+              </select>
+            </div>
+          </div>
+
+          <div class="form-grid-two">
+            <div class="form-group">
+              <label>Trabajador Responsable (Opcional)</label>
+              <input
+                type="text"
+                class="form-control"
+                placeholder="Nombre del vaquero o encargado..."
+                [(ngModel)]="movimientoData.responsable"
+                name="responsableMovimiento"
+              />
+            </div>
+
+            <div class="form-group">
+              <label>Observaciones / Notas de Campo</label>
+              <input
+                type="text"
+                class="form-control"
+                placeholder="Detalles del traslado, condición de pasturas, etc."
+                [(ngModel)]="movimientoData.observaciones"
+                name="observacionesMovimiento"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-outline" (click)="cancelarMovimiento()" [disabled]="guardando()">
+            Cancelar
+          </button>
+          <button class="btn btn-primary" (click)="confirmarMovimiento()" [disabled]="guardando()">
+            @if (guardando()) {
+              <div class="spinner-sm"></div>
+              <span>Registrando...</span>
+            } @else {
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+              <span>Confirmar Traslado</span>
+            }
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ===================================================================== -->
+  <!-- MODAL: CREAR NUEVO POTRERO O CORRAL (CON GEOMETRÍA TRAZADA)           -->
+  <!-- ===================================================================== -->
+  @if (modalCrearPotreroAbierto()) {
+    <div class="modal-backdrop animate-fade-in" (click)="modalCrearPotreroAbierto.set(false)">
+      <div class="modal-card modal-md" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title-group">
+            <div class="modal-icon-badge emerald">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/>
+              </svg>
+            </div>
+            <div>
+              <h3 class="modal-title">Registrar Nueva Área Delimitada</h3>
+              <p class="modal-subtitle">Asigne nombre libre, tipo y capacidad de carga animal.</p>
+            </div>
+          </div>
+          <button class="btn-icon-close" (click)="modalCrearPotreroAbierto.set(false)">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Nombre del Potrero o Corral *</label>
+            <input
+              type="text"
+              class="form-control"
+              placeholder="Ej: Potrero Don Cesar, Corral de Engorde..."
+              [(ngModel)]="potreroForm.nombre"
+              name="nombrePotrero"
+              required
+            />
+          </div>
+
+          <div class="form-grid-two">
+            <div class="form-group">
+              <label>Tipo de Área *</label>
+              <select class="form-control" [(ngModel)]="potreroForm.tipo_area" name="tipoArea">
+                <option value="POTRERO">POTRERO (Pastoreo)</option>
+                <option value="CORRAL">CORRAL (Manejo / Manga)</option>
+                <option value="CUARENTENA">CUARENTENA (Aislamiento)</option>
+                <option value="MATERNIDAD">MATERNIDAD (Crías / Parición)</option>
+                <option value="OTRO">OTRO (Instalación Auxiliar)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Capacidad Recomendada (Cabezas) *</label>
+              <input
+                type="number"
+                class="form-control"
+                min="1"
+                [(ngModel)]="potreroForm.capacidad_cabezas"
+                name="capacidadCabezas"
+              />
+            </div>
+          </div>
+
+          <div class="form-grid-two">
+            <div class="form-group">
+              <label>Superficie en Hectáreas (ha)</label>
+              <input
+                type="number"
+                step="0.01"
+                class="form-control"
+                placeholder="Calculada automáticamente si se omite"
+                [(ngModel)]="potreroForm.superficie_ha"
+                name="superficieHa"
+              />
+            </div>
+
+            <div class="form-group">
+              <label>Color Distintivo del Polígono</label>
+              <div class="color-picker-row">
+                @for (c of coloresDisponibles; track c.hex) {
+                  <button
+                    type="button"
+                    class="color-dot-btn"
+                    [style.background-color]="c.hex"
+                    [class.active]="potreroForm.color_hex === c.hex"
+                    (click)="potreroForm.color_hex = c.hex"
+                    [title]="c.label"
+                  ></button>
+                }
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Observaciones de Pasturas o Infraestructura</label>
+            <textarea
+              class="form-control"
+              rows="2"
+              placeholder="Tipo de pasto (Brachiaria, Tanzania), bebederos, sombreaderos..."
+              [(ngModel)]="potreroForm.observaciones"
+              name="obsPotrero"
+            ></textarea>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-outline" (click)="modalCrearPotreroAbierto.set(false)">Cancelar</button>
+          <button class="btn btn-primary" (click)="guardarNuevoPotrero()" [disabled]="guardando()">
+            @if (guardando()) {
+              <div class="spinner-sm"></div>
+              <span>Guardando...</span>
+            } @else {
+              <span>Guardar Potrero</span>
+            }
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ===================================================================== -->
+  <!-- MODAL: EDITAR POTRERO                                                 -->
+  <!-- ===================================================================== -->
+  @if (modalEditarPotreroAbierto()) {
+    <div class="modal-backdrop animate-fade-in" (click)="modalEditarPotreroAbierto.set(false)">
+      <div class="modal-card modal-md" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3 class="modal-title">Editar Datos del Potrero</h3>
+          <button class="btn-icon-close" (click)="modalEditarPotreroAbierto.set(false)">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Nombre *</label>
+            <input
+              type="text"
+              class="form-control"
+              [(ngModel)]="potreroForm.nombre"
+              name="editNombre"
+            />
+          </div>
+
+          <div class="form-grid-two">
+            <div class="form-group">
+              <label>Tipo de Área</label>
+              <select class="form-control" [(ngModel)]="potreroForm.tipo_area" name="editTipoArea">
+                <option value="POTRERO">POTRERO</option>
+                <option value="CORRAL">CORRAL</option>
+                <option value="CUARENTENA">CUARENTENA</option>
+                <option value="MATERNIDAD">MATERNIDAD</option>
+                <option value="OTRO">OTRO</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Capacidad Estimada (Cabezas)</label>
+              <input
+                type="number"
+                class="form-control"
+                min="1"
+                [(ngModel)]="potreroForm.capacidad_cabezas"
+                name="editCapacidad"
+              />
+            </div>
+          </div>
+
+          <div class="form-grid-two">
+            <div class="form-group">
+              <label>Superficie (ha)</label>
+              <input
+                type="number"
+                step="0.01"
+                class="form-control"
+                [(ngModel)]="potreroForm.superficie_ha"
+                name="editSuperficie"
+              />
+            </div>
+
+            <div class="form-group">
+              <label>Color</label>
+              <div class="color-picker-row">
+                @for (c of coloresDisponibles; track c.hex) {
+                  <button
+                    type="button"
+                    class="color-dot-btn"
+                    [style.background-color]="c.hex"
+                    [class.active]="potreroForm.color_hex === c.hex"
+                    (click)="potreroForm.color_hex = c.hex"
+                    [title]="c.label"
+                  ></button>
+                }
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Observaciones</label>
+            <textarea
+              class="form-control"
+              rows="2"
+              [(ngModel)]="potreroForm.observaciones"
+              name="editObs"
+            ></textarea>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-outline" (click)="modalEditarPotreroAbierto.set(false)">Cancelar</button>
+          <button class="btn btn-primary" (click)="guardarEdicionPotrero()" [disabled]="guardando()">
+            Guardar Cambios
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ===================================================================== -->
+  <!-- MODAL: HISTORIAL CRONOLÓGICO DE MOVIMIENTOS                           -->
+  <!-- ===================================================================== -->
+  @if (modalHistorialAbierto()) {
+    <div class="modal-backdrop animate-fade-in" (click)="modalHistorialAbierto.set(false)">
+      <div class="modal-card modal-xl" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title-group">
+            <div class="modal-icon-badge">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12 6 12 12 16 14"/>
+              </svg>
+            </div>
+            <div>
+              <h3 class="modal-title">Historial de Movimientos de Ganado</h3>
+              <p class="modal-subtitle">Auditoría completa de rotaciones de pasturas y traslados de animales.</p>
+            </div>
+          </div>
+          <button class="btn-icon-close" (click)="modalHistorialAbierto.set(false)">✕</button>
+        </div>
+
+        <div class="modal-body table-responsive">
+          <table class="clean-table">
+            <thead>
+              <tr>
+                <th>Comprobante</th>
+                <th>Fecha</th>
+                <th>Origen</th>
+                <th>Destino</th>
+                <th>Cabezas</th>
+                <th>Motivo</th>
+                <th>Responsable</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              @if (movimientosHistorial().length === 0) {
+                <tr>
+                  <td colspan="9" class="text-center py-4 text-muted">
+                    No se registran movimientos de ganado aún.
+                  </td>
+                </tr>
+              } @else {
+                @for (mov of movimientosHistorial(); track mov.id) {
+                  <tr [class.row-anulado]="mov.estado === 'ANULADO'">
+                    <td class="font-mono text-bold">{{ mov.numero_comprobante }}</td>
+                    <td>{{ mov.fecha_movimiento }}</td>
+                    <td>{{ mov.potrero_origen_nombre }}</td>
+                    <td><strong class="text-emerald">{{ mov.potrero_destino_nombre }}</strong></td>
+                    <td class="text-center">
+                      <span class="badge badge-neutral">{{ mov.cantidad_animales }} cab.</span>
+                    </td>
+                    <td>{{ mov.motivo || 'Rotación' }}</td>
+                    <td>{{ mov.responsable || '-' }}</td>
+                    <td>
+                      <span
+                        class="badge"
+                        [class.badge-emerald]="mov.estado === 'CONFIRMADO'"
+                        [class.badge-rose]="mov.estado === 'ANULADO'"
+                      >
+                        {{ mov.estado }}
+                      </span>
+                    </td>
+                    <td>
+                      <div class="table-actions">
+                        <button
+                          class="btn-icon-subtle"
+                          (click)="verDetalleMovimiento(mov)"
+                          title="Ver detalle de animales"
+                        >
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+                            <circle cx="12" cy="12" r="3"/>
+                          </svg>
+                        </button>
+
+                        @if (mov.estado === 'CONFIRMADO') {
+                          <button
+                            class="btn-icon-subtle danger"
+                            (click)="iniciarAnulacionMovimiento(mov)"
+                            title="Anular movimiento"
+                          >
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                              <circle cx="12" cy="12" r="10"/>
+                              <line x1="15" y1="9" x2="9" y2="15"/>
+                              <line x1="9" y1="9" x2="15" y2="15"/>
+                            </svg>
+                          </button>
+                        }
+                      </div>
+                    </td>
+                  </tr>
+                }
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-outline" (click)="modalHistorialAbierto.set(false)">Cerrar</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ===================================================================== -->
+  <!-- MODAL: DETALLE DE UN MOVIMIENTO ESPECÍFICO                            -->
+  <!-- ===================================================================== -->
+  @if (modalDetalleMovimientoAbierto() && movimientoSeleccionadoDetalle()) {
+    <div class="modal-backdrop animate-fade-in" (click)="modalDetalleMovimientoAbierto.set(false)">
+      <div class="modal-card modal-lg" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title-group">
+            <h3 class="modal-title">Detalle de Comprobante: {{ movimientoSeleccionadoDetalle()!.numero_comprobante }}</h3>
+            <p class="modal-subtitle">
+              Traslado desde {{ movimientoSeleccionadoDetalle()!.potrero_origen_nombre }} hacia {{ movimientoSeleccionadoDetalle()!.potrero_destino_nombre }}
+            </p>
+          </div>
+          <button class="btn-icon-close" (click)="modalDetalleMovimientoAbierto.set(false)">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <table class="clean-table">
+            <thead>
+              <tr>
+                <th>Código Animal</th>
+                <th>Número de Arete</th>
+                <th>Nombre / Alias</th>
+                <th>Raza</th>
+                <th>Sexo</th>
+                <th>Peso</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (det of movimientoSeleccionadoDetalle()!.detalles; track det.id) {
+                <tr>
+                  <td class="font-mono text-bold">{{ det.codigo_interno }}</td>
+                  <td>{{ det.numero_arete || 'S/N' }}</td>
+                  <td>{{ det.animal_nombre || '-' }}</td>
+                  <td>{{ det.animal_raza || '-' }}</td>
+                  <td>{{ det.animal_sexo || '-' }}</td>
+                  <td>{{ det.animal_peso_actual ? det.animal_peso_actual + ' kg' : '-' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-outline" (click)="modalDetalleMovimientoAbierto.set(false)">Cerrar</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ===================================================================== -->
+  <!-- MODAL: ANULACIÓN CONTROLADA DE MOVIMIENTO                             -->
+  <!-- ===================================================================== -->
+  @if (modalAnularMovimientoAbierto() && movimientoAAnular()) {
+    <div class="modal-backdrop animate-fade-in" (click)="modalAnularMovimientoAbierto.set(false)">
+      <div class="modal-card modal-sm" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3 class="modal-title">Anular Movimiento {{ movimientoAAnular()!.numero_comprobante }}</h3>
+          <button class="btn-icon-close" (click)="modalAnularMovimientoAbierto.set(false)">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <p class="text-secondary mb-3">
+            Esta acción devolverá atómicamente las <strong>{{ movimientoAAnular()!.cantidad_animales }} cabezas</strong>
+            al potrero original (<strong>{{ movimientoAAnular()!.potrero_origen_nombre }}</strong>).
+          </p>
+
+          <div class="form-group">
+            <label>Motivo de la Anulación *</label>
+            <textarea
+              class="form-control"
+              rows="3"
+              placeholder="Explique la razón de la anulación (error operativo, reubicación incorrecta...)"
+              [ngModel]="motivoAnulacion()"
+              (ngModelChange)="motivoAnulacion.set($event)"
+            ></textarea>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-outline" (click)="modalAnularMovimientoAbierto.set(false)">Cancelar</button>
+          <button
+            class="btn btn-danger"
+            (click)="confirmarAnulacionMovimiento()"
+            [disabled]="guardando() || !motivoAnulacion().trim()"
+          >
+            @if (guardando()) {
+              <div class="spinner-sm"></div>
+              <span>Anulando...</span>
+            } @else {
+              <span>Confirmar Anulación</span>
+            }
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ===================================================================== -->
+  <!-- MODAL: PERFIL 360° DEL ANIMAL                                         -->
+  <!-- ===================================================================== -->
+  @if (modalPerfilAnimalAbierto()) {
+    <div class="modal-backdrop animate-fade-in" (click)="cerrarPerfilAnimal()">
+      <div class="modal-card modal-lg" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title-group">
+            <div class="modal-icon-badge">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/>
+                <path d="M2 12h20"/>
+              </svg>
+            </div>
+            <div>
+              <h3 class="modal-title">
+                Ficha Perfil 360° — {{ perfilAnimalSeleccionado()?.animal?.codigo_interno || 'Cargando...' }}
+              </h3>
+              <p class="modal-subtitle">
+                {{ perfilAnimalSeleccionado()?.animal?.numero_arete ? 'Arete: ' + perfilAnimalSeleccionado()?.animal?.numero_arete : 'Sin arete asignado' }}
+                • {{ perfilAnimalSeleccionado()?.animal?.raza }} • {{ perfilAnimalSeleccionado()?.animal?.sexo }}
+              </p>
+            </div>
+          </div>
+          <button class="btn-icon-close" (click)="cerrarPerfilAnimal()">✕</button>
+        </div>
+
+        <!-- TABS DEL PERFIL 360 -->
+        <div class="profile-tabs">
+          <button
+            class="tab-btn"
+            [class.active]="perfilTabActiva() === 'info'"
+            (click)="perfilTabActiva.set('info')"
+          >
+            Ficha General
+          </button>
+          <button
+            class="tab-btn"
+            [class.active]="perfilTabActiva() === 'pesajes'"
+            (click)="perfilTabActiva.set('pesajes')"
+          >
+            Pesajes ({{ perfilAnimalSeleccionado()?.pesajes?.length || 0 }})
+          </button>
+          <button
+            class="tab-btn"
+            [class.active]="perfilTabActiva() === 'movimientos'"
+            (click)="perfilTabActiva.set('movimientos')"
+          >
+            Historial de Potreros ({{ historialMovimientosAnimal().length }})
+          </button>
+        </div>
+
+        <div class="modal-body">
+          @if (!perfilAnimalSeleccionado()) {
+            <div class="loading-state py-5">
+              <div class="spinner-sm"></div>
+              <span>Cargando expediente biológico...</span>
+            </div>
+          } @else {
+            <!-- TAB 1: INFORMACIÓN GENERAL -->
+            @if (perfilTabActiva() === 'info') {
+              <div class="profile-grid">
+                <div class="profile-item">
+                  <span class="label">Código Interno</span>
+                  <span class="value font-mono">{{ perfilAnimalSeleccionado()!.animal.codigo_interno }}</span>
+                </div>
+                <div class="profile-item">
+                  <span class="label">Número de Arete</span>
+                  <span class="value">{{ perfilAnimalSeleccionado()!.animal.numero_arete || 'Sin arete' }}</span>
+                </div>
+                <div class="profile-item">
+                  <span class="label">Nombre / Alias</span>
+                  <span class="value">{{ perfilAnimalSeleccionado()!.animal.nombre || 'Sin nombre' }}</span>
+                </div>
+                <div class="profile-item">
+                  <span class="label">Ubicación Actual</span>
+                  <span class="value text-emerald font-bold">{{ perfilAnimalSeleccionado()!.animal.ubicacion }}</span>
+                </div>
+                <div class="profile-item">
+                  <span class="label">Sexo</span>
+                  <span class="value">{{ perfilAnimalSeleccionado()!.animal.sexo }}</span>
+                </div>
+                <div class="profile-item">
+                  <span class="label">Raza</span>
+                  <span class="value">{{ perfilAnimalSeleccionado()!.animal.raza }}</span>
+                </div>
+                <div class="profile-item">
+                  <span class="label">Peso Actual</span>
+                  <span class="value highlight">{{ perfilAnimalSeleccionado()!.animal.peso_actual ? perfilAnimalSeleccionado()!.animal.peso_actual + ' kg' : 'N/A' }}</span>
+                </div>
+                <div class="profile-item">
+                  <span class="label">Estado Biológico</span>
+                  <span class="badge badge-emerald">{{ perfilAnimalSeleccionado()!.animal.estado }}</span>
+                </div>
+              </div>
+            }
+
+            <!-- TAB 2: PESAJES -->
+            @if (perfilTabActiva() === 'pesajes') {
+              <table class="clean-table">
+                <thead>
+                  <tr>
+                    <th>Fecha</th>
+                    <th>Peso (kg)</th>
+                    <th>Notas</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @if (!perfilAnimalSeleccionado()!.pesajes || perfilAnimalSeleccionado()!.pesajes!.length === 0) {
+                    <tr>
+                      <td colspan="3" class="text-center py-3 text-muted">Sin pesajes registrados</td>
+                    </tr>
+                  } @else {
+                    @for (pes of perfilAnimalSeleccionado()!.pesajes!; track pes.id) {
+                      <tr>
+                        <td>{{ pes.fecha_pesaje }}</td>
+                        <td class="font-bold">{{ pes.peso }} kg</td>
+                        <td>{{ pes.notas || '-' }}</td>
+                      </tr>
+                    }
+                  }
+                </tbody>
+              </table>
+            }
+
+            <!-- TAB 3: HISTORIAL DE TRASLADOS ENTRE POTREROS -->
+            @if (perfilTabActiva() === 'movimientos') {
+              <table class="clean-table">
+                <thead>
+                  <tr>
+                    <th>Comprobante</th>
+                    <th>Fecha</th>
+                    <th>Origen</th>
+                    <th>Destino</th>
+                    <th>Motivo</th>
+                    <th>Responsable</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @if (historialMovimientosAnimal().length === 0) {
+                    <tr>
+                      <td colspan="6" class="text-center py-4 text-muted">
+                        Este animal no ha registrado traslados entre potreros aún.
+                      </td>
+                    </tr>
+                  } @else {
+                    @for (hm of historialMovimientosAnimal(); track hm.movimiento_id) {
+                      <tr>
+                        <td class="font-mono text-bold">{{ hm.numero_comprobante }}</td>
+                        <td>{{ hm.fecha_movimiento }}</td>
+                        <td>{{ hm.potrero_origen }}</td>
+                        <td><strong class="text-emerald">{{ hm.potrero_destino }}</strong></td>
+                        <td>{{ hm.motivo || 'Rotación' }}</td>
+                        <td>{{ hm.responsable || '-' }}</td>
+                      </tr>
+                    }
+                  }
+                </tbody>
+              </table>
+            }
+          }
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-outline" (click)="cerrarPerfilAnimal()">Cerrar</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- NOTIFICACIÓN TOAST FLOTANTE -->
+  @if (toastMensaje()) {
+    <div class="toast-notification animate-slide-up" [class]="toastTipo()">
+      <span>{{ toastMensaje() }}</span>
+    </div>
+  }
+</div>

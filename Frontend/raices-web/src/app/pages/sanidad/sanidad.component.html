@@ -1,0 +1,1472 @@
+<div class="sanidad-page-wrapper">
+  <!-- ENCABEZADO SUPERIOR -->
+  <header class="page-header">
+    <div class="header-left">
+      <div class="header-badge">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 2v20M2 12h20"/>
+          <path d="M19 7l3 2-2 3"/>
+          <path d="M5 7L2 9l2 3"/>
+        </svg>
+        <span>Módulo de Ganadería</span>
+      </div>
+      <h1 class="page-title">Sanidad, Tratamientos y Vacunación</h1>
+      <p class="page-subtitle">
+        Control veterinario del hato, campañas de vacunación, períodos de retiro de carne/leche y trazabilidad clínica.
+      </p>
+    </div>
+
+    <div class="header-actions">
+      <!-- BOTÓN MODO MANGA / CORRAL -->
+      <button
+        class="btn"
+        [ngClass]="esModoManga() ? 'btn-manga-active' : 'btn-outline'"
+        (click)="toggleModoManga()"
+        title="Optimiza la interfaz con botones táctiles de 48px para trabajo en corrales o con celular"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect width="14" height="20" x="5" y="2" rx="2" ry="2"/>
+          <path d="M12 18h.01"/>
+        </svg>
+        <span>{{ esModoManga() ? 'Modo Manga Activo' : 'Modo Manga (Táctil)' }}</span>
+      </button>
+
+      <button
+        class="btn btn-outline"
+        (click)="abrirModalNuevaOperacion('TRATAMIENTO_INDIVIDUAL')"
+        title="Registrar tratamiento curativo a animales enfermos"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="m19 14 1.5 1.5a2 2 0 0 1 0 2.8l-1.2 1.2a2 2 0 0 1-2.8 0L15 18"/>
+          <path d="M14 6l6 6"/>
+          <path d="M4 16l6-6"/>
+          <path d="m2 22 5-5"/>
+        </svg>
+        Tratamiento Clínico
+      </button>
+
+      <button
+        class="btn btn-primary"
+        (click)="abrirModalNuevaOperacion('VACUNACION_GRUPAL')"
+        title="Registrar jornada masiva de vacunación o desparasitación"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="m18 2 4 4"/>
+          <path d="m17 7 3-3"/>
+          <path d="M19 9 8.7 19.3c-1 1-2.5 1.7-3.7 1.7H3v-2c0-1.2.7-2.7 1.7-3.7L15 5"/>
+          <path d="m9 11 4 4"/>
+        </svg>
+        Jornada de Vacunación
+      </button>
+    </div>
+  </header>
+
+  <!-- TARJETAS DE KPIS SANITARIOS -->
+  <section class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-icon-wrapper bg-blue-soft">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2">
+          <path d="m18 2 4 4"/>
+          <path d="m17 7 3-3"/>
+          <path d="M19 9 8.7 19.3c-1 1-2.5 1.7-3.7 1.7H3v-2c0-1.2.7-2.7 1.7-3.7L15 5"/>
+        </svg>
+      </div>
+      <div class="kpi-body">
+        <span class="kpi-label">Vacunaciones este Mes</span>
+        <h3 class="kpi-value">{{ kpis()?.total_vacunaciones_mes || 0 }}</h3>
+        <span class="kpi-subtext">Jornadas oficiales ejecutadas</span>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon-wrapper bg-emerald-soft">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2">
+          <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+        </svg>
+      </div>
+      <div class="kpi-body">
+        <span class="kpi-label">Tratamientos Activos</span>
+        <h3 class="kpi-value">{{ kpis()?.total_tratamientos_activos || 0 }}</h3>
+        <span class="kpi-subtext">Últimos 30 días en seguimiento</span>
+      </div>
+    </div>
+
+    <div class="kpi-card" [ngClass]="{'border-amber-alert': (kpis()?.animales_en_retiro_carne || 0) > 0}">
+      <div class="kpi-icon-wrapper bg-amber-soft">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2">
+          <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/>
+          <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+      </div>
+      <div class="kpi-body">
+        <span class="kpi-label">En Período de Retiro</span>
+        <div class="kpi-value-row">
+          <h3 class="kpi-value text-amber">
+            {{ kpis()?.animales_en_retiro_carne || 0 }}
+          </h3>
+          <span class="kpi-subtag">Carne</span>
+          <span class="divider">/</span>
+          <h3 class="kpi-value text-amber">
+            {{ kpis()?.animales_en_retiro_leche || 0 }}
+          </h3>
+          <span class="kpi-subtag">Leche</span>
+        </div>
+        <span class="kpi-subtext text-amber-dark">Inaptos para venta o consumo</span>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon-wrapper bg-purple-soft">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2">
+          <rect width="20" height="14" x="2" y="7" rx="2" ry="2"/>
+          <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+        </svg>
+      </div>
+      <div class="kpi-body">
+        <span class="kpi-label">Catálogo Activo</span>
+        <div class="kpi-value-row">
+          <h3 class="kpi-value">{{ kpis()?.vacunas_catalogo_activas || 0 }}</h3>
+          <span class="kpi-subtag">Vacunas</span>
+          <span class="divider">/</span>
+          <h3 class="kpi-value">{{ kpis()?.medicamentos_catalogo_activos || 0 }}</h3>
+          <span class="kpi-subtag">Fármacos</span>
+        </div>
+        <span class="kpi-subtext">Listos para administración</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- PESTAÑAS DE NAVEGACIÓN -->
+  <nav class="tabs-nav">
+    <button
+      class="tab-btn"
+      [class.active]="pestanaActiva() === 'OPERACIONES'"
+      (click)="cambiarPestana('OPERACIONES')"
+    >
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+        <line x1="16" y1="13" x2="8" y2="13"/>
+        <line x1="16" y1="17" x2="8" y2="17"/>
+      </svg>
+      <span>Historial de Operaciones</span>
+      <span class="tab-count">{{ operaciones().length }}</span>
+    </button>
+
+    <button
+      class="tab-btn"
+      [class.active]="pestanaActiva() === 'ALERTAS_RETIRO'"
+      (click)="cambiarPestana('ALERTAS_RETIRO')"
+    >
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+        <line x1="12" y1="9" x2="12" y2="13"/>
+        <line x1="12" y1="17" x2="12.01" y2="17"/>
+      </svg>
+      <span>Alertas de Período de Retiro</span>
+      @if (alertasRetiro().length > 0) {
+        <span class="tab-count badge-warning">{{ alertasRetiro().length }}</span>
+      }
+    </button>
+
+    <button
+      class="tab-btn"
+      [class.active]="pestanaActiva() === 'CATALOGOS'"
+      (click)="cambiarPestana('CATALOGOS')"
+    >
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="8" x2="12" y2="12"/>
+        <line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      <span>Catálogos Sanitarios</span>
+    </button>
+  </nav>
+
+  <!-- ===================================================================== -->
+  <!-- PESTAÑA 1: HISTORIAL DE OPERACIONES SANITARIAS                        -->
+  <!-- ===================================================================== -->
+  @if (pestanaActiva() === 'OPERACIONES') {
+    <div class="tab-content animate-fade-in">
+      <!-- BARRA DE FILTROS -->
+      <div class="filters-bar">
+        <div class="search-input-wrapper">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input
+            type="text"
+            class="form-control"
+            placeholder="Buscar por comprobante, diagnóstico, veterinario o producto..."
+            [ngModel]="filtroBusqueda()"
+            (ngModelChange)="filtroBusqueda.set($event)"
+          />
+        </div>
+
+        <div class="filters-select-row">
+          <select
+            class="form-control-sm"
+            [ngModel]="filtroTipo()"
+            (ngModelChange)="filtroTipo.set($event)"
+          >
+            <option value="TODOS">Todos los tipos de operación</option>
+            <option value="VACUNACION_GRUPAL">Vacunación Grupal</option>
+            <option value="VACUNACION_INDIVIDUAL">Vacunación Individual</option>
+            <option value="TRATAMIENTO_INDIVIDUAL">Tratamiento Individual</option>
+            <option value="TRATAMIENTO_GRUPAL">Tratamiento Grupal</option>
+            <option value="PREVENTIVO">Preventivo</option>
+          </select>
+
+          <select
+            class="form-control-sm"
+            [ngModel]="filtroPotrero()"
+            (ngModelChange)="filtroPotrero.set($event)"
+          >
+            <option [ngValue]="null">Todos los Potreros / Corrales</option>
+            @for (p of potreros(); track p.id) {
+              <option [ngValue]="p.id">{{ p.nombre }}</option>
+            }
+          </select>
+
+          <select
+            class="form-control-sm"
+            [ngModel]="filtroEstado()"
+            (ngModelChange)="filtroEstado.set($event)"
+          >
+            <option value="TODOS">Todos los estados</option>
+            <option value="EJECUTADO">Ejecutado</option>
+            <option value="PROGRAMADO">Programado</option>
+            <option value="ANULADO">Anulado</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- TABLA DE OPERACIONES SANITARIAS -->
+      <div class="table-responsive-card">
+        @if (cargando()) {
+          <div class="loading-state">
+            <div class="spinner"></div>
+            <p>Cargando operaciones sanitarias...</p>
+          </div>
+        } @else if (operacionesFiltradas().length === 0) {
+          <div class="empty-state">
+            <div class="empty-icon">💉</div>
+            <h3>No se encontraron registros sanitarios</h3>
+            <p>Comience registrando una jornada de vacunación o tratamiento veterinario.</p>
+            <button class="btn btn-primary" (click)="abrirModalNuevaOperacion()">
+              Registrar Primera Operación
+            </button>
+          </div>
+        } @else {
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>COMPROBANTE</th>
+                <th>FECHA</th>
+                <th>TIPO</th>
+                <th>PRODUCTO APLICADO</th>
+                <th>POTRERO / LOTE</th>
+                <th>CABEZAS</th>
+                <th>RESPONSABLE</th>
+                <th>ESTADO</th>
+                <th class="text-right">ACCIONES</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (op of operacionesFiltradas(); track op.id) {
+                <tr [class.row-anulado]="op.estado === 'ANULADO'">
+                  <td>
+                    <span class="comprobante-chip font-bold">{{ op.numero_comprobante }}</span>
+                  </td>
+                  <td>{{ op.fecha_aplicacion }}</td>
+                  <td>
+                    <span
+                      class="badge"
+                      [ngClass]="op.tipo_operacion.includes('VACUNA') ? 'badge-vacuna' : 'badge-tratamiento'"
+                    >
+                      {{ op.tipo_operacion.includes('VACUNA') ? '💉 Vacunación' : '💊 Tratamiento' }}
+                    </span>
+                  </td>
+                  <td>
+                    <div class="producto-cell">
+                      <strong>{{ op.vacuna_nombre || op.medicamento_nombre || op.producto_aplicado }}</strong>
+                      @if (op.lote_producto) {
+                        <span class="subtext">Lote: {{ op.lote_producto }}</span>
+                      }
+                      @if (op.diagnostico) {
+                        <span class="diagnostico-tag">Diag: {{ op.diagnostico }}</span>
+                      }
+                    </div>
+                  </td>
+                  <td>
+                    <span class="potrero-tag">
+                      📍 {{ op.potrero_origen_nombre || 'Sin potrero asignado' }}
+                    </span>
+                  </td>
+                  <td>
+                    <span class="cabezas-chip font-bold">{{ op.cantidad_animales }} cab.</span>
+                  </td>
+                  <td>
+                    <span>{{ op.veterinario_nombre || op.trabajador_nombre || 'No asignado' }}</span>
+                  </td>
+                  <td>
+                    @if (op.estado === 'EJECUTADO') {
+                      <span class="badge badge-success">✓ Ejecutado</span>
+                    } @else if (op.estado === 'PROGRAMADO') {
+                      <span class="badge badge-warning">⏳ Programado</span>
+                    } @else {
+                      <span class="badge badge-danger">✗ Anulado</span>
+                    }
+                  </td>
+                  <td class="text-right actions-cell">
+                    <button
+                      class="btn-icon"
+                      (click)="verDetalleOperacion(op)"
+                      title="Ver detalle y lista de animales"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                      </svg>
+                    </button>
+                    @if (op.estado !== 'ANULADO' && auth.hasPermission('GANADERIA_ELIMINAR')) {
+                      <button
+                        class="btn-icon text-danger"
+                        (click)="abrirModalAnular(op)"
+                        title="Anular operación sanitaria"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <circle cx="12" cy="12" r="10"/>
+                          <line x1="15" y1="9" x2="9" y2="15"/>
+                          <line x1="9" y1="9" x2="15" y2="15"/>
+                        </svg>
+                      </button>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- ===================================================================== -->
+  <!-- PESTAÑA 2: ALERTAS DE PERÍODO DE RETIRO (CARNE / LECHE)                -->
+  <!-- ===================================================================== -->
+  @if (pestanaActiva() === 'ALERTAS_RETIRO') {
+    <div class="tab-content animate-fade-in">
+      <div class="alert-info-banner">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <div>
+          <h4>Control Oficial de Períodos de Resguardo y Retiro (Senasag Bolivia)</h4>
+          <p>
+            Los animales listados a continuación recibieron fármacos veterinarios o vacunas con período de retiro vigente.
+            <strong>Está prohibido su faeneo, venta para abasto o consumo lácteo</strong> hasta la fecha indicada para garantizar la inocuidad alimentaria.
+          </p>
+        </div>
+      </div>
+
+      <div class="table-responsive-card">
+        @if (alertasRetiro().length === 0) {
+          <div class="empty-state">
+            <div class="empty-icon">🛡️</div>
+            <h3>¡Hato Libre de Residuos Fármaco-Químicos!</h3>
+            <p>No existen animales activos en período de retiro de carne ni de leche en este momento.</p>
+          </div>
+        } @else {
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ANIMAL</th>
+                <th>POTRERO ACTUAL</th>
+                <th>TIPO DE RETIRO</th>
+                <th>DÍAS RESTANTES</th>
+                <th>FECHA FIN RETIRO</th>
+                <th>PRODUCTO ORIGEN</th>
+                <th>COMPROBANTE</th>
+                <th>FECHA APLICACIÓN</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (a of alertasRetiro(); track a.animal_id) {
+                <tr class="row-warning">
+                  <td>
+                    <div class="animal-info-cell">
+                      <span class="codigo-chip">{{ a.codigo_interno }}</span>
+                      <span class="arete-chip">{{ a.numero_arete ? 'Arete: ' + a.numero_arete : 'Sin Arete' }}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="potrero-tag">📍 {{ a.potrero_nombre || 'N/A' }}</span>
+                  </td>
+                  <td>
+                    @if (a.tipo_retiro === 'CARNE') {
+                      <span class="badge badge-danger">🥩 Retiro Carne</span>
+                    } @else if (a.tipo_retiro === 'LECHE') {
+                      <span class="badge badge-warning">🥛 Retiro Leche</span>
+                    } @else {
+                      <span class="badge badge-danger">🥩 Carne + 🥛 Leche</span>
+                    }
+                  </td>
+                  <td>
+                    <span class="countdown-badge pulse-countdown">
+                      ⚠️ {{ a.dias_restantes_carne || a.dias_restantes_leche }} días
+                    </span>
+                  </td>
+                  <td>
+                    <strong class="text-danger">
+                      {{ a.fecha_fin_retiro_carne || a.fecha_fin_retiro_leche }}
+                    </strong>
+                  </td>
+                  <td>
+                    <strong>{{ a.producto_origen }}</strong>
+                  </td>
+                  <td>
+                    <span class="comprobante-chip">{{ a.numero_comprobante }}</span>
+                  </td>
+                  <td>{{ a.fecha_aplicacion }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- ===================================================================== -->
+  <!-- PESTAÑA 3: CATÁLOGOS SANITARIOS (VACUNAS Y FÁRMACOS)                 -->
+  <!-- ===================================================================== -->
+  @if (pestanaActiva() === 'CATALOGOS') {
+    <div class="tab-content animate-fade-in">
+      <div class="catalogo-subnav">
+        <div class="btn-group">
+          <button
+            class="btn btn-sm"
+            [ngClass]="subpestanaCatalogo() === 'VACUNAS' ? 'btn-primary' : 'btn-outline'"
+            (click)="subpestanaCatalogo.set('VACUNAS')"
+          >
+            💉 Vacunas Oficiales ({{ vacunas().length }})
+          </button>
+          <button
+            class="btn btn-sm"
+            [ngClass]="subpestanaCatalogo() === 'MEDICAMENTOS' ? 'btn-primary' : 'btn-outline'"
+            (click)="subpestanaCatalogo.set('MEDICAMENTOS')"
+          >
+            💊 Fármacos y Medicamentos ({{ medicamentos().length }})
+          </button>
+        </div>
+
+        <div class="catalogo-actions">
+          @if (subpestanaCatalogo() === 'VACUNAS') {
+            <button class="btn btn-sm btn-primary" (click)="abrirModalVacuna()">
+              + Nueva Vacuna
+            </button>
+          } @else {
+            <button class="btn btn-sm btn-primary" (click)="abrirModalMedicamento()">
+              + Nuevo Medicamento
+            </button>
+          }
+        </div>
+      </div>
+
+      <!-- SUBTABLA DE VACUNAS -->
+      @if (subpestanaCatalogo() === 'VACUNAS') {
+        <div class="table-responsive-card">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>CÓDIGO</th>
+                <th>NOMBRE VACUNA</th>
+                <th>ENFERMEDAD OBJETIVO</th>
+                <th>DOSIS</th>
+                <th>VÍA</th>
+                <th>RETIRO (CARNE/LECHE)</th>
+                <th>REFUERZO</th>
+                <th>ESTADO</th>
+                <th class="text-right">ACCIONES</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (v of vacunas(); track v.id) {
+                <tr>
+                  <td><span class="comprobante-chip font-bold">{{ v.codigo }}</span></td>
+                  <td>
+                    <strong>{{ v.nombre }}</strong>
+                    @if (v.nombre_comercial) {
+                      <span class="subtext">Comercial: {{ v.nombre_comercial }}</span>
+                    }
+                  </td>
+                  <td>{{ v.enfermedad_objetivo }}</td>
+                  <td>{{ v.dosis_defecto_ml ? v.dosis_defecto_ml + ' ml' : 'Según peso' }}</td>
+                  <td><span class="via-tag">{{ v.via_administracion }}</span></td>
+                  <td>
+                    <span class="retiro-tag">🥩 {{ v.dias_retiro_carne }}d / 🥛 {{ v.dias_retiro_leche }}d</span>
+                  </td>
+                  <td>
+                    @if (v.requiere_refuerzo) {
+                      <span class="badge badge-info">Sí (cada {{ v.dias_refuerzo }}d)</span>
+                    } @else {
+                      <span class="badge badge-light">Dosis única</span>
+                    }
+                  </td>
+                  <td>
+                    <span
+                      class="badge cursor-pointer"
+                      [ngClass]="v.estado === 'ACTIVO' ? 'badge-success' : 'badge-danger'"
+                      (click)="alternarEstadoVacuna(v)"
+                      title="Haga clic para cambiar estado"
+                    >
+                      {{ v.estado }}
+                    </span>
+                  </td>
+                  <td class="text-right">
+                    <button class="btn-icon" (click)="abrirModalVacuna(v)" title="Editar vacuna">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                      </svg>
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+
+      <!-- SUBTABLA DE MEDICAMENTOS -->
+      @if (subpestanaCatalogo() === 'MEDICAMENTOS') {
+        <div class="table-responsive-card">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>CÓDIGO</th>
+                <th>NOMBRE COMERCIAL / GENÉRICO</th>
+                <th>TIPO FÁRMACO</th>
+                <th>PRINCIPIO ACTIVO</th>
+                <th>VÍA / UNIDAD</th>
+                <th>RETIRO CARNE</th>
+                <th>RETIRO LECHE</th>
+                <th>VINCULACIÓN ALMACÉN</th>
+                <th>ESTADO</th>
+                <th class="text-right">ACCIONES</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (m of medicamentos(); track m.id) {
+                <tr>
+                  <td><span class="comprobante-chip font-bold">{{ m.codigo }}</span></td>
+                  <td>
+                    <strong>{{ m.nombre }}</strong>
+                    @if (m.nombre_comercial) {
+                      <span class="subtext">{{ m.nombre_comercial }}</span>
+                    }
+                  </td>
+                  <td><span class="badge badge-tratamiento">{{ m.tipo_farmaco }}</span></td>
+                  <td>{{ m.principio_activo || 'N/A' }}</td>
+                  <td><span class="via-tag">{{ m.via_administracion }} ({{ m.unidad_medida }})</span></td>
+                  <td>
+                    <strong [class.text-danger]="m.dias_retiro_carne > 20">
+                      🥩 {{ m.dias_retiro_carne }} días
+                    </strong>
+                  </td>
+                  <td>
+                    <strong>🥛 {{ m.dias_retiro_leche }} días</strong>
+                  </td>
+                  <td>
+                    @if (m.almacen_nombre) {
+                      <span class="badge badge-info">📦 {{ m.almacen_nombre }}</span>
+                    } @else {
+                      <span class="text-muted">Sin enlace a stock</span>
+                    }
+                  </td>
+                  <td>
+                    <span
+                      class="badge cursor-pointer"
+                      [ngClass]="m.estado === 'ACTIVO' ? 'badge-success' : 'badge-danger'"
+                      (click)="alternarEstadoMedicamento(m)"
+                      title="Haga clic para cambiar estado"
+                    >
+                      {{ m.estado }}
+                    </span>
+                  </td>
+                  <td class="text-right">
+                    <button class="btn-icon" (click)="abrirModalMedicamento(m)" title="Editar medicamento">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                      </svg>
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- ===================================================================== -->
+  <!-- MODAL: REGISTRAR OPERACIÓN SANITARIA (VACUNACIÓN / TRATAMIENTO)        -->
+  <!-- ===================================================================== -->
+  @if (modalOperacionAbierto()) {
+    <div class="modal-backdrop animate-fade-in" (click)="modalOperacionAbierto.set(false)">
+      <div
+        class="modal-dialog modal-xl animate-scale-up"
+        [class.modal-manga-mode]="esModoManga()"
+        (click)="$event.stopPropagation()"
+      >
+        <div class="modal-header">
+          <div>
+            <h3 class="modal-title">
+              {{ operacionForm.tipo_insumo === 'VACUNA' ? '💉 Jornada de Vacunación' : '💊 Tratamiento Veterinario' }}
+            </h3>
+            <p class="modal-subtitle">
+              Administración de dosis, asignación de potrero y control individual de cabezas intervenidas.
+            </p>
+          </div>
+          <button class="btn-close" (click)="modalOperacionAbierto.set(false)">&times;</button>
+        </div>
+
+        <div class="modal-body">
+          <!-- SECCIÓN 1: DATOS GENERALES DE LA OPERACIÓN -->
+          <div class="form-grid-3">
+            <div class="form-group">
+              <label>Tipo de Operación *</label>
+              <select
+                class="form-control"
+                [(ngModel)]="operacionForm.tipo_operacion"
+                (ngModelChange)="onTipoOperacionChange()"
+              >
+                <option value="VACUNACION_GRUPAL">Vacunación Grupal (Lote / Potrero)</option>
+                <option value="VACUNACION_INDIVIDUAL">Vacunación Individual</option>
+                <option value="TRATAMIENTO_INDIVIDUAL">Tratamiento Clínico Individual</option>
+                <option value="TRATAMIENTO_GRUPAL">Tratamiento Grupal (Lote / Potrero)</option>
+                <option value="PREVENTIVO">Aplicación Preventiva / Baño Garrapaticida</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Fecha de Aplicación *</label>
+              <input type="date" class="form-control" [(ngModel)]="operacionForm.fecha_aplicacion" />
+            </div>
+
+            <div class="form-group">
+              <label>Potrero / Corral de Origen</label>
+              <select
+                class="form-control"
+                [(ngModel)]="operacionForm.potrero_origen_id"
+                (ngModelChange)="onPotreroOrigenChange()"
+              >
+                <option [ngValue]="null">-- Todo el Establecimiento (Sin filtro) --</option>
+                @for (p of potreros(); track p.id) {
+                  <option [ngValue]="p.id">{{ p.nombre }} ({{ p.total_animales }} cab.)</option>
+                }
+              </select>
+            </div>
+          </div>
+
+          <!-- SECCIÓN 2: INSUMO / VACUNA O MEDICAMENTO -->
+          <div class="form-grid-3 card-subgroup">
+            @if (operacionForm.tipo_insumo === 'VACUNA') {
+              <div class="form-group">
+                <label>Vacuna Oficial *</label>
+                <select
+                  class="form-control"
+                  [(ngModel)]="operacionForm.vacuna_id"
+                  (ngModelChange)="onCambioVacuna()"
+                >
+                  <option [ngValue]="null" disabled>-- Seleccione Vacuna --</option>
+                  @for (v of vacunas(); track v.id) {
+                    <option [ngValue]="v.id">
+                      {{ v.nombre }} (Retiro: {{ v.dias_retiro_carne }}d)
+                    </option>
+                  }
+                </select>
+              </div>
+            } @else {
+              <div class="form-group">
+                <label>Medicamento / Fármaco *</label>
+                <select
+                  class="form-control"
+                  [(ngModel)]="operacionForm.medicamento_id"
+                  (ngModelChange)="onCambioMedicamento()"
+                >
+                  <option [ngValue]="null" disabled>-- Seleccione Fármaco --</option>
+                  @for (m of medicamentos(); track m.id) {
+                    <option [ngValue]="m.id">
+                      {{ m.nombre }} - {{ m.tipo_farmaco }} (Retiro: {{ m.dias_retiro_carne }}d)
+                    </option>
+                  }
+                </select>
+              </div>
+            }
+
+            <div class="form-group">
+              <label>Dosis Predeterminada</label>
+              <div class="input-with-addon">
+                <input
+                  type="number"
+                  step="0.1"
+                  class="form-control"
+                  [(ngModel)]="operacionForm.dosis_general"
+                  (ngModelChange)="aplicarDosisGeneralATodos()"
+                />
+                <span class="input-addon">{{ operacionForm.unidad_general }}</span>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Número de Lote (Trazabilidad)</label>
+              <input
+                type="text"
+                class="form-control"
+                placeholder="Ej: LOT-2026-X89"
+                [(ngModel)]="operacionForm.lote_producto"
+              />
+            </div>
+          </div>
+
+          <!-- SECCIÓN 3: RESPONSABLES Y DIAGNÓSTICO -->
+          <div class="form-grid-3">
+            <div class="form-group">
+              <label>Veterinario / Técnico a Cargo</label>
+              <input
+                type="text"
+                class="form-control"
+                placeholder="Dr. Veterinario o Técnico Externo"
+                [(ngModel)]="operacionForm.veterinario_nombre"
+              />
+            </div>
+
+            <div class="form-group">
+              <label>Trabajador del Hato (Asistente)</label>
+              <select class="form-control" [(ngModel)]="operacionForm.trabajador_id">
+                <option [ngValue]="null">-- Seleccionar Trabajador Interno --</option>
+                @for (t of trabajadores(); track t.id) {
+                  <option [ngValue]="t.id">{{ t.nombres }} {{ t.apellidos }} ({{ t.cargo }})</option>
+                }
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Diagnóstico / Causa Clínica</label>
+              <input
+                type="text"
+                class="form-control"
+                placeholder="Ej: Neumonía, Cojera, Campaña Obligatoria..."
+                [(ngModel)]="operacionForm.diagnostico"
+              />
+            </div>
+          </div>
+
+          <!-- SWITCHES DE OPCIONES AVANZADAS (INVENTARIO Y CUARENTENA) -->
+          <div class="switches-panel">
+            <label class="switch-item">
+              <input type="checkbox" [(ngModel)]="operacionForm.descontar_inventario" />
+              <div class="switch-label">
+                <strong>Descontar automáticamente del Almacén de Insumos</strong>
+                <span>Resta las dosis del stock central del ERP al confirmar la jornada</span>
+              </div>
+            </label>
+
+            <label class="switch-item">
+              <input type="checkbox" [(ngModel)]="operacionForm.trasladar_a_cuarentena" />
+              <div class="switch-label">
+                <strong>¿Trasladar inmediatamente a Corral de Cuarentena / Aislamiento?</strong>
+                <span>Registra el movimiento satelital y actualiza la ubicación del ganado tratado</span>
+              </div>
+            </label>
+          </div>
+
+          <!-- SECCIÓN 4: LISTA DE ANIMALES Y MODO MANGA TÁCTIL -->
+          <div class="animales-selection-section">
+            <div class="section-toolbar">
+              <div class="toolbar-left">
+                <h4>Cabezas a Intervenir ({{ resumenJornada().total }} seleccionados)</h4>
+                <div class="selection-actions">
+                  <button type="button" class="btn-link" (click)="seleccionarTodosAnimales(true)">
+                    Marcar Todos
+                  </button>
+                  <span class="sep">|</span>
+                  <button type="button" class="btn-link" (click)="seleccionarTodosAnimales(false)">
+                    Desmarcar Todos
+                  </button>
+                </div>
+              </div>
+
+              <!-- BUSCADOR MODO MANGA CON TECLADO NUMÉRICO -->
+              <div class="manga-search-box">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="11" cy="11" r="8"/>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                <input
+                  type="text"
+                  inputmode="numeric"
+                  class="form-control"
+                  placeholder="Filtrar por Arete o Código en la Manga..."
+                  [ngModel]="mangaBusquedaArete()"
+                  (ngModelChange)="mangaBusquedaArete.set($event)"
+                />
+              </div>
+            </div>
+
+            <!-- VISTA TABULAR / CHECKLIST TÁCTIL -->
+            <div class="animales-checklist-container" [class.manga-mode-active]="esModoManga()">
+              @for (item of animalesOperacionFiltradosManga(); track item.animal.id) {
+                <div
+                  class="animal-row-card"
+                  [class.row-selected]="item.seleccionado"
+                  [class.status-aplicado]="item.estado_aplicacion === 'APLICADO'"
+                  [class.status-pendiente]="item.estado_aplicacion === 'PENDIENTE'"
+                  [class.status-rechazado]="item.estado_aplicacion === 'RECHAZADO'"
+                >
+                  <div class="animal-check">
+                    <input type="checkbox" [(ngModel)]="item.seleccionado" />
+                  </div>
+
+                  <div class="animal-meta">
+                    <span class="codigo-chip">{{ item.animal.codigo_interno }}</span>
+                    <strong class="arete-title">
+                      {{ item.animal.numero_arete ? 'Arete ' + item.animal.numero_arete : 'Sin Arete' }}
+                    </strong>
+                    <span class="subtext">
+                      {{ item.animal.raza }} - {{ item.animal.sexo }} ({{ item.animal.peso_actual ? item.animal.peso_actual + ' kg' : 'S/P' }})
+                    </span>
+                    <span class="location-badge">📍 {{ item.animal.ubicacion }}</span>
+                  </div>
+
+                  <div class="dosis-col">
+                    <label class="compact-label">Dosis:</label>
+                    <div class="dosis-input-wrap">
+                      <input
+                        type="number"
+                        step="0.1"
+                        class="form-control form-control-sm input-dosis"
+                        [(ngModel)]="item.dosis"
+                      />
+                      <span>{{ item.unidad }}</span>
+                    </div>
+                  </div>
+
+                  <!-- BOTONES TÁCTILES MODO MANGA (TOUCH TARGETS >= 48PX) -->
+                  <div class="status-selector-group">
+                    <button
+                      type="button"
+                      class="btn-manga-state state-aplicado"
+                      [class.active]="item.estado_aplicacion === 'APLICADO'"
+                      (click)="mangaMarcarEstado(item, 'APLICADO')"
+                    >
+                      ✓ Aplicado
+                    </button>
+                    <button
+                      type="button"
+                      class="btn-manga-state state-pendiente"
+                      [class.active]="item.estado_aplicacion === 'PENDIENTE'"
+                      (click)="mangaMarcarEstado(item, 'PENDIENTE')"
+                    >
+                      ⏳ Omitir
+                    </button>
+                    <button
+                      type="button"
+                      class="btn-manga-state state-rechazado"
+                      [class.active]="item.estado_aplicacion === 'RECHAZADO'"
+                      (click)="mangaMarcarEstado(item, 'RECHAZADO')"
+                    >
+                      ✗ Reacciona
+                    </button>
+                  </div>
+                </div>
+              } @empty {
+                <div class="empty-list-notice">
+                  <span class="empty-icon">🐄</span>
+                  <p class="empty-title">No hay animales para mostrar</p>
+                  <p class="empty-subtitle">
+                    @if (operacionForm.potrero_origen_id) {
+                      Este potrero no tiene animales activos asignados o no coinciden con la búsqueda ingresada.
+                    } @else {
+                      No se encontraron animales activos en el establecimiento o no coinciden con la búsqueda.
+                    }
+                  </p>
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+
+        <!-- BARRA FLOTANTE INFERIOR CON RESUMEN EN VIVO (MODO MANGA) -->
+        <div class="modal-footer footer-sticky">
+          <div class="manga-summary-bar">
+            <span class="summary-item">
+              Total Hato: <strong>{{ resumenJornada().total }}</strong>
+            </span>
+            <span class="summary-item text-success">
+              Aplicados: <strong>{{ resumenJornada().aplicados }}</strong>
+            </span>
+            <span class="summary-item text-amber">
+              Pendientes: <strong>{{ resumenJornada().pendientes }}</strong>
+            </span>
+            @if (resumenJornada().rechazados > 0) {
+              <span class="summary-item text-danger">
+                Rechazados: <strong>{{ resumenJornada().rechazados }}</strong>
+              </span>
+            }
+          </div>
+
+          <div class="modal-actions-right">
+            <button
+              type="button"
+              class="btn btn-outline"
+              (click)="modalOperacionAbierto.set(false)"
+              [disabled]="guardando()"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              class="btn btn-primary btn-lg"
+              (click)="guardarOperacionSanitaria()"
+              [disabled]="guardando()"
+            >
+              @if (guardando()) {
+                <span class="spinner-sm"></span> Guardando...
+              } @else {
+                Guardar Jornada Sanitaria
+              }
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ===================================================================== -->
+  <!-- MODAL: DETALLE COMPLETO DE OPERACIÓN SANITARIA                         -->
+  <!-- ===================================================================== -->
+  @if (modalDetalleAbierto() && operacionDetalleActual()) {
+    <div class="modal-backdrop animate-fade-in" (click)="modalDetalleAbierto.set(false)">
+      <div class="modal-dialog modal-xl animate-scale-up" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div>
+            <div class="header-badges-row">
+              <span class="comprobante-chip font-bold">{{ operacionDetalleActual()?.numero_comprobante }}</span>
+              <span
+                class="badge"
+                [ngClass]="operacionDetalleActual()?.estado === 'EJECUTADO' ? 'badge-success' : 'badge-danger'"
+              >
+                {{ operacionDetalleActual()?.estado }}
+              </span>
+            </div>
+            <h3 class="modal-title">Detalle de Operación Sanitaria</h3>
+          </div>
+          <button class="btn-close" (click)="modalDetalleAbierto.set(false)">&times;</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="info-grid-4">
+            <div class="info-item">
+              <span class="info-label">Fecha de Aplicación</span>
+              <strong>{{ operacionDetalleActual()?.fecha_aplicacion }}</strong>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Tipo de Operación</span>
+              <strong>{{ operacionDetalleActual()?.tipo_operacion }}</strong>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Producto Administrado</span>
+              <strong class="text-primary">{{ operacionDetalleActual()?.producto_aplicado }}</strong>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Lote y Vencimiento</span>
+              <span>{{ operacionDetalleActual()?.lote_producto || 'Sin lote' }} ({{ operacionDetalleActual()?.fecha_vencimiento_producto || 'S/V' }})</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Potrero Origen</span>
+              <strong>📍 {{ operacionDetalleActual()?.potrero_origen_nombre || 'N/A' }}</strong>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Veterinario / Responsable</span>
+              <strong>{{ operacionDetalleActual()?.veterinario_nombre || operacionDetalleActual()?.trabajador_nombre || 'N/A' }}</strong>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Diagnóstico</span>
+              <span>{{ operacionDetalleActual()?.diagnostico || 'Sin diagnóstico registrado' }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Total Animales Intervenidos</span>
+              <strong class="text-success">{{ operacionDetalleActual()?.cantidad_animales }} cabezas</strong>
+            </div>
+          </div>
+
+          <!-- TABLA DE ANIMALES DETALLADOS -->
+          <h4 class="subheading">Animales Intervenidos y Control de Retiro</h4>
+          <div class="table-responsive-card">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>ANIMAL</th>
+                  <th>DOSIS APLICADA</th>
+                  <th>ESTADO APLICACIÓN</th>
+                  <th>FIN RETIRO CARNE</th>
+                  <th>FIN RETIRO LECHE</th>
+                  <th>REACCIÓN ADVERSA</th>
+                  <th class="text-right">ACCIONES</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (d of operacionDetalleActual()?.detalles; track d.id) {
+                  <tr>
+                    <td>
+                      <div class="animal-info-cell">
+                        <span class="codigo-chip">{{ d.codigo_interno }}</span>
+                        <strong>{{ d.numero_arete ? 'Arete: ' + d.numero_arete : 'Sin Arete' }}</strong>
+                        <span class="subtext">{{ d.animal_raza }} - {{ d.animal_sexo }}</span>
+                      </div>
+                    </td>
+                    <td><strong>{{ d.dosis_aplicada }} {{ d.unidad_medida }}</strong></td>
+                    <td>
+                      <span
+                        class="badge"
+                        [ngClass]="{
+                          'badge-success': d.estado_aplicacion === 'APLICADO',
+                          'badge-warning': d.estado_aplicacion === 'PENDIENTE',
+                          'badge-danger': d.estado_aplicacion === 'RECHAZADO'
+                        }"
+                      >
+                        {{ d.estado_aplicacion }}
+                      </span>
+                    </td>
+                    <td>
+                      @if (d.en_retiro_carne) {
+                        <span class="badge badge-danger">
+                          🥩 {{ d.fecha_fin_retiro_carne }} ({{ d.dias_restantes_retiro_carne }}d)
+                        </span>
+                      } @else {
+                        <span class="text-muted">Apto</span>
+                      }
+                    </td>
+                    <td>
+                      @if (d.en_retiro_leche) {
+                        <span class="badge badge-warning">
+                          🥛 {{ d.fecha_fin_retiro_leche }} ({{ d.dias_restantes_retiro_leche }}d)
+                        </span>
+                      } @else {
+                        <span class="text-muted">Apto</span>
+                      }
+                    </td>
+                    <td>{{ d.reaccion_adversa || 'Ninguna observada' }}</td>
+                    <td class="text-right">
+                      <button
+                        class="btn btn-sm btn-outline"
+                        (click)="abrirModalSeguimiento(d)"
+                        title="Registrar evolución clínica"
+                      >
+                        + Evolución
+                      </button>
+                    </td>
+                  </tr>
+
+                  <!-- HISTORIAL DE SEGUIMIENTOS CLÍNICOS SI EXISTE -->
+                  @if (d.seguimientos && d.seguimientos.length > 0) {
+                    <tr class="nested-row">
+                      <td colspan="7">
+                        <div class="seguimientos-panel">
+                          <h5>Historial de Evolución Clínica:</h5>
+                          <div class="timeline-items">
+                            @for (s of d.seguimientos; track s.id) {
+                              <div class="timeline-badge-card">
+                                <span class="badge badge-info">{{ s.fecha_seguimiento }}</span>
+                                <span class="status-pill">{{ s.estado_salud }}</span>
+                                @if (s.temperatura_c) {
+                                  <span>🌡️ {{ s.temperatura_c }} °C</span>
+                                }
+                                @if (s.peso_actual_kg) {
+                                  <span>⚖️ {{ s.peso_actual_kg }} kg</span>
+                                }
+                                <p>{{ s.observaciones || 'Sin notas' }}</p>
+                              </div>
+                            }
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  }
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          @if (operacionDetalleActual()?.estado !== 'ANULADO' && auth.hasPermission('GANADERIA_ELIMINAR')) {
+            <button
+              class="btn btn-danger-soft"
+              (click)="abrirModalAnular(operacionDetalleActual()!)"
+            >
+              Anular Operación
+            </button>
+          }
+          <button class="btn btn-primary" (click)="modalDetalleAbierto.set(false)">
+            Cerrar Ficha
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ===================================================================== -->
+  <!-- MODAL: REGISTRAR EVOLUCIÓN CLÍNICA / SEGUIMIENTO                       -->
+  <!-- ===================================================================== -->
+  @if (modalSeguimientoAbierto() && detalleSeleccionadoParaSeguimiento()) {
+    <div class="modal-backdrop animate-fade-in" (click)="modalSeguimientoAbierto.set(false)">
+      <div class="modal-dialog modal-md animate-scale-up" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div>
+            <h3 class="modal-title">Control de Evolución Clínica</h3>
+            <p class="modal-subtitle">
+              Animal: <strong>{{ detalleSeleccionadoParaSeguimiento()?.codigo_interno }}</strong>
+              (Arete: {{ detalleSeleccionadoParaSeguimiento()?.numero_arete || 'S/A' }})
+            </p>
+          </div>
+          <button class="btn-close" (click)="modalSeguimientoAbierto.set(false)">&times;</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Fecha de Control *</label>
+            <input type="date" class="form-control" [(ngModel)]="seguimientoForm.fecha_seguimiento" />
+          </div>
+
+          <div class="form-group">
+            <label>Estado de Salud Observado *</label>
+            <select class="form-control" [(ngModel)]="seguimientoForm.estado_salud">
+              <option value="FAVORABLE">Favorable (En franca mejoría)</option>
+              <option value="ESTABLE">Estable (Sin cambios significativos)</option>
+              <option value="DESFAVORABLE">Desfavorable (Empeorando / Requiere cambio de fármaco)</option>
+              <option value="RECUPERADO">Recuperado (Alta clínica definitiva)</option>
+            </select>
+          </div>
+
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label>Temperatura Rectal (°C)</label>
+              <input
+                type="number"
+                step="0.1"
+                class="form-control"
+                placeholder="Ej: 38.5"
+                [(ngModel)]="seguimientoForm.temperatura_c"
+              />
+            </div>
+            <div class="form-group">
+              <label>Peso Actual (kg)</label>
+              <input
+                type="number"
+                step="0.5"
+                class="form-control"
+                placeholder="Ej: 420.0"
+                [(ngModel)]="seguimientoForm.peso_actual_kg"
+              />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Observaciones Clínicas y Conducta</label>
+            <textarea
+              class="form-control"
+              rows="3"
+              placeholder="Signos vitales, apetito, rumia, secreciones o cambios en el tratamiento..."
+              [(ngModel)]="seguimientoForm.observaciones"
+            ></textarea>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-outline" (click)="modalSeguimientoAbierto.set(false)">
+            Cancelar
+          </button>
+          <button
+            class="btn btn-primary"
+            (click)="guardarSeguimientoClinico()"
+            [disabled]="guardando()"
+          >
+            {{ guardando() ? 'Guardando...' : 'Registrar Evolución' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ===================================================================== -->
+  <!-- MODAL: CREAR / EDITAR VACUNA                                          -->
+  <!-- ===================================================================== -->
+  @if (modalVacunaAbierto()) {
+    <div class="modal-backdrop animate-fade-in" (click)="modalVacunaAbierto.set(false)">
+      <div class="modal-dialog modal-lg animate-scale-up" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3 class="modal-title">
+            {{ vacunaEditandoId() ? 'Editar Vacuna Oficial' : 'Registrar Nueva Vacuna Oficial' }}
+          </h3>
+          <button class="btn-close" (click)="modalVacunaAbierto.set(false)">&times;</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label>Código Inmutable *</label>
+              <input
+                type="text"
+                class="form-control"
+                [(ngModel)]="vacunaForm.codigo"
+                [disabled]="!!vacunaEditandoId()"
+              />
+            </div>
+            <div class="form-group">
+              <label>Nombre de la Vacuna *</label>
+              <input type="text" class="form-control" [(ngModel)]="vacunaForm.nombre" />
+            </div>
+          </div>
+
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label>Nombre Comercial / Laboratorio</label>
+              <input type="text" class="form-control" [(ngModel)]="vacunaForm.nombre_comercial" />
+            </div>
+            <div class="form-group">
+              <label>Enfermedad Objetivo *</label>
+              <input type="text" class="form-control" [(ngModel)]="vacunaForm.enfermedad_objetivo" />
+            </div>
+          </div>
+
+          <div class="form-grid-3">
+            <div class="form-group">
+              <label>Dosis Estándar (ml)</label>
+              <input type="number" step="0.5" class="form-control" [(ngModel)]="vacunaForm.dosis_defecto_ml" />
+            </div>
+            <div class="form-group">
+              <label>Vía de Administración</label>
+              <select class="form-control" [(ngModel)]="vacunaForm.via_administracion">
+                <option value="SUBCUTANEA">Subcutánea</option>
+                <option value="INTRAMUSCULAR">Intramuscular</option>
+                <option value="ORAL">Oral</option>
+                <option value="INTRANASAL">Intranasal</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Período de Retiro Carne (días)</label>
+              <input type="number" class="form-control" [(ngModel)]="vacunaForm.dias_retiro_carne" />
+            </div>
+          </div>
+
+          <div class="form-grid-2">
+            <label class="checkbox-label">
+              <input type="checkbox" [(ngModel)]="vacunaForm.requiere_refuerzo" />
+              <span>Requiere Revacunación / Refuerzo Periódico</span>
+            </label>
+            @if (vacunaForm.requiere_refuerzo) {
+              <div class="form-group">
+                <label>Frecuencia de Refuerzo (días)</label>
+                <input
+                  type="number"
+                  class="form-control"
+                  placeholder="Ej: 180 (semestral), 365 (anual)"
+                  [(ngModel)]="vacunaForm.dias_refuerzo"
+                />
+              </div>
+            }
+          </div>
+
+          <div class="form-group">
+            <label>Observaciones y Recomendaciones Oficiales</label>
+            <textarea class="form-control" rows="2" [(ngModel)]="vacunaForm.observaciones"></textarea>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-outline" (click)="modalVacunaAbierto.set(false)">Cancelar</button>
+          <button class="btn btn-primary" (click)="guardarVacuna()" [disabled]="guardando()">
+            {{ guardando() ? 'Guardando...' : 'Guardar Vacuna' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ===================================================================== -->
+  <!-- MODAL: CREAR / EDITAR MEDICAMENTO                                     -->
+  <!-- ===================================================================== -->
+  @if (modalMedicamentoAbierto()) {
+    <div class="modal-backdrop animate-fade-in" (click)="modalMedicamentoAbierto.set(false)">
+      <div class="modal-dialog modal-lg animate-scale-up" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3 class="modal-title">
+            {{ medicamentoEditandoId() ? 'Editar Medicamento Veterinario' : 'Registrar Nuevo Medicamento' }}
+          </h3>
+          <button class="btn-close" (click)="modalMedicamentoAbierto.set(false)">&times;</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label>Código Inmutable *</label>
+              <input
+                type="text"
+                class="form-control"
+                [(ngModel)]="medicamentoForm.codigo"
+                [disabled]="!!medicamentoEditandoId()"
+              />
+            </div>
+            <div class="form-group">
+              <label>Nombre del Fármaco *</label>
+              <input type="text" class="form-control" [(ngModel)]="medicamentoForm.nombre" />
+            </div>
+          </div>
+
+          <div class="form-grid-3">
+            <div class="form-group">
+              <label>Nombre Comercial</label>
+              <input type="text" class="form-control" [(ngModel)]="medicamentoForm.nombre_comercial" />
+            </div>
+            <div class="form-group">
+              <label>Tipo de Fármaco</label>
+              <select class="form-control" [(ngModel)]="medicamentoForm.tipo_farmaco">
+                <option value="ANTIBIOTICO">Antibiótico</option>
+                <option value="ANTIPARASITARIO_INTERNO">Antiparasitario Interno</option>
+                <option value="ANTIPARASITARIO_EXTERNO">Antiparasitario Externo</option>
+                <option value="ANTIINFLAMATORIO">Antiinflamatorio</option>
+                <option value="VITAMINICO">Vitamínico / Reconstituyente</option>
+                <option value="DESINFECTANTE">Desinfectante / Curabichera</option>
+                <option value="HORMONAL">Hormonal / Reproductivo</option>
+                <option value="OTRO">Otro</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Principio Activo</label>
+              <input type="text" class="form-control" [(ngModel)]="medicamentoForm.principio_activo" />
+            </div>
+          </div>
+
+          <div class="form-grid-3">
+            <div class="form-group">
+              <label>Vía de Administración</label>
+              <select class="form-control" [(ngModel)]="medicamentoForm.via_administracion">
+                <option value="INTRAMUSCULAR">Intramuscular</option>
+                <option value="SUBCUTANEA">Subcutánea</option>
+                <option value="INTRAVENOSA">Intravenosa</option>
+                <option value="TOPICA">Tópica / Pour-on</option>
+                <option value="ORAL">Oral</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Retiro Carne (días) *</label>
+              <input type="number" class="form-control" [(ngModel)]="medicamentoForm.dias_retiro_carne" />
+            </div>
+            <div class="form-group">
+              <label>Retiro Leche (días) *</label>
+              <input type="number" class="form-control" [(ngModel)]="medicamentoForm.dias_retiro_leche" />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Vincular a Producto de Almacén (Inventario Central)</label>
+            <select class="form-control" [(ngModel)]="medicamentoForm.almacen_id">
+              <option [ngValue]="null">-- Sin vinculación a inventario --</option>
+              @for (item of almacenItems(); track item.id) {
+                <option [ngValue]="item.id">
+                  {{ item.nombre }} (Stock: {{ item.stock_actual }} {{ item.unidad_control }})
+                </option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Observaciones de Dosificación y Contraindicaciones</label>
+            <textarea class="form-control" rows="2" [(ngModel)]="medicamentoForm.observaciones"></textarea>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-outline" (click)="modalMedicamentoAbierto.set(false)">Cancelar</button>
+          <button class="btn btn-primary" (click)="guardarMedicamento()" [disabled]="guardando()">
+            {{ guardando() ? 'Guardando...' : 'Guardar Medicamento' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ===================================================================== -->
+  <!-- MODAL: ANULAR OPERACIÓN SANITARIA CON AUDITORÍA                        -->
+  <!-- ===================================================================== -->
+  @if (modalAnularAbierto() && operacionAAnular()) {
+    <div class="modal-backdrop animate-fade-in" (click)="modalAnularAbierto.set(false)">
+      <div class="modal-dialog modal-md animate-scale-up" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3 class="modal-title text-danger">Anular Operación Sanitaria</h3>
+          <button class="btn-close" (click)="modalAnularAbierto.set(false)">&times;</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="alert-danger-banner">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="8" x2="12" y2="12"/>
+              <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            <p>
+              Está a punto de anular el comprobante <strong>{{ operacionAAnular()?.numero_comprobante }}</strong>.
+              Esto eliminará los períodos de retiro asociados y revertirá cualquier descuento de inventario.
+            </p>
+          </div>
+
+          <div class="form-group">
+            <label>Motivo Obligatorio de Anulación *</label>
+            <textarea
+              class="form-control"
+              rows="3"
+              placeholder="Indique la justificación para anular este registro sanitario..."
+              [ngModel]="motivoAnulacion()"
+              (ngModelChange)="motivoAnulacion.set($event)"
+            ></textarea>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-outline" (click)="modalAnularAbierto.set(false)">Cancelar</button>
+          <button
+            class="btn btn-danger"
+            (click)="confirmarAnulacion()"
+            [disabled]="guardando() || motivoAnulacion().trim().length < 5"
+          >
+            {{ guardando() ? 'Anulando...' : 'Confirmar Anulación' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- TOAST NOTIFICATION CONTAINER -->
+  @if (toast(); as t) {
+    <div class="toast-notification animate-bounce-in" [ngClass]="'toast-' + t.tipo">
+      <div class="toast-content">
+        @if (t.tipo === 'success') { <span>✓</span> }
+        @else if (t.tipo === 'error') { <span>✕</span> }
+        @else if (t.tipo === 'warning') { <span>⚠️</span> }
+        @else { <span>ℹ</span> }
+        <p>{{ t.mensaje }}</p>
+      </div>
+      <button class="toast-close" (click)="toast.set(null)">&times;</button>
+    </div>
+  }
+</div>

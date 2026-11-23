@@ -664,3 +664,722 @@ export interface AnticipoRiderCreatePayload {
   metodo_pago: string;
   observaciones?: string;
 }
+
+// ==========================================
+// GANADERÍA - MÓDULO INTEGRAL (SPEC-001)
+// ==========================================
+
+export interface Animal {
+  id: number;
+  codigo_interno: string;
+  numero_arete?: string | null;
+  nombre?: string | null;
+  tipo_ganado: string;
+  raza: string;
+  sexo: string;
+  fecha_nacimiento?: string | null;
+  edad_estimada_meses?: number | null;
+  peso_inicial?: number | null;
+  peso_actual?: number | null;
+  fecha_ultimo_pesaje?: string | null;
+  categoria?: string | null;
+  estado: string;
+  potrero_id?: number | null;
+  ubicacion: string;
+  foto_url?: string | null;
+  observaciones?: string | null;
+  procedencia: string;
+  madre_id?: number | null;
+  madre_codigo?: string | null;
+  madre_arete?: string | null;
+  padre_id?: number | null;
+  padre_codigo?: string | null;
+  padre_arete?: string | null;
+  fecha_registro: string;
+  fecha_actualizacion?: string | null;
+}
+
+export interface PesajeGanado {
+  id: number;
+  animal_id: number;
+  fecha_pesaje: string;
+  peso: number;
+  notas?: string | null;
+  usuario_id?: string | null;
+  usuario_nombre?: string | null;
+  fecha_creacion: string;
+}
+
+export interface HistorialArete {
+  id: number;
+  animal_id: number;
+  arete_anterior?: string | null;
+  arete_nuevo: string;
+  motivo?: string | null;
+  fecha_cambio: string;
+  usuario_id?: string | null;
+  usuario_nombre?: string | null;
+}
+
+export interface NacimientoGanado {
+  id: number;
+  codigo_parto: string;
+  madre_id: number;
+  madre_codigo?: string | null;
+  madre_arete?: string | null;
+  padre_id?: number | null;
+  padre_codigo?: string | null;
+  padre_arete?: string | null;
+  fecha_parto: string;
+  condicion_cria: string;
+  observaciones?: string | null;
+  cria_id?: number | null;
+  cria_codigo?: string | null;
+  cria_arete?: string | null;
+  cria_sexo?: string | null;
+  cria_peso_nacer?: number | null;
+  usuario_id?: string | null;
+  usuario_nombre?: string | null;
+  fecha_registro: string;
+}
+
+export interface CompraGanadoDetalle {
+  id: number;
+  compra_id: number;
+  animal_id: number;
+  animal_codigo?: string | null;
+  animal_arete?: string | null;
+  tipo_ganado: string;
+  raza: string;
+  sexo: string;
+  peso_compra?: number | null;
+  precio_unitario: number;
+  modalidad_precio: string;
+  subtotal: number;
+}
+
+export interface CompraGanado {
+  id: number;
+  numero_comprobante: string;
+  proveedor: string;
+  fecha_compra: string;
+  numero_documento?: string | null;
+  cantidad_cabezas: number;
+  costos_adicionales: number;
+  costo_transporte: number;
+  total_compra: number;
+  observaciones?: string | null;
+  documento_adjunto_url?: string | null;
+  usuario_id?: string | null;
+  usuario_nombre?: string | null;
+  fecha_registro: string;
+  detalles: CompraGanadoDetalle[];
+}
+
+export interface VentaGanadoDetalle {
+  id: number;
+  venta_id: number;
+  animal_id: number;
+  animal_codigo?: string | null;
+  animal_arete?: string | null;
+  tipo_ganado: string;
+  raza: string;
+  sexo: string;
+  peso_venta?: number | null;
+  precio_unitario: number;
+  modalidad_precio: string;
+  subtotal: number;
+}
+
+export interface VentaGanado {
+  id: number;
+  numero_comprobante: string;
+  cliente: string;
+  fecha_venta: string;
+  cantidad_cabezas: number;
+  modalidad_venta: string;
+  total_bruto: number;
+  descuento: number;
+  costo_transporte: number;
+  total_neto: number;
+  metodo_pago?: string | null;
+  numero_documento?: string | null;
+  observaciones?: string | null;
+  documento_adjunto_url?: string | null;
+  estado: string;
+  motivo_anulacion?: string | null;
+  usuario_id?: string | null;
+  usuario_nombre?: string | null;
+  fecha_registro: string;
+  detalles: VentaGanadoDetalle[];
+}
+
+export interface BajaGanado {
+  id: number;
+  numero_acta: string;
+  animal_id: number;
+  animal_codigo?: string | null;
+  animal_arete?: string | null;
+  tipo_baja: string;
+  fecha_baja: string;
+  causa_diagnostico?: string | null;
+  necropsia_realizada: boolean;
+  destino_cuerpo?: string | null;
+  valor_estimado_perdida: number;
+  observaciones?: string | null;
+  documento_adjunto_url?: string | null;
+  estado: string;
+  motivo_anulacion?: string | null;
+  usuario_id?: string | null;
+  usuario_nombre?: string | null;
+  fecha_registro: string;
+}
+
+export interface AnimalPerfil {
+  animal: Animal;
+  pesajes: PesajeGanado[];
+  historial_aretes: HistorialArete[];
+  madre?: Animal | null;
+  padre?: Animal | null;
+  partos_madre: NacimientoGanado[];
+  hijos: Animal[];
+  detalles_compra?: CompraGanadoDetalle | null;
+  detalles_venta?: VentaGanadoDetalle | null;
+  detalles_baja?: BajaGanado | null;
+}
+
+export interface GanaderiaKPIs {
+  total_hato: number;
+  activos: number;
+  machos: number;
+  hembras: number;
+  vendidos: number;
+  fallecidos_bajas: number;
+  total_nacimientos: number;
+  total_compras: number;
+  peso_promedio_activo: number;
+}
+
+export interface AnimalCreatePayload {
+  numero_arete?: string | null;
+  nombre?: string | null;
+  tipo_ganado: string;
+  raza: string;
+  sexo: string;
+  fecha_nacimiento?: string | null;
+  edad_estimada_meses?: number | null;
+  peso_inicial?: number | null;
+  categoria?: string | null;
+  estado?: string;
+  potrero_id?: number | null;
+  ubicacion: string;
+  observaciones?: string | null;
+  procedencia?: string;
+  madre_id?: number | null;
+  padre_id?: number | null;
+}
+
+export interface AnimalUpdatePayload {
+  numero_arete?: string | null;
+  nombre?: string | null;
+  tipo_ganado?: string;
+  raza?: string;
+  sexo?: string;
+  fecha_nacimiento?: string | null;
+  edad_estimada_meses?: number | null;
+  categoria?: string | null;
+  estado?: string;
+  potrero_id?: number | null;
+  ubicacion?: string;
+  observaciones?: string | null;
+  motivo_cambio_arete?: string | null;
+  madre_id?: number | null;
+  padre_id?: number | null;
+}
+
+export interface PesajeCreatePayload {
+  fecha_pesaje: string;
+  peso: number;
+  notas?: string | null;
+}
+
+export interface NacimientoCreatePayload {
+  madre_id: number;
+  padre_id?: number | null;
+  fecha_parto: string;
+  condicion_cria: string;
+  observaciones?: string | null;
+  cria_tipo_ganado?: string;
+  cria_raza?: string;
+  cria_sexo?: string;
+  cria_peso_nacer?: number | null;
+  cria_numero_arete?: string | null;
+  cria_potrero_id?: number | null;
+  cria_ubicacion?: string;
+}
+
+export interface CompraGanadoDetallePayload {
+  tipo_ganado: string;
+  raza: string;
+  sexo: string;
+  fecha_nacimiento?: string | null;
+  edad_estimada_meses?: number | null;
+  numero_arete?: string | null;
+  peso?: number | null;
+  precio_compra: number;
+  modalidad_precio: string;
+  potrero_id?: number | null;
+  ubicacion: string;
+  observaciones?: string | null;
+}
+
+export interface CompraGanadoCreatePayload {
+  proveedor: string;
+  fecha_compra: string;
+  numero_documento?: string | null;
+  costos_adicionales?: number;
+  costo_transporte?: number;
+  observaciones?: string | null;
+  detalles: CompraGanadoDetallePayload[];
+}
+
+export interface VentaGanadoItemPayload {
+  animal_id: number;
+  precio: number;
+  modalidad_precio: string;
+}
+
+export interface VentaGanadoCreatePayload {
+  cliente: string;
+  fecha_venta: string;
+  modalidad_venta: string;
+  metodo_pago?: string | null;
+  costo_transporte?: number;
+  descuento?: number;
+  numero_documento?: string | null;
+  observaciones?: string | null;
+  animales: VentaGanadoItemPayload[];
+}
+
+export interface BajaGanadoCreatePayload {
+  animal_id: number;
+  tipo_baja: string;
+  fecha_baja: string;
+  causa_diagnostico?: string | null;
+  necropsia_realizada?: boolean;
+  destino_cuerpo?: string | null;
+  valor_estimado_perdida?: number;
+  observaciones?: string | null;
+}
+
+// ==========================================
+// GESTIÓN DE POTREROS Y MOVIMIENTOS (SPEC-002)
+// ==========================================
+
+export interface Potrero {
+  id: number;
+  codigo: string;
+  nombre: string;
+  tipo_area: 'POTRERO' | 'CORRAL' | 'CUARENTENA' | 'MATERNIDAD' | 'OTRO' | string;
+  superficie_ha?: number | null;
+  capacidad_cabezas: number;
+  color_hex: string;
+  poligono_geojson: string;
+  centroide_lat?: number | null;
+  centroide_lng?: number | null;
+  estado: string;
+  activo?: boolean;
+  total_animales: number;
+  animales_actuales?: number;
+  total_machos: number;
+  total_hembras: number;
+  observaciones?: string | null;
+  fecha_creacion: string;
+  fecha_actualizacion: string;
+  animales?: Animal[];
+}
+
+export interface MovimientoGanadoDetalle {
+  id: number;
+  movimiento_id: number;
+  animal_id: number;
+  numero_arete?: string | null;
+  codigo_interno: string;
+  potrero_origen_id: number;
+  potrero_destino_id: number;
+  animal_nombre?: string | null;
+  animal_raza?: string | null;
+  animal_sexo?: string | null;
+  animal_peso_actual?: number | null;
+}
+
+export interface MovimientoGanado {
+  id: number;
+  numero_comprobante: string;
+  fecha_movimiento: string;
+  potrero_origen_id: number;
+  potrero_origen_nombre?: string | null;
+  potrero_destino_id: number;
+  potrero_destino_nombre?: string | null;
+  tipo_operacion: string;
+  cantidad_animales: number;
+  motivo?: string | null;
+  responsable?: string | null;
+  observaciones?: string | null;
+  estado: string;
+  motivo_anulacion?: string | null;
+  usuario_ci?: string | null;
+  fecha_creacion: string;
+  detalles: MovimientoGanadoDetalle[];
+}
+
+export interface MovimientoGanadoCreatePayload {
+  potrero_origen_id: number;
+  potrero_destino_id: number;
+  animales_ids: number[];
+  fecha_movimiento?: string | null;
+  tipo_operacion?: string;
+  motivo?: string | null;
+  responsable?: string | null;
+  observaciones?: string | null;
+}
+
+export interface AnimalPuntoMapa {
+  id: number;
+  codigo_interno: string;
+  numero_arete?: string | null;
+  nombre?: string | null;
+  tipo: string;
+  raza: string;
+  sexo: string;
+  peso_actual?: number | null;
+  potrero_id: number;
+  potrero_nombre: string;
+  lat: number;
+  lng: number;
+}
+
+export interface MapaDistribucion {
+  potreros: Potrero[];
+  animales: AnimalPuntoMapa[];
+  total_cabezas_activas: number;
+}
+
+// =========================================================================
+// MÓDULO DE GANADERÍA — SANIDAD Y TRATAMIENTOS (SPEC-003)
+// =========================================================================
+
+export interface SanidadVacuna {
+  id: number;
+  codigo: string;
+  nombre: string;
+  nombre_comercial?: string | null;
+  enfermedad_objetivo: string;
+  especie: string;
+  dosis_defecto_ml?: number | null;
+  via_administracion: string;
+  dias_retiro_carne: number;
+  dias_retiro_leche: number;
+  requiere_refuerzo: boolean;
+  dias_refuerzo?: number | null;
+  estado: string;
+  observaciones?: string | null;
+  fecha_creacion?: string;
+}
+
+export interface SanidadMedicamento {
+  id: number;
+  codigo: string;
+  nombre: string;
+  nombre_comercial?: string | null;
+  tipo_farmaco: string;
+  principio_activo?: string | null;
+  concentracion?: string | null;
+  unidad_medida: string;
+  via_administracion: string;
+  dias_retiro_carne: number;
+  dias_retiro_leche: number;
+  almacen_id?: number | null;
+  almacen_nombre?: string | null;
+  estado: string;
+  observaciones?: string | null;
+  fecha_creacion?: string;
+}
+
+export interface SanidadSeguimiento {
+  id: number;
+  detalle_id: number;
+  fecha_seguimiento: string;
+  estado_salud: string;
+  temperatura_c?: number | null;
+  peso_actual_kg?: number | null;
+  observaciones?: string | null;
+  usuario_ci?: string | null;
+  usuario_nombre?: string | null;
+  fecha_creacion?: string;
+}
+
+export interface SanidadOperacionDetalle {
+  id: number;
+  operacion_id: number;
+  animal_id: number;
+  numero_arete?: string | null;
+  codigo_interno: string;
+  animal_nombre?: string | null;
+  animal_raza?: string | null;
+  animal_sexo?: string | null;
+  dosis_aplicada?: number | null;
+  unidad_medida: string;
+  fecha_fin_retiro_carne?: string | null;
+  fecha_fin_retiro_leche?: string | null;
+  en_retiro_carne?: boolean;
+  en_retiro_leche?: boolean;
+  dias_restantes_retiro_carne?: number;
+  dias_restantes_retiro_leche?: number;
+  estado_aplicacion: string;
+  reaccion_adversa?: string | null;
+  observaciones?: string | null;
+  seguimientos?: SanidadSeguimiento[];
+}
+
+export interface SanidadOperacion {
+  id: number;
+  numero_comprobante: string;
+  tipo_operacion: string;
+  fecha_aplicacion: string;
+  fecha_programada?: string | null;
+  potrero_origen_id?: number | null;
+  potrero_origen_nombre?: string | null;
+  vacuna_id?: number | null;
+  vacuna_nombre?: string | null;
+  medicamento_id?: number | null;
+  medicamento_nombre?: string | null;
+  producto_aplicado?: string;
+  lote_producto?: string | null;
+  fecha_vencimiento_producto?: string | null;
+  diagnostico?: string | null;
+  sintomas?: string | null;
+  cantidad_animales: number;
+  trabajador_id?: number | null;
+  trabajador_nombre?: string | null;
+  veterinario_nombre?: string | null;
+  costo_total_estimado?: number | null;
+  descontar_inventario: boolean;
+  movimiento_almacen_id?: number | null;
+  traslado_cuarentena_id?: number | null;
+  estado: string;
+  motivo_anulacion?: string | null;
+  observaciones?: string | null;
+  usuario_ci?: string | null;
+  usuario_nombre?: string | null;
+  fecha_creacion: string;
+  detalles?: SanidadOperacionDetalle[];
+}
+
+export interface AnimalOperacionItemPayload {
+  animal_id: number;
+  dosis_aplicada?: number | null;
+  unidad_medida?: string;
+  estado_aplicacion?: 'APLICADO' | 'PENDIENTE' | 'RECHAZADO';
+  reaccion_adversa?: string | null;
+  observaciones?: string | null;
+}
+
+export interface SanidadOperacionCreatePayload {
+  tipo_operacion: string;
+  fecha_aplicacion: string;
+  fecha_programada?: string | null;
+  potrero_origen_id?: number | null;
+  vacuna_id?: number | null;
+  medicamento_id?: number | null;
+  lote_producto?: string | null;
+  fecha_vencimiento_producto?: string | null;
+  diagnostico?: string | null;
+  sintomas?: string | null;
+  trabajador_id?: number | null;
+  veterinario_nombre?: string | null;
+  costo_total_estimado?: number | null;
+  descontar_inventario: boolean;
+  trasladar_a_cuarentena: boolean;
+  potrero_cuarentena_id?: number | null;
+  observaciones?: string | null;
+  animales: AnimalOperacionItemPayload[];
+}
+
+export interface AlertaRetiro {
+  animal_id: number;
+  codigo_interno: string;
+  numero_arete?: string | null;
+  potrero_id?: number | null;
+  potrero_nombre?: string | null;
+  tipo_retiro: 'CARNE' | 'LECHE' | 'AMBOS';
+  fecha_fin_retiro_carne?: string | null;
+  fecha_fin_retiro_leche?: string | null;
+  dias_restantes_carne: number;
+  dias_restantes_leche: number;
+  producto_origen: string;
+  numero_comprobante: string;
+  fecha_aplicacion: string;
+}
+
+export interface SanidadKPIs {
+  total_vacunaciones_mes: number;
+  total_tratamientos_activos: number;
+  animales_en_retiro_carne: number;
+  animales_en_retiro_leche: number;
+  vacunas_catalogo_activas: number;
+  medicamentos_catalogo_activos: number;
+  alertas_retiro_proximas: AlertaRetiro[];
+}
+
+export interface HistorialSanitarioAnimal {
+  animal_id: number;
+  codigo_interno: string;
+  numero_arete?: string | null;
+  en_retiro_carne: boolean;
+  en_retiro_leche: boolean;
+  fecha_fin_retiro_carne?: string | null;
+  fecha_fin_retiro_leche?: string | null;
+  dias_restantes_retiro_carne: number;
+  dias_restantes_retiro_leche: number;
+  vacunaciones: SanidadOperacionDetalle[];
+  tratamientos: SanidadOperacionDetalle[];
+}
+
+// =========================================================================
+// MÓDULO DE GESTIÓN AGRÍCOLA (SPEC-004)
+// =========================================================================
+
+export interface ActividadPreparacion {
+  id: number;
+  ciclo_agricola_id: number;
+  tipo_actividad: string; // ARADO, RASTRA, ROLO, SUBSOLADO, OTRO
+  fecha: string;
+  completada: boolean;
+  observaciones?: string | null;
+  fecha_creacion?: string;
+}
+
+export interface ActividadManejo {
+  id: number;
+  ciclo_agricola_id: number;
+  fecha: string;
+  tipo_actividad: string; // FUMIGACION, HERBICIDA, INSECTICIDA, FUNGICIDA, FERTILIZACION, APLICACION_FOLIAR, OTRO
+  producto_utilizado: string;
+  cantidad_aplicada: number;
+  unidad_medida: string; // LT, KG, DOSIS
+  dosis_por_ha?: number | null;
+  superficie_aplicada_ha?: number | null;
+  observaciones?: string | null;
+  fecha_creacion?: string;
+}
+
+export interface CosechaRegistro {
+  id: number;
+  ciclo_agricola_id: number;
+  fecha_cosecha: string;
+  fecha_fin_cosecha?: string | null;
+  cultivo_cosechado: string;
+  superficie_cosechada_ha: number;
+  cantidad_producida: number;
+  unidad_medida: string; // TN, KG, QQ
+  rendimiento_calculado_ha: number;
+  observaciones?: string | null;
+  fecha_creacion?: string;
+}
+
+export interface CicloAgricola {
+  id: number;
+  area_agricola_id: number;
+  cultivo: string;
+  variedad_hibrido?: string | null;
+  campana: string;
+  fecha_inicio: string;
+  superficie_utilizada_ha: number;
+  fase_actual: 'PREPARACION' | 'SIEMBRA' | 'MANEJO' | 'COSECHA' | 'FINALIZADO';
+  estado: 'ACTIVO' | 'FINALIZADO' | 'CANCELADO';
+  fecha_cierre?: string | null;
+  total_cosechado?: number | null;
+  unidad_cosecha?: string;
+  rendimiento_promedio_ha?: number | null;
+  observaciones?: string | null;
+  actividades_preparacion: ActividadPreparacion[];
+  actividades_manejo: ActividadManejo[];
+  cosechas: CosechaRegistro[];
+  fecha_creacion?: string;
+}
+
+export interface AreaAgricola {
+  id: number;
+  codigo: string;
+  nombre: string;
+  superficie_ha: number;
+  poligono_geojson?: string | null;
+  centroide_lat?: number | null;
+  centroide_lng?: number | null;
+  color_hex: string;
+  estado: string; // ACTIVO, INACTIVO
+  observaciones?: string | null;
+  ciclo_activo?: CicloAgricola | null;
+  total_ciclos_historicos: number;
+  fecha_creacion?: string;
+  fecha_actualizacion?: string;
+}
+
+export interface AreaAgricolaCreatePayload {
+  nombre: string;
+  superficie_ha: number;
+  poligono_geojson?: string | null;
+  color_hex?: string;
+  observaciones?: string | null;
+}
+
+export interface CicloAgricolaCreatePayload {
+  cultivo: string;
+  variedad_hibrido?: string | null;
+  campana: string;
+  fecha_inicio: string;
+  superficie_utilizada_ha: number;
+  observaciones?: string | null;
+}
+
+export interface SiembraUpdatePayload {
+  cultivo: string;
+  variedad_hibrido?: string | null;
+  fecha_siembra: string;
+  superficie_sembrada_ha: number;
+  observaciones?: string | null;
+}
+
+export interface ActividadManejoCreatePayload {
+  fecha: string;
+  tipo_actividad: string;
+  producto_utilizado: string;
+  cantidad_aplicada: number;
+  unidad_medida: string;
+  dosis_por_ha?: number | null;
+  superficie_aplicada_ha?: number | null;
+  observaciones?: string | null;
+}
+
+export interface CosechaCreatePayload {
+  fecha_cosecha: string;
+  fecha_fin_cosecha?: string | null;
+  cultivo_cosechado: string;
+  superficie_cosechada_ha: number;
+  cantidad_producida: number;
+  unidad_medida: string;
+  observaciones?: string | null;
+}
+
+export interface AgriculturaKPIs {
+  total_areas: number;
+  superficie_total_ha: number;
+  ciclos_activos: number;
+  hectareas_en_produccion: number;
+  distribucion_fases: { [key: string]: number };
+  rendimiento_promedio_ultimas_campanas: number;
+}
+
+
+

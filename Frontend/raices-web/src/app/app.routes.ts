@@ -28,6 +28,26 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/inventario/inventario.component').then(m => m.InventarioComponent)
       },
       {
+        path: 'ganaderia',
+        loadComponent: () => import('./pages/ganaderia/ganaderia.component').then(m => m.GanaderiaComponent)
+      },
+      {
+        path: 'potreros',
+        loadComponent: () => import('./pages/potreros/potreros.component').then(m => m.PotrerosComponent)
+      },
+      {
+        path: 'sanidad',
+        loadComponent: () => import('./pages/sanidad/sanidad.component').then(m => m.SanidadComponent)
+      },
+      {
+        path: 'agricultura',
+        loadComponent: () => import('./pages/agricultura/agricultura.component').then(m => m.AgriculturaComponent)
+      },
+      {
+        path: 'apicultura',
+        loadComponent: () => import('./pages/apicultura/apicultura.component').then(m => m.ApiculturaComponent)
+      },
+      {
         path: 'planilla',
         loadComponent: () => import('./pages/planilla/planilla.component').then(m => m.PlanillaComponent)
       },

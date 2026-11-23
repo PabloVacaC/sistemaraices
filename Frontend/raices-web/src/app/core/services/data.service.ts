@@ -37,6 +37,46 @@ import {
   DescuentoCreatePayload,
   AnticipoRider,
   AnticipoRiderCreatePayload,
+  Animal,
+  AnimalPerfil,
+  PesajeGanado,
+  HistorialArete,
+  NacimientoGanado,
+  CompraGanado,
+  VentaGanado,
+  BajaGanado,
+  GanaderiaKPIs,
+  AnimalCreatePayload,
+  AnimalUpdatePayload,
+  PesajeCreatePayload,
+  NacimientoCreatePayload,
+  CompraGanadoCreatePayload,
+  VentaGanadoCreatePayload,
+  BajaGanadoCreatePayload,
+  Potrero,
+  MovimientoGanado,
+  MovimientoGanadoCreatePayload,
+  MapaDistribucion,
+  SanidadVacuna,
+  SanidadMedicamento,
+  SanidadSeguimiento,
+  SanidadOperacionDetalle,
+  SanidadOperacion,
+  SanidadOperacionCreatePayload,
+  AlertaRetiro,
+  SanidadKPIs,
+  HistorialSanitarioAnimal,
+  AreaAgricola,
+  CicloAgricola,
+  ActividadPreparacion,
+  ActividadManejo,
+  CosechaRegistro,
+  AgriculturaKPIs,
+  AreaAgricolaCreatePayload,
+  CicloAgricolaCreatePayload,
+  SiembraUpdatePayload,
+  ActividadManejoCreatePayload,
+  CosechaCreatePayload,
 } from '../models/types';
 
 @Injectable({
@@ -517,5 +557,415 @@ export class DataService {
       { motivo },
       { headers: this.auth.getHeaders() }
     );
+  }
+
+  // ==========================================
+  // GANADERÍA - MÓDULO INTEGRAL (SPEC-001)
+  // ==========================================
+
+  getGanaderiaKPIs(): Observable<GanaderiaKPIs> {
+    return this.http.get<GanaderiaKPIs>(`${this.API_URL}/ganaderia/kpis`, {
+      headers: this.auth.getHeaders()
+    });
+  }
+
+  getAnimales(params?: {
+    procedencia?: string;
+    estado?: string;
+    sexo?: string;
+    categoria?: string;
+    search?: string;
+    skip?: number;
+    limit?: number;
+  }): Observable<Animal[]> {
+    let httpParams: any = {};
+    if (params) {
+      if (params.procedencia) httpParams.procedencia = params.procedencia;
+      if (params.estado) httpParams.estado = params.estado;
+      if (params.sexo) httpParams.sexo = params.sexo;
+      if (params.categoria) httpParams.categoria = params.categoria;
+      if (params.search) httpParams.search = params.search;
+      if (params.skip !== undefined) httpParams.skip = params.skip;
+      if (params.limit !== undefined) httpParams.limit = params.limit;
+    }
+    return this.http.get<Animal[]>(`${this.API_URL}/ganaderia/animales`, {
+      headers: this.auth.getHeaders(),
+      params: httpParams
+    });
+  }
+
+  getAnimalPerfil(animalId: number): Observable<AnimalPerfil> {
+    return this.http.get<AnimalPerfil>(`${this.API_URL}/ganaderia/animales/${animalId}`, {
+      headers: this.auth.getHeaders()
+    });
+  }
+
+  crearAnimal(payload: AnimalCreatePayload): Observable<Animal> {
+    return this.http.post<Animal>(`${this.API_URL}/ganaderia/animales`, payload, {
+      headers: this.auth.getHeaders()
+    });
+  }
+
+  actualizarAnimal(animalId: number, payload: AnimalUpdatePayload): Observable<Animal> {
+    return this.http.put<Animal>(`${this.API_URL}/ganaderia/animales/${animalId}`, payload, {
+      headers: this.auth.getHeaders()
+    });
+  }
+
+  registrarPesaje(animalId: number, payload: PesajeCreatePayload): Observable<PesajeGanado> {
+    return this.http.post<PesajeGanado>(`${this.API_URL}/ganaderia/animales/${animalId}/pesajes`, payload, {
+      headers: this.auth.getHeaders()
+    });
+  }
+
+  eliminarPesaje(pesajeId: number): Observable<any> {
+    return this.http.delete<any>(`${this.API_URL}/ganaderia/pesajes/${pesajeId}`, {
+      headers: this.auth.getHeaders()
+    });
+  }
+
+  getNacimientos(skip: number = 0, limit: number = 50): Observable<NacimientoGanado[]> {
+    return this.http.get<NacimientoGanado[]>(`${this.API_URL}/ganaderia/nacimientos`, {
+      headers: this.auth.getHeaders(),
+      params: { skip, limit }
+    });
+  }
+
+  crearNacimiento(payload: NacimientoCreatePayload): Observable<NacimientoGanado> {
+    return this.http.post<NacimientoGanado>(`${this.API_URL}/ganaderia/nacimientos`, payload, {
+      headers: this.auth.getHeaders()
+    });
+  }
+
+  getComprasGanado(skip: number = 0, limit: number = 50): Observable<CompraGanado[]> {
+    return this.http.get<CompraGanado[]>(`${this.API_URL}/ganaderia/compras`, {
+      headers: this.auth.getHeaders(),
+      params: { skip, limit }
+    });
+  }
+
+  crearCompraGanado(payload: CompraGanadoCreatePayload): Observable<CompraGanado> {
+    return this.http.post<CompraGanado>(`${this.API_URL}/ganaderia/compras`, payload, {
+      headers: this.auth.getHeaders()
+    });
+  }
+
+  getVentasGanado(skip: number = 0, limit: number = 50): Observable<VentaGanado[]> {
+    return this.http.get<VentaGanado[]>(`${this.API_URL}/ganaderia/ventas`, {
+      headers: this.auth.getHeaders(),
+      params: { skip, limit }
+    });
+  }
+
+  crearVentaGanado(payload: VentaGanadoCreatePayload): Observable<VentaGanado> {
+    return this.http.post<VentaGanado>(`${this.API_URL}/ganaderia/ventas`, payload, {
+      headers: this.auth.getHeaders()
+    });
+  }
+
+  anularVentaGanado(ventaId: number, motivo: string): Observable<any> {
+    return this.http.post<any>(`${this.API_URL}/ganaderia/ventas/${ventaId}/anular`, { motivo }, {
+      headers: this.auth.getHeaders()
+    });
+  }
+
+  getBajasGanado(skip: number = 0, limit: number = 50): Observable<BajaGanado[]> {
+    return this.http.get<BajaGanado[]>(`${this.API_URL}/ganaderia/bajas`, {
+      headers: this.auth.getHeaders(),
+      params: { skip, limit }
+    });
+  }
+
+  crearBajaGanado(payload: BajaGanadoCreatePayload): Observable<BajaGanado> {
+    return this.http.post<BajaGanado>(`${this.API_URL}/ganaderia/bajas`, payload, {
+      headers: this.auth.getHeaders()
+    });
+  }
+
+  anularBajaGanado(bajaId: number, motivo: string): Observable<any> {
+    return this.http.post<any>(`${this.API_URL}/ganaderia/bajas/${bajaId}/anular`, { motivo }, {
+      headers: this.auth.getHeaders()
+    });
+  }
+
+  // --- Potreros y Movimientos (SPEC-002) ---
+  getPotreros(): Observable<Potrero[]> {
+    return this.http.get<Potrero[]>(`${this.API_URL}/ganaderia/potreros`, {
+      headers: this.auth.getHeaders()
+    });
+  }
+
+  getPotrero(id: number): Observable<Potrero> {
+    return this.http.get<Potrero>(`${this.API_URL}/ganaderia/potreros/${id}`, {
+      headers: this.auth.getHeaders()
+    });
+  }
+
+  crearPotrero(payload: any): Observable<Potrero> {
+    return this.http.post<Potrero>(`${this.API_URL}/ganaderia/potreros`, payload, {
+      headers: this.auth.getHeaders()
+    });
+  }
+
+  actualizarPotrero(id: number, payload: any): Observable<Potrero> {
+    return this.http.put<Potrero>(`${this.API_URL}/ganaderia/potreros/${id}`, payload, {
+      headers: this.auth.getHeaders()
+    });
+  }
+
+  desactivarPotrero(id: number): Observable<Potrero> {
+    return this.http.patch<Potrero>(`${this.API_URL}/ganaderia/potreros/${id}/desactivar`, {}, {
+      headers: this.auth.getHeaders()
+    });
+  }
+
+  getMapaDistribucion(): Observable<MapaDistribucion> {
+    return this.http.get<MapaDistribucion>(`${this.API_URL}/ganaderia/mapa-distribucion`, {
+      headers: this.auth.getHeaders()
+    });
+  }
+
+  crearMovimientoGanado(payload: MovimientoGanadoCreatePayload): Observable<MovimientoGanado> {
+    return this.http.post<MovimientoGanado>(`${this.API_URL}/ganaderia/movimientos`, payload, {
+      headers: this.auth.getHeaders()
+    });
+  }
+
+  getMovimientosGanado(potreroId?: number, skip: number = 0, limit: number = 50): Observable<MovimientoGanado[]> {
+    let params: any = { skip, limit };
+    if (potreroId) {
+      params.potrero_id = potreroId;
+    }
+    return this.http.get<MovimientoGanado[]>(`${this.API_URL}/ganaderia/movimientos`, {
+      headers: this.auth.getHeaders(),
+      params
+    });
+  }
+
+  getMovimientoGanado(id: number): Observable<MovimientoGanado> {
+    return this.http.get<MovimientoGanado>(`${this.API_URL}/ganaderia/movimientos/${id}`, {
+      headers: this.auth.getHeaders()
+    });
+  }
+
+  anularMovimientoGanado(id: number, motivo: string): Observable<MovimientoGanado> {
+    return this.http.post<MovimientoGanado>(`${this.API_URL}/ganaderia/movimientos/${id}/anular`, { motivo }, {
+      headers: this.auth.getHeaders()
+    });
+  }
+
+  getHistorialMovimientosAnimal(animalId: number): Observable<any[]> {
+    return this.http.get<any[]>(`${this.API_URL}/ganaderia/animales/${animalId}/historial-movimientos`, {
+      headers: this.auth.getHeaders()
+    });
+  }
+
+  // =========================================================================
+  // SANIDAD, TRATAMIENTOS Y VACUNACIÓN (SPEC-003)
+  // =========================================================================
+
+  getSanidadKPIs(): Observable<SanidadKPIs> {
+    return this.http.get<SanidadKPIs>(`${this.API_URL}/sanidad/kpis`, {
+      headers: this.auth.getHeaders()
+    });
+  }
+
+  getAlertasRetiro(): Observable<AlertaRetiro[]> {
+    return this.http.get<AlertaRetiro[]>(`${this.API_URL}/sanidad/alertas-retiro`, {
+      headers: this.auth.getHeaders()
+    });
+  }
+
+  getVacunas(soloActivas: boolean = false): Observable<SanidadVacuna[]> {
+    return this.http.get<SanidadVacuna[]>(`${this.API_URL}/sanidad/vacunas`, {
+      headers: this.auth.getHeaders(),
+      params: { solo_activas: soloActivas }
+    });
+  }
+
+  crearVacuna(payload: Partial<SanidadVacuna>): Observable<SanidadVacuna> {
+    return this.http.post<SanidadVacuna>(`${this.API_URL}/sanidad/vacunas`, payload, {
+      headers: this.auth.getHeaders()
+    });
+  }
+
+  actualizarVacuna(id: number, payload: Partial<SanidadVacuna>): Observable<SanidadVacuna> {
+    return this.http.put<SanidadVacuna>(`${this.API_URL}/sanidad/vacunas/${id}`, payload, {
+      headers: this.auth.getHeaders()
+    });
+  }
+
+  alternarEstadoVacuna(id: number): Observable<SanidadVacuna> {
+    return this.http.patch<SanidadVacuna>(`${this.API_URL}/sanidad/vacunas/${id}/estado`, {}, {
+      headers: this.auth.getHeaders()
+    });
+  }
+
+  getMedicamentos(soloActivos: boolean = false): Observable<SanidadMedicamento[]> {
+    return this.http.get<SanidadMedicamento[]>(`${this.API_URL}/sanidad/medicamentos`, {
+      headers: this.auth.getHeaders(),
+      params: { solo_activos: soloActivos }
+    });
+  }
+
+  crearMedicamento(payload: Partial<SanidadMedicamento>): Observable<SanidadMedicamento> {
+    return this.http.post<SanidadMedicamento>(`${this.API_URL}/sanidad/medicamentos`, payload, {
+      headers: this.auth.getHeaders()
+    });
+  }
+
+  actualizarMedicamento(id: number, payload: Partial<SanidadMedicamento>): Observable<SanidadMedicamento> {
+    return this.http.put<SanidadMedicamento>(`${this.API_URL}/sanidad/medicamentos/${id}`, payload, {
+      headers: this.auth.getHeaders()
+    });
+  }
+
+  alternarEstadoMedicamento(id: number): Observable<SanidadMedicamento> {
+    return this.http.patch<SanidadMedicamento>(`${this.API_URL}/sanidad/medicamentos/${id}/estado`, {}, {
+      headers: this.auth.getHeaders()
+    });
+  }
+
+  getOperacionesSanitarias(params?: any): Observable<SanidadOperacion[]> {
+    return this.http.get<SanidadOperacion[]>(`${this.API_URL}/sanidad/operaciones`, {
+      headers: this.auth.getHeaders(),
+      params
+    });
+  }
+
+  getOperacionSanitaria(id: number): Observable<SanidadOperacion> {
+    return this.http.get<SanidadOperacion>(`${this.API_URL}/sanidad/operaciones/${id}`, {
+      headers: this.auth.getHeaders()
+    });
+  }
+
+  crearOperacionSanitaria(payload: SanidadOperacionCreatePayload): Observable<SanidadOperacion> {
+    return this.http.post<SanidadOperacion>(`${this.API_URL}/sanidad/operaciones`, payload, {
+      headers: this.auth.getHeaders()
+    });
+  }
+
+  anularOperacionSanitaria(id: number, motivo_anulacion: string): Observable<SanidadOperacion> {
+    return this.http.patch<SanidadOperacion>(`${this.API_URL}/sanidad/operaciones/${id}/anular`, { motivo_anulacion }, {
+      headers: this.auth.getHeaders()
+    });
+  }
+
+  registrarSeguimientoClinico(detalleId: number, payload: any): Observable<SanidadSeguimiento> {
+    return this.http.post<SanidadSeguimiento>(`${this.API_URL}/sanidad/detalles/${detalleId}/seguimiento`, payload, {
+      headers: this.auth.getHeaders()
+    });
+  }
+
+  getHistorialSanitarioAnimal(animalId: number): Observable<HistorialSanitarioAnimal> {
+    return this.http.get<HistorialSanitarioAnimal>(`${this.API_URL}/sanidad/animales/${animalId}/historial`, {
+      headers: this.auth.getHeaders()
+    });
+  }
+
+  // ==========================================
+  // GESTIÓN AGRÍCOLA (SPEC-004)
+  // ==========================================
+
+  getAgriculturaKPIs(): Observable<AgriculturaKPIs> {
+    return this.http.get<AgriculturaKPIs>(`${this.API_URL}/agricultura/kpis`, {
+      headers: this.auth.getHeaders()
+    });
+  }
+
+  getAreasAgricolas(): Observable<AreaAgricola[]> {
+    return this.http.get<AreaAgricola[]>(`${this.API_URL}/agricultura/areas`, {
+      headers: this.auth.getHeaders()
+    });
+  }
+
+  getAreaAgricolaById(id: number): Observable<AreaAgricola> {
+    return this.http.get<AreaAgricola>(`${this.API_URL}/agricultura/areas/${id}`, {
+      headers: this.auth.getHeaders()
+    });
+  }
+
+  createAreaAgricola(payload: AreaAgricolaCreatePayload): Observable<AreaAgricola> {
+    return this.http.post<AreaAgricola>(`${this.API_URL}/agricultura/areas`, payload, {
+      headers: this.auth.getHeaders()
+    });
+  }
+
+  updateAreaAgricola(id: number, payload: Partial<AreaAgricolaCreatePayload>): Observable<AreaAgricola> {
+    return this.http.put<AreaAgricola>(`${this.API_URL}/agricultura/areas/${id}`, payload, {
+      headers: this.auth.getHeaders()
+    });
+  }
+
+  deleteAreaAgricola(id: number): Observable<any> {
+    return this.http.delete<any>(`${this.API_URL}/agricultura/areas/${id}`, {
+      headers: this.auth.getHeaders()
+    });
+  }
+
+  getHistorialAreaAgricola(areaId: number): Observable<CicloAgricola[]> {
+    return this.http.get<CicloAgricola[]>(`${this.API_URL}/agricultura/areas/${areaId}/historial`, {
+      headers: this.auth.getHeaders()
+    });
+  }
+
+  iniciarCicloAgricola(areaId: number, payload: CicloAgricolaCreatePayload): Observable<CicloAgricola> {
+    return this.http.post<CicloAgricola>(`${this.API_URL}/agricultura/areas/${areaId}/ciclos`, payload, {
+      headers: this.auth.getHeaders()
+    });
+  }
+
+  getCicloAgricolaById(cicloId: number): Observable<CicloAgricola> {
+    return this.http.get<CicloAgricola>(`${this.API_URL}/agricultura/ciclos/${cicloId}`, {
+      headers: this.auth.getHeaders()
+    });
+  }
+
+  cambiarFaseCicloAgricola(cicloId: number, fase: string): Observable<CicloAgricola> {
+    return this.http.put<CicloAgricola>(`${this.API_URL}/agricultura/ciclos/${cicloId}/fase`, { fase }, {
+      headers: this.auth.getHeaders()
+    });
+  }
+
+  crearActividadPreparacion(cicloId: number, payload: any): Observable<ActividadPreparacion> {
+    return this.http.post<ActividadPreparacion>(`${this.API_URL}/agricultura/ciclos/${cicloId}/preparacion`, payload, {
+      headers: this.auth.getHeaders()
+    });
+  }
+
+  actualizarActividadPreparacion(cicloId: number, actId: number, payload: any): Observable<ActividadPreparacion> {
+    return this.http.put<ActividadPreparacion>(`${this.API_URL}/agricultura/ciclos/${cicloId}/preparacion/${actId}`, payload, {
+      headers: this.auth.getHeaders()
+    });
+  }
+
+  actualizarSiembra(cicloId: number, payload: SiembraUpdatePayload): Observable<CicloAgricola> {
+    return this.http.put<CicloAgricola>(`${this.API_URL}/agricultura/ciclos/${cicloId}/siembra`, payload, {
+      headers: this.auth.getHeaders()
+    });
+  }
+
+  crearActividadManejo(cicloId: number, payload: ActividadManejoCreatePayload): Observable<ActividadManejo> {
+    return this.http.post<ActividadManejo>(`${this.API_URL}/agricultura/ciclos/${cicloId}/manejo`, payload, {
+      headers: this.auth.getHeaders()
+    });
+  }
+
+  eliminarActividadManejo(cicloId: number, actId: number): Observable<any> {
+    return this.http.delete<any>(`${this.API_URL}/agricultura/ciclos/${cicloId}/manejo/${actId}`, {
+      headers: this.auth.getHeaders()
+    });
+  }
+
+  registrarCosecha(cicloId: number, payload: CosechaCreatePayload): Observable<CosechaRegistro> {
+    return this.http.post<CosechaRegistro>(`${this.API_URL}/agricultura/ciclos/${cicloId}/cosecha`, payload, {
+      headers: this.auth.getHeaders()
+    });
+  }
+
+  finalizarCicloAgricola(cicloId: number): Observable<CicloAgricola> {
+    return this.http.post<CicloAgricola>(`${this.API_URL}/agricultura/ciclos/${cicloId}/finalizar`, {}, {
+      headers: this.auth.getHeaders()
+    });
   }
 }

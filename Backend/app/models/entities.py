@@ -699,3 +699,642 @@ class GastoMenor(Base):
             return self.area.nombre
         return None
 
+
+# =========================================================================
+# MÓDULO DE GANADERÍA (SPEC-001 — REGISTRO E IDENTIFICACIÓN DEL GANADO)
+# =========================================================================
+
+class Animal(Base):
+    __tablename__ = "animal"
+    __table_args__ = (
+        UniqueConstraint("numero_arete", name="uq_animal_numero_arete"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    codigo_interno: Mapped[str] = mapped_column(String(50), unique=True, nullable=False, index=True)
+    numero_arete: Mapped[Optional[str]] = mapped_column(String(50), nullable=True, index=True)
+    nombre: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    tipo: Mapped[str] = mapped_column(String(50), default="Bovino", nullable=False, index=True)
+    raza: Mapped[str] = mapped_column(String(100), default="Nelore", nullable=False, index=True)
+    sexo: Mapped[str] = mapped_column(String(20), nullable=False, index=True)  # MACHO, HEMBRA
+    fecha_nacimiento: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    peso_inicial: Mapped[Optional[Decimal]] = mapped_column(Numeric(10, 2), nullable=True)
+    peso_actual: Mapped[Optional[Decimal]] = mapped_column(Numeric(10, 2), nullable=True)
+    fecha_ultimo_pesaje: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    estado: Mapped[str] = mapped_column(String(30), default="ACTIVO", nullable=False, index=True)  # ACTIVO, VENDIDO, FALLECIDO, ROBADO, PERDIDO, SACRIFICADO, DESCARTADO, BAJA
+    procedencia: Mapped[str] = mapped_column(String(40), default="REGISTRO_MANUAL", nullable=False, index=True)  # REGISTRO_MANUAL, NACIMIENTO, COMPRA
+    madre_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("animal.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    padre_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("animal.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    potrero_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("potrero.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    ubicacion: Mapped[str] = mapped_column(String(100), default="Potrero 1", nullable=False, index=True)
+    propietario: Mapped[Optional[str]] = mapped_column(String(150), nullable=True)
+    observaciones: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    usuario_registro_ci: Mapped[Optional[str]] = mapped_column(
+        String(30), ForeignKey("usuario.ci", ondelete="SET NULL"), nullable=True, index=True
+    )
+    fecha_creacion: Mapped[datetime] = mapped_column(DateTime, default=get_bolivia_now, nullable=False)
+    fecha_actualizacion: Mapped[datetime] = mapped_column(
+        DateTime, default=get_bolivia_now, onupdate=get_bolivia_now, nullable=False
+    )
+
+    # Relaciones
+    madre = relationship("Animal", foreign_keys=[madre_id], remote_side=[id], lazy="selectin")
+    padre = relationship("Animal", foreign_keys=[padre_id], remote_side=[id], lazy="selectin")
+    potrero = relationship("Potrero", foreign_keys=[potrero_id], back_populates="animales", lazy="selectin")
+    usuario_registro = relationship("Usuario", foreign_keys=[usuario_registro_ci], lazy="selectin")
+    pesajes = relationship("PesajeGanado", back_populates="animal", cascade="all, delete-orphan", order_by="desc(PesajeGanado.fecha_pesaje)")
+    historial_aretes = relationship("HistorialArete", back_populates="animal", cascade="all, delete-orphan", order_by="desc(HistorialArete.fecha_cambio)")
+
+
+class PesajeGanado(Base):
+    __tablename__ = "pesaje_ganado"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    animal_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("animal.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    fecha_pesaje: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    peso: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
+    variacion_anterior: Mapped[Optional[Decimal]] = mapped_column(Numeric(10, 2), nullable=True)
+    responsable: Mapped[Optional[str]] = mapped_column(String(150), nullable=True)
+    observaciones: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    usuario_ci: Mapped[Optional[str]] = mapped_column(
+        String(30), ForeignKey("usuario.ci", ondelete="SET NULL"), nullable=True, index=True
+    )
+    fecha_creacion: Mapped[datetime] = mapped_column(DateTime, default=get_bolivia_now, nullable=False)
+
+    # Relaciones
+    animal = relationship("Animal", back_populates="pesajes")
+    usuario = relationship("Usuario", lazy="joined")
+
+
+class HistorialArete(Base):
+    __tablename__ = "historial_arete"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    animal_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("animal.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    arete_anterior: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    arete_nuevo: Mapped[str] = mapped_column(String(50), nullable=False)
+    fecha_cambio: Mapped[date] = mapped_column(Date, default=get_bolivia_date, nullable=False, index=True)
+    motivo: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    usuario_ci: Mapped[Optional[str]] = mapped_column(
+        String(30), ForeignKey("usuario.ci", ondelete="SET NULL"), nullable=True, index=True
+    )
+    fecha_creacion: Mapped[datetime] = mapped_column(DateTime, default=get_bolivia_now, nullable=False)
+
+    # Relaciones
+    animal = relationship("Animal", back_populates="historial_aretes")
+    usuario = relationship("Usuario", lazy="joined")
+
+
+class NacimientoGanado(Base):
+    __tablename__ = "nacimiento_ganado"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    numero_comprobante: Mapped[str] = mapped_column(String(50), unique=True, nullable=False, index=True)
+    madre_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("animal.id", ondelete="RESTRICT"), nullable=False, index=True
+    )
+    padre_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("animal.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    cria_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("animal.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    fecha_nacimiento: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    sexo_cria: Mapped[str] = mapped_column(String(20), nullable=False)
+    peso_nacimiento: Mapped[Optional[Decimal]] = mapped_column(Numeric(10, 2), nullable=True)
+    tipo_parto: Mapped[str] = mapped_column(String(40), default="UNICO", nullable=False)  # UNICO, GEMELAR, DISTOCICO
+    estado_nacimiento: Mapped[str] = mapped_column(String(30), default="VIVO", nullable=False)  # VIVO, MUERTO_AL_NACER
+    numero_arete_cria: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    tipo_animal: Mapped[str] = mapped_column(String(50), default="Bovino", nullable=False)
+    raza_cria: Mapped[str] = mapped_column(String(100), default="Nelore", nullable=False)
+    ubicacion: Mapped[str] = mapped_column(String(100), nullable=False)
+    observaciones: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    usuario_ci: Mapped[Optional[str]] = mapped_column(
+        String(30), ForeignKey("usuario.ci", ondelete="SET NULL"), nullable=True, index=True
+    )
+    fecha_creacion: Mapped[datetime] = mapped_column(DateTime, default=get_bolivia_now, nullable=False)
+
+    # Relaciones
+    madre = relationship("Animal", foreign_keys=[madre_id], lazy="selectin")
+    padre = relationship("Animal", foreign_keys=[padre_id], lazy="selectin")
+    cria = relationship("Animal", foreign_keys=[cria_id], lazy="selectin")
+    usuario = relationship("Usuario", lazy="selectin")
+
+
+class CompraGanado(Base):
+    __tablename__ = "compra_ganado"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    numero_comprobante: Mapped[str] = mapped_column(String(50), unique=True, nullable=False, index=True)
+    proveedor: Mapped[str] = mapped_column(String(150), nullable=False, index=True)
+    fecha_compra: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    documento_referencia: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    costos_adicionales: Mapped[Decimal] = mapped_column(Numeric(14, 2), default=Decimal("0.00"), nullable=False)
+    transporte: Mapped[Decimal] = mapped_column(Numeric(14, 2), default=Decimal("0.00"), nullable=False)
+    monto_total: Mapped[Decimal] = mapped_column(Numeric(14, 2), default=Decimal("0.00"), nullable=False)
+    observaciones: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    estado: Mapped[str] = mapped_column(String(30), default="CONFIRMADO", nullable=False, index=True)  # CONFIRMADO, ANULADO
+    motivo_anulacion: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    usuario_ci: Mapped[Optional[str]] = mapped_column(
+        String(30), ForeignKey("usuario.ci", ondelete="SET NULL"), nullable=True, index=True
+    )
+    fecha_creacion: Mapped[datetime] = mapped_column(DateTime, default=get_bolivia_now, nullable=False)
+
+    # Relaciones
+    detalles = relationship("CompraGanadoDetalle", back_populates="compra", cascade="all, delete-orphan", lazy="joined")
+    usuario = relationship("Usuario", lazy="joined")
+
+
+class CompraGanadoDetalle(Base):
+    __tablename__ = "compra_ganado_detalle"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    compra_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("compra_ganado.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    animal_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("animal.id", ondelete="RESTRICT"), nullable=False, index=True
+    )
+    modalidad_precio: Mapped[str] = mapped_column(String(30), default="POR_ANIMAL", nullable=False)  # POR_ANIMAL, POR_KG
+    precio_unitario: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    peso_compra: Mapped[Optional[Decimal]] = mapped_column(Numeric(10, 2), nullable=True)
+    costo_total: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)
+
+    # Relaciones
+    compra = relationship("CompraGanado", back_populates="detalles")
+    animal = relationship("Animal", lazy="selectin")
+
+
+class VentaGanado(Base):
+    __tablename__ = "venta_ganado"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    numero_comprobante: Mapped[str] = mapped_column(String(50), unique=True, nullable=False, index=True)
+    cliente: Mapped[str] = mapped_column(String(150), nullable=False, index=True)
+    fecha_venta: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    modalidad_venta: Mapped[str] = mapped_column(String(30), default="POR_ANIMAL", nullable=False)  # POR_ANIMAL, POR_KG
+    metodo_pago: Mapped[str] = mapped_column(String(50), default="EFECTIVO", nullable=False)
+    transporte: Mapped[Optional[str]] = mapped_column(String(150), nullable=True)
+    descuentos: Mapped[Decimal] = mapped_column(Numeric(14, 2), default=Decimal("0.00"), nullable=False)
+    monto_total: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)
+    documento_referencia: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    observaciones: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    estado: Mapped[str] = mapped_column(String(30), default="CONFIRMADO", nullable=False, index=True)  # CONFIRMADO, ANULADO
+    motivo_anulacion: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    usuario_ci: Mapped[Optional[str]] = mapped_column(
+        String(30), ForeignKey("usuario.ci", ondelete="SET NULL"), nullable=True, index=True
+    )
+    fecha_creacion: Mapped[datetime] = mapped_column(DateTime, default=get_bolivia_now, nullable=False)
+
+    # Relaciones
+    detalles = relationship("VentaGanadoDetalle", back_populates="venta", cascade="all, delete-orphan", lazy="joined")
+    usuario = relationship("Usuario", lazy="joined")
+
+
+class VentaGanadoDetalle(Base):
+    __tablename__ = "venta_ganado_detalle"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    venta_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("venta_ganado.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    animal_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("animal.id", ondelete="RESTRICT"), nullable=False, index=True
+    )
+    numero_arete: Mapped[str] = mapped_column(String(50), nullable=False)  # Arete capturado al vender
+    modalidad_precio: Mapped[str] = mapped_column(String(30), default="POR_ANIMAL", nullable=False)
+    peso_venta: Mapped[Optional[Decimal]] = mapped_column(Numeric(10, 2), nullable=True)
+    precio_unitario: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    subtotal: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)
+
+    # Relaciones
+    venta = relationship("VentaGanado", back_populates="detalles")
+    animal = relationship("Animal", lazy="selectin")
+
+
+class BajaGanado(Base):
+    __tablename__ = "baja_ganado"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    numero_comprobante: Mapped[str] = mapped_column(String(50), unique=True, nullable=False, index=True)
+    animal_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("animal.id", ondelete="RESTRICT"), nullable=False, index=True
+    )
+    numero_arete: Mapped[str] = mapped_column(String(50), nullable=False)  # Arete capturado al dar de baja
+    fecha_baja: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    motivo: Mapped[str] = mapped_column(String(50), nullable=False, index=True)  # FALLECIMIENTO, ROBO, PERDIDA, SACRIFICIO, DESCARTE, OTRO
+    estado_animal_resultante: Mapped[str] = mapped_column(String(30), nullable=False)
+    responsable: Mapped[Optional[str]] = mapped_column(String(150), nullable=True)
+    documento_adjunto: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    observaciones: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    estado: Mapped[str] = mapped_column(String(30), default="CONFIRMADO", nullable=False, index=True)  # CONFIRMADO, ANULADO
+    motivo_anulacion: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    usuario_ci: Mapped[Optional[str]] = mapped_column(
+        String(30), ForeignKey("usuario.ci", ondelete="SET NULL"), nullable=True, index=True
+    )
+    fecha_creacion: Mapped[datetime] = mapped_column(DateTime, default=get_bolivia_now, nullable=False)
+
+    # Relaciones
+    animal = relationship("Animal", lazy="selectin")
+    usuario = relationship("Usuario", lazy="selectin")
+
+
+class Potrero(Base):
+    __tablename__ = "potrero"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    codigo: Mapped[str] = mapped_column(String(50), unique=True, nullable=False, index=True)
+    nombre: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    tipo_area: Mapped[str] = mapped_column(String(40), default="POTRERO", nullable=False, index=True)  # POTRERO, CORRAL, CUARENTENA, MATERNIDAD, OTRO
+    superficie_ha: Mapped[Optional[Decimal]] = mapped_column(Numeric(10, 2), nullable=True)
+    capacidad_cabezas: Mapped[int] = mapped_column(Integer, default=50, nullable=False)
+    color_hex: Mapped[str] = mapped_column(String(20), default="#10b981", nullable=False)
+    poligono_geojson: Mapped[str] = mapped_column(Text, nullable=False)
+    centroide_lat: Mapped[Optional[Decimal]] = mapped_column(Numeric(10, 6), nullable=True)
+    centroide_lng: Mapped[Optional[Decimal]] = mapped_column(Numeric(10, 6), nullable=True)
+    estado: Mapped[str] = mapped_column(String(20), default="ACTIVO", nullable=False, index=True)  # ACTIVO, INACTIVO
+    observaciones: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    usuario_registro_ci: Mapped[Optional[str]] = mapped_column(
+        String(30), ForeignKey("usuario.ci", ondelete="SET NULL"), nullable=True, index=True
+    )
+    fecha_creacion: Mapped[datetime] = mapped_column(DateTime, default=get_bolivia_now, nullable=False)
+    fecha_actualizacion: Mapped[datetime] = mapped_column(
+        DateTime, default=get_bolivia_now, onupdate=get_bolivia_now, nullable=False
+    )
+
+    # Relaciones
+    usuario_registro = relationship("Usuario", lazy="selectin")
+    animales = relationship("Animal", back_populates="potrero", foreign_keys="Animal.potrero_id")
+
+
+class MovimientoGanado(Base):
+    __tablename__ = "movimiento_ganado"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    numero_comprobante: Mapped[str] = mapped_column(String(50), unique=True, nullable=False, index=True)
+    fecha_movimiento: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    potrero_origen_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("potrero.id", ondelete="RESTRICT"), nullable=False, index=True
+    )
+    potrero_destino_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("potrero.id", ondelete="RESTRICT"), nullable=False, index=True
+    )
+    tipo_operacion: Mapped[str] = mapped_column(String(30), default="MANUAL", nullable=False)  # ARRASTRE_MAPA, MANUAL_INDIVIDUAL, MANUAL_GRUPAL
+    cantidad_animales: Mapped[int] = mapped_column(Integer, nullable=False)
+    motivo: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    responsable: Mapped[Optional[str]] = mapped_column(String(150), nullable=True)
+    observaciones: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    estado: Mapped[str] = mapped_column(String(20), default="CONFIRMADO", nullable=False, index=True)  # CONFIRMADO, ANULADO
+    motivo_anulacion: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    usuario_ci: Mapped[Optional[str]] = mapped_column(
+        String(30), ForeignKey("usuario.ci", ondelete="SET NULL"), nullable=True, index=True
+    )
+    fecha_creacion: Mapped[datetime] = mapped_column(DateTime, default=get_bolivia_now, nullable=False)
+
+    # Relaciones
+    potrero_origen = relationship("Potrero", foreign_keys=[potrero_origen_id], lazy="selectin")
+    potrero_destino = relationship("Potrero", foreign_keys=[potrero_destino_id], lazy="selectin")
+    usuario = relationship("Usuario", lazy="selectin")
+    detalles = relationship("MovimientoGanadoDetalle", back_populates="movimiento", cascade="all, delete-orphan", lazy="selectin")
+
+
+class MovimientoGanadoDetalle(Base):
+    __tablename__ = "movimiento_ganado_detalle"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    movimiento_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("movimiento_ganado.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    animal_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("animal.id", ondelete="RESTRICT"), nullable=False, index=True
+    )
+    numero_arete: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    codigo_interno: Mapped[str] = mapped_column(String(50), nullable=False)
+    potrero_origen_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    potrero_destino_id: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    # Relaciones
+    movimiento = relationship("MovimientoGanado", back_populates="detalles")
+    animal = relationship("Animal", lazy="selectin")
+
+
+# =========================================================================
+# MÓDULO DE GANADERÍA (SPEC-003 — SANIDAD, TRATAMIENTOS Y VACUNACIÓN)
+# =========================================================================
+
+class SanidadVacuna(Base):
+    __tablename__ = "sanidad_vacuna"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    codigo: Mapped[str] = mapped_column(String(50), unique=True, nullable=False, index=True)
+    nombre: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    nombre_comercial: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    enfermedad_objetivo: Mapped[str] = mapped_column(String(150), nullable=False)
+    especie: Mapped[str] = mapped_column(String(50), default="BOVINO", nullable=False)
+    dosis_defecto_ml: Mapped[Optional[Decimal]] = mapped_column(Numeric(6, 2), nullable=True)
+    via_administracion: Mapped[str] = mapped_column(String(50), default="SUBCUTANEA", nullable=False)
+    dias_retiro_carne: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    dias_retiro_leche: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    requiere_refuerzo: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    dias_refuerzo: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    estado: Mapped[str] = mapped_column(String(20), default="ACTIVO", nullable=False, index=True)
+    observaciones: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    fecha_creacion: Mapped[datetime] = mapped_column(DateTime, default=get_bolivia_now, nullable=False)
+
+
+class SanidadMedicamento(Base):
+    __tablename__ = "sanidad_medicamento"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    codigo: Mapped[str] = mapped_column(String(50), unique=True, nullable=False, index=True)
+    nombre: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    nombre_comercial: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    tipo_farmaco: Mapped[str] = mapped_column(String(50), default="ANTIBIOTICO", nullable=False, index=True)
+    principio_activo: Mapped[Optional[str]] = mapped_column(String(150), nullable=True)
+    concentracion: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    unidad_medida: Mapped[str] = mapped_column(String(20), default="ML", nullable=False)
+    via_administracion: Mapped[str] = mapped_column(String(50), default="INTRAMUSCULAR", nullable=False)
+    dias_retiro_carne: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    dias_retiro_leche: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    almacen_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("almacen.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    estado: Mapped[str] = mapped_column(String(20), default="ACTIVO", nullable=False, index=True)
+    observaciones: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    fecha_creacion: Mapped[datetime] = mapped_column(DateTime, default=get_bolivia_now, nullable=False)
+
+    # Relación
+    almacen = relationship("Almacen", lazy="selectin")
+
+
+class SanidadOperacion(Base):
+    __tablename__ = "sanidad_operacion"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    numero_comprobante: Mapped[str] = mapped_column(String(50), unique=True, nullable=False, index=True)
+    tipo_operacion: Mapped[str] = mapped_column(String(40), nullable=False, index=True)  # VACUNACION_INDIVIDUAL, VACUNACION_GRUPAL, TRATAMIENTO_INDIVIDUAL, TRATAMIENTO_GRUPAL, PREVENTIVO
+    fecha_aplicacion: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    fecha_programada: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    potrero_origen_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("potrero.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    vacuna_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("sanidad_vacuna.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    medicamento_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("sanidad_medicamento.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    lote_producto: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    fecha_vencimiento_producto: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    diagnostico: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    sintomas: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    cantidad_animales: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    trabajador_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("trabajador.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    veterinario_nombre: Mapped[Optional[str]] = mapped_column(String(150), nullable=True)
+    costo_total_estimado: Mapped[Optional[Decimal]] = mapped_column(Numeric(12, 2), nullable=True)
+    descontar_inventario: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    movimiento_almacen_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("movimiento_almacen.id", ondelete="SET NULL"), nullable=True
+    )
+    traslado_cuarentena_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("movimiento_ganado.id", ondelete="SET NULL"), nullable=True
+    )
+    estado: Mapped[str] = mapped_column(String(20), default="EJECUTADO", nullable=False, index=True)  # EJECUTADO, PROGRAMADO, ANULADO
+    motivo_anulacion: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    observaciones: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    usuario_ci: Mapped[Optional[str]] = mapped_column(
+        String(30), ForeignKey("usuario.ci", ondelete="SET NULL"), nullable=True, index=True
+    )
+    fecha_creacion: Mapped[datetime] = mapped_column(DateTime, default=get_bolivia_now, nullable=False)
+
+    # Relaciones
+    detalles = relationship("SanidadOperacionDetalle", back_populates="operacion", cascade="all, delete-orphan", lazy="selectin")
+    vacuna = relationship("SanidadVacuna", lazy="selectin")
+    medicamento = relationship("SanidadMedicamento", lazy="selectin")
+    potrero_origen = relationship("Potrero", foreign_keys=[potrero_origen_id], lazy="selectin")
+    trabajador = relationship("Trabajador", foreign_keys=[trabajador_id], lazy="selectin")
+    usuario = relationship("Usuario", foreign_keys=[usuario_ci], lazy="selectin")
+
+
+class SanidadOperacionDetalle(Base):
+    __tablename__ = "sanidad_operacion_detalle"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    operacion_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("sanidad_operacion.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    animal_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("animal.id", ondelete="RESTRICT"), nullable=False, index=True
+    )
+    numero_arete: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    codigo_interno: Mapped[str] = mapped_column(String(50), nullable=False)
+    dosis_aplicada: Mapped[Optional[Decimal]] = mapped_column(Numeric(6, 2), nullable=True)
+    unidad_medida: Mapped[str] = mapped_column(String(20), default="ML", nullable=False)
+    fecha_fin_retiro_carne: Mapped[Optional[date]] = mapped_column(Date, nullable=True, index=True)
+    fecha_fin_retiro_leche: Mapped[Optional[date]] = mapped_column(Date, nullable=True, index=True)
+    estado_aplicacion: Mapped[str] = mapped_column(String(20), default="APLICADO", nullable=False, index=True)  # APLICADO, PENDIENTE, RECHAZADO
+    reaccion_adversa: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    observaciones: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    # Relaciones
+    operacion = relationship("SanidadOperacion", back_populates="detalles")
+    animal = relationship("Animal", lazy="selectin")
+    seguimientos = relationship(
+        "SanidadSeguimiento",
+        back_populates="detalle",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+        order_by="desc(SanidadSeguimiento.fecha_seguimiento)"
+    )
+
+
+class SanidadSeguimiento(Base):
+    __tablename__ = "sanidad_seguimiento"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    detalle_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("sanidad_operacion_detalle.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    fecha_seguimiento: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    estado_salud: Mapped[str] = mapped_column(String(30), default="FAVORABLE", nullable=False)  # FAVORABLE, ESTABLE, DESFAVORABLE, RECUPERADO
+    temperatura_c: Mapped[Optional[Decimal]] = mapped_column(Numeric(4, 1), nullable=True)
+    peso_actual_kg: Mapped[Optional[Decimal]] = mapped_column(Numeric(10, 2), nullable=True)
+    observaciones: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    usuario_ci: Mapped[Optional[str]] = mapped_column(
+        String(30), ForeignKey("usuario.ci", ondelete="SET NULL"), nullable=True, index=True
+    )
+    fecha_creacion: Mapped[datetime] = mapped_column(DateTime, default=get_bolivia_now, nullable=False)
+
+    # Relaciones
+    detalle = relationship("SanidadOperacionDetalle", back_populates="seguimientos")
+    usuario = relationship("Usuario", foreign_keys=[usuario_ci], lazy="selectin")
+
+
+# =========================================================================
+# MÓDULO DE GESTIÓN AGRÍCOLA (SPEC-004)
+# =========================================================================
+
+class AreaAgricola(Base):
+    __tablename__ = "area_agricola"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    codigo: Mapped[str] = mapped_column(String(50), unique=True, nullable=False, index=True)  # AGR-0001
+    nombre: Mapped[str] = mapped_column(String(100), nullable=False, index=True)  # Ej: Parcela Norte 1
+    superficie_ha: Mapped[Decimal] = mapped_column(Numeric(10, 2), default=Decimal("0.00"), nullable=False)
+    poligono_geojson: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # GeoJSON string [[lat, lng], ...]
+    centroide_lat: Mapped[Optional[Decimal]] = mapped_column(Numeric(10, 6), nullable=True)
+    centroide_lng: Mapped[Optional[Decimal]] = mapped_column(Numeric(10, 6), nullable=True)
+    color_hex: Mapped[str] = mapped_column(String(20), default="#10B981", nullable=False)
+    estado: Mapped[str] = mapped_column(String(20), default="ACTIVO", nullable=False, index=True)  # ACTIVO, INACTIVO
+    observaciones: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    fecha_creacion: Mapped[datetime] = mapped_column(DateTime, default=get_bolivia_now, nullable=False)
+    fecha_actualizacion: Mapped[datetime] = mapped_column(
+        DateTime, default=get_bolivia_now, onupdate=get_bolivia_now, nullable=False
+    )
+
+    # Relaciones
+    ciclos = relationship(
+        "CicloAgricola",
+        back_populates="area",
+        cascade="all, delete-orphan",
+        order_by="desc(CicloAgricola.fecha_inicio)",
+        lazy="selectin"
+    )
+
+    @property
+    def ciclo_activo(self):
+        for c in self.ciclos:
+            if c.estado == "ACTIVO":
+                return c
+        return None
+
+
+class CicloAgricola(Base):
+    __tablename__ = "ciclo_agricola"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    area_agricola_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("area_agricola.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    cultivo: Mapped[str] = mapped_column(String(80), nullable=False, index=True)  # Soya, Maíz, Sorgo, Trigo, etc.
+    variedad_hibrido: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)  # Ej: Don Mario 68I68
+    campana: Mapped[str] = mapped_column(String(80), nullable=False, index=True)  # Ej: Verano 2025/2026, Invierno 2026
+    fecha_inicio: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    superficie_utilizada_ha: Mapped[Decimal] = mapped_column(Numeric(10, 2), default=Decimal("0.00"), nullable=False)
+    fase_actual: Mapped[str] = mapped_column(
+        String(30), default="PREPARACION", nullable=False, index=True
+    )  # PREPARACION, SIEMBRA, MANEJO, COSECHA, FINALIZADO
+    estado: Mapped[str] = mapped_column(
+        String(20), default="ACTIVO", nullable=False, index=True
+    )  # ACTIVO, FINALIZADO, CANCELADO
+    fecha_cierre: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    total_cosechado: Mapped[Optional[Decimal]] = mapped_column(Numeric(12, 2), nullable=True)
+    unidad_cosecha: Mapped[str] = mapped_column(String(20), default="TN", nullable=False)  # TN, KG, QQ
+    rendimiento_promedio_ha: Mapped[Optional[Decimal]] = mapped_column(Numeric(10, 2), nullable=True)  # Ej: 3.45 TN/ha
+    observaciones: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    usuario_ci: Mapped[Optional[str]] = mapped_column(
+        String(30), ForeignKey("usuario.ci", ondelete="SET NULL"), nullable=True, index=True
+    )
+    fecha_creacion: Mapped[datetime] = mapped_column(DateTime, default=get_bolivia_now, nullable=False)
+    fecha_actualizacion: Mapped[datetime] = mapped_column(
+        DateTime, default=get_bolivia_now, onupdate=get_bolivia_now, nullable=False
+    )
+
+    # Relaciones
+    area = relationship("AreaAgricola", back_populates="ciclos")
+    usuario = relationship("Usuario", foreign_keys=[usuario_ci], lazy="selectin")
+    actividades_preparacion = relationship(
+        "ActividadPreparacion",
+        back_populates="ciclo",
+        cascade="all, delete-orphan",
+        order_by="ActividadPreparacion.fecha",
+        lazy="selectin"
+    )
+    actividades_manejo = relationship(
+        "ActividadManejo",
+        back_populates="ciclo",
+        cascade="all, delete-orphan",
+        order_by="desc(ActividadManejo.fecha)",
+        lazy="selectin"
+    )
+    cosechas = relationship(
+        "CosechaRegistro",
+        back_populates="ciclo",
+        cascade="all, delete-orphan",
+        order_by="desc(CosechaRegistro.fecha_cosecha)",
+        lazy="selectin"
+    )
+
+
+class ActividadPreparacion(Base):
+    __tablename__ = "actividad_preparacion"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    ciclo_agricola_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("ciclo_agricola.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    tipo_actividad: Mapped[str] = mapped_column(String(50), nullable=False)  # ARADO, RASTRA, ROLO, SUBSOLADO, OTRO
+    fecha: Mapped[date] = mapped_column(Date, nullable=False)
+    completada: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    observaciones: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    fecha_creacion: Mapped[datetime] = mapped_column(DateTime, default=get_bolivia_now, nullable=False)
+
+    ciclo = relationship("CicloAgricola", back_populates="actividades_preparacion")
+
+
+class ActividadManejo(Base):
+    __tablename__ = "actividad_manejo"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    ciclo_agricola_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("ciclo_agricola.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    fecha: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    tipo_actividad: Mapped[str] = mapped_column(
+        String(50), nullable=False, index=True
+    )  # FUMIGACION, HERBICIDA, INSECTICIDA, FUNGICIDA, FERTILIZACION, APLICACION_FOLIAR, OTRO
+    producto_utilizado: Mapped[str] = mapped_column(String(120), nullable=False)
+    cantidad_aplicada: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
+    unidad_medida: Mapped[str] = mapped_column(String(20), default="LT", nullable=False)  # LT, KG, DOSIS
+    dosis_por_ha: Mapped[Optional[Decimal]] = mapped_column(Numeric(10, 2), nullable=True)
+    superficie_aplicada_ha: Mapped[Optional[Decimal]] = mapped_column(Numeric(10, 2), nullable=True)
+    observaciones: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    fecha_creacion: Mapped[datetime] = mapped_column(DateTime, default=get_bolivia_now, nullable=False)
+
+    ciclo = relationship("CicloAgricola", back_populates="actividades_manejo")
+
+
+class CosechaRegistro(Base):
+    __tablename__ = "cosecha_registro"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    ciclo_agricola_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("ciclo_agricola.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    fecha_cosecha: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    fecha_fin_cosecha: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    cultivo_cosechado: Mapped[str] = mapped_column(String(80), nullable=False)
+    superficie_cosechada_ha: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
+    cantidad_producida: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    unidad_medida: Mapped[str] = mapped_column(String(20), default="TN", nullable=False)  # TN, KG, QQ
+    rendimiento_calculado_ha: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
+    observaciones: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    fecha_creacion: Mapped[datetime] = mapped_column(DateTime, default=get_bolivia_now, nullable=False)
+
+    ciclo = relationship("CicloAgricola", back_populates="cosechas")
+
+
+
+

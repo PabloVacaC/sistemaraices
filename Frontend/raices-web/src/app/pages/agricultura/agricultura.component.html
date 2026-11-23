@@ -1,0 +1,1073 @@
+<div class="agricultura-page-container">
+  <!-- ENCABEZADO PRINCIPAL DEL MÓDULO -->
+  <header class="module-header animate-fade-in">
+    <div class="header-left">
+      <div class="module-tag">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M7 20h10"/>
+          <path d="M10 20c0-3.5 1.5-6.5 4-8.5"/>
+          <path d="M2 13c3.5 0 6.5-1.5 8.5-4"/>
+          <path d="M14 11.5c-2-2-2-5.5 0-7.5s5.5-2 7.5 0-2 7.5-7.5 7.5z"/>
+          <path d="M5.5 14c2-2 5.5-2 7.5 0s2 5.5 0 7.5-7.5-2-7.5-7.5z"/>
+        </svg>
+        <span>MÓDULO DE AGRICULTURA</span>
+      </div>
+      <h1 class="page-title">Gestión de Parcelas y Ciclos Agrícolas</h1>
+      <p class="page-subtitle">
+        Cartografía satelital interactiva, delimitación poligonal de áreas y control de campañas de cultivo.
+      </p>
+    </div>
+
+    <div class="header-actions">
+      @if (!modoDibujoActivo()) {
+        <button class="btn btn-primary" (click)="iniciarModoDibujo()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="12 2 2 7 12 12 22 7 12 2"/>
+            <polyline points="2 17 12 22 22 17"/>
+            <polyline points="2 12 12 17 22 12"/>
+          </svg>
+          <span>+ Delimitar Parcela Agrícola</span>
+        </button>
+      }
+    </div>
+  </header>
+
+  <!-- TARJETAS DE INDICADORES (KPIS) -->
+  <section class="kpis-grid animate-fade-in">
+    <div class="kpi-card">
+      <div class="kpi-icon icon-areas">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/>
+        </svg>
+      </div>
+      <div class="kpi-data">
+        <span class="kpi-value">{{ kpis()?.total_areas || areas().length }}</span>
+        <span class="kpi-label">Parcelas Delimitadas</span>
+        <span class="kpi-subtext">{{ kpis()?.superficie_total_ha || 0 }} ha totales</span>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon icon-ciclos">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+        </svg>
+      </div>
+      <div class="kpi-data">
+        <span class="kpi-value font-emerald">{{ kpis()?.ciclos_activos || 0 }}</span>
+        <span class="kpi-label">Ciclos Activos</span>
+        <span class="kpi-subtext">{{ kpis()?.hectareas_en_produccion || 0 }} ha en producción</span>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon icon-fases">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <polyline points="12 6 12 12 14 14"/>
+        </svg>
+      </div>
+      <div class="kpi-data">
+        <div class="fases-pills">
+          <span class="fase-tag prep">Prep: {{ kpis()?.distribucion_fases?.['PREPARACION'] || 0 }}</span>
+          <span class="fase-tag man">Manejo: {{ kpis()?.distribucion_fases?.['MANEJO'] || 0 }}</span>
+          <span class="fase-tag cos">Cosecha: {{ kpis()?.distribucion_fases?.['COSECHA'] || 0 }}</span>
+        </div>
+        <span class="kpi-label">Distribución de Fases</span>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon icon-rendimiento">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="20" x2="18" y2="10"/>
+          <line x1="12" y1="20" x2="12" y2="4"/>
+          <line x1="6" y1="20" x2="6" y2="14"/>
+        </svg>
+      </div>
+      <div class="kpi-data">
+        <span class="kpi-value font-purple">
+          {{ kpis()?.rendimiento_promedio_ultimas_campanas || 0 }}
+          <small>TN/ha</small>
+        </span>
+        <span class="kpi-label">Rendimiento Promedio</span>
+        <span class="kpi-subtext">Campañas consolidadas</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONTENEDOR PRINCIPAL: MAPA SATELITAL Y DRAWER -->
+  <div class="map-layout-wrapper">
+    <!-- BARRA FLOTANTE DE MODO DIBUJO -->
+    @if (modoDibujoActivo()) {
+      <div class="drawing-floating-bar animate-scale-up">
+        <div class="bar-indicator">
+          <span class="pulse-dot"></span>
+          <div>
+            <strong>Modo Delimitación de Parcela Activo</strong>
+            <span>Haga clic en el mapa satelital para trazar vértices (Marcados: {{ verticesDibujados().length }})</span>
+          </div>
+        </div>
+
+        <div class="bar-actions">
+          <button
+            type="button"
+            class="btn btn-sm btn-outline-light"
+            (click)="deshacerUltimoVertice()"
+            [disabled]="verticesDibujados().length === 0"
+          >
+            ↩ Deshacer vértice
+          </button>
+          <button
+            type="button"
+            class="btn btn-sm btn-success"
+            (click)="finalizarTrazadoYCompletarFormulario()"
+            [disabled]="verticesDibujados().length < 3"
+          >
+            ✓ Finalizar y Asignar Datos
+          </button>
+          <button type="button" class="btn btn-sm btn-danger" (click)="cancelarDibujo()">
+            ✕ Cancelar
+          </button>
+        </div>
+      </div>
+    }
+
+    <!-- MAPA SATELITAL LEAFLET -->
+    <div class="map-container-relative">
+      <div id="mapa-agricultura" class="leaflet-map-canvas"></div>
+
+      <!-- SELECTOR DE CAPA SATELITAL Y LEYENDA FLOTANTE -->
+      <div class="map-floating-controls">
+        <div class="layer-switcher-btn-group">
+          <button
+            class="btn-layer"
+            [class.active]="capaSatelitalSeleccionada() === 'google'"
+            (click)="cambiarCapaSatelital('google')"
+          >
+            Google Satélite
+          </button>
+          <button
+            class="btn-layer"
+            [class.active]="capaSatelitalSeleccionada() === 'esri'"
+            (click)="cambiarCapaSatelital('esri')"
+          >
+            Esri Satélite
+          </button>
+        </div>
+
+        <div class="map-legend-box">
+          <span class="legend-title">Fases Agrícolas:</span>
+          <span class="legend-item"><span class="color-dot" style="background:#F59E0B"></span> Preparación</span>
+          <span class="legend-item"><span class="color-dot" style="background:#3B82F6"></span> Siembra</span>
+          <span class="legend-item"><span class="color-dot" style="background:#10B981"></span> Manejo / Fumigación</span>
+          <span class="legend-item"><span class="color-dot" style="background:#8B5CF6"></span> Cosecha</span>
+          <span class="legend-item"><span class="color-dot" style="background:#94A3B8"></span> Sin Ciclo</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- DRAWER LATERAL (OFFCANVAS) DE LA PARCELA SELECCIONADA -->
+    @if (drawerAbierto() && areaSeleccionada()) {
+      <aside class="parcela-drawer animate-slide-left">
+        <!-- CABECERA DEL DRAWER -->
+        <div class="drawer-header" [style.border-top-color]="obtenerColorPorFase(areaSeleccionada()!)">
+          <div>
+            <div class="drawer-badge-row">
+              <span class="codigo-chip">{{ areaSeleccionada()!.codigo }}</span>
+              <span
+                class="fase-badge"
+                [style.background]="obtenerColorPorFase(areaSeleccionada()!) + '20'"
+                [style.color]="obtenerColorPorFase(areaSeleccionada()!)"
+              >
+                {{ obtenerEtiquetaFase(areaSeleccionada()!) }}
+              </span>
+            </div>
+            <h2 class="drawer-title">{{ areaSeleccionada()!.nombre }}</h2>
+            <p class="drawer-subtitle">
+              Superficie: <strong>{{ areaSeleccionada()!.superficie_ha }} ha</strong>
+              @if (areaSeleccionada()!.ciclo_activo) {
+                &bull; Campaña: <strong>{{ areaSeleccionada()!.ciclo_activo!.campana }}</strong>
+              }
+            </p>
+          </div>
+          <button class="btn-close-drawer" (click)="cerrarDrawer()">&times;</button>
+        </div>
+
+        <!-- PESTAÑAS DEL DRAWER -->
+        <nav class="drawer-tabs">
+          <button
+            class="tab-btn"
+            [class.active]="tabDrawer() === 'ciclo'"
+            (click)="tabDrawer.set('ciclo')"
+          >
+            🌱 Ciclo Actual
+          </button>
+          <button
+            class="tab-btn"
+            [class.active]="tabDrawer() === 'historial'"
+            (click)="tabDrawer.set('historial')"
+          >
+            📚 Historial ({{ historialCiclos().length }})
+          </button>
+          <button
+            class="tab-btn"
+            [class.active]="tabDrawer() === 'editar'"
+            (click)="tabDrawer.set('editar')"
+          >
+            ⚙️ Parcela
+          </button>
+        </nav>
+
+        <!-- CONTENIDO PESTAÑA 1: CICLO ACTUAL -->
+        <div class="drawer-body">
+          @if (tabDrawer() === 'ciclo') {
+            @if (!areaSeleccionada()!.ciclo_activo) {
+              <!-- ESTADO SIN CICLO ACTIVO -->
+              <div class="empty-cycle-card animate-fade-in">
+                <span class="empty-icon">🌾</span>
+                <h3>Sin ciclo agrícola activo</h3>
+                <p>Esta parcela se encuentra actualmente en descanso o barbecho.</p>
+                <button class="btn btn-primary" (click)="abrirModalIniciarCiclo()">
+                  + Iniciar Ciclo Agrícola
+                </button>
+              </div>
+            } @else {
+              <!-- CICLO ACTIVO EN CURSO -->
+              <div class="active-cycle-view animate-fade-in">
+                <!-- STEPPER VISUAL DE 4 FASES -->
+                <div class="cycle-stepper">
+                  <div
+                    class="step-item"
+                    [class.active]="areaSeleccionada()!.ciclo_activo!.fase_actual === 'PREPARACION'"
+                    [class.completed]="areaSeleccionada()!.ciclo_activo!.fase_actual !== 'PREPARACION'"
+                  >
+                    <div class="step-circle">1</div>
+                    <span class="step-name">Preparación</span>
+                  </div>
+                  <div class="step-line"></div>
+
+                  <div
+                    class="step-item"
+                    [class.active]="areaSeleccionada()!.ciclo_activo!.fase_actual === 'SIEMBRA'"
+                    [class.completed]="['MANEJO', 'COSECHA', 'FINALIZADO'].includes(areaSeleccionada()!.ciclo_activo!.fase_actual)"
+                  >
+                    <div class="step-circle">2</div>
+                    <span class="step-name">Siembra</span>
+                  </div>
+                  <div class="step-line"></div>
+
+                  <div
+                    class="step-item"
+                    [class.active]="areaSeleccionada()!.ciclo_activo!.fase_actual === 'MANEJO'"
+                    [class.completed]="['COSECHA', 'FINALIZADO'].includes(areaSeleccionada()!.ciclo_activo!.fase_actual)"
+                  >
+                    <div class="step-circle">3</div>
+                    <span class="step-name">Manejo</span>
+                  </div>
+                  <div class="step-line"></div>
+
+                  <div
+                    class="step-item"
+                    [class.active]="areaSeleccionada()!.ciclo_activo!.fase_actual === 'COSECHA'"
+                    [class.completed]="areaSeleccionada()!.ciclo_activo!.fase_actual === 'FINALIZADO'"
+                  >
+                    <div class="step-circle">4</div>
+                    <span class="step-name">Cosecha</span>
+                  </div>
+                </div>
+
+                <!-- FICHA RESUMEN DEL CULTIVO -->
+                <div class="crop-info-card">
+                  <div class="crop-info-grid">
+                    <div>
+                      <span class="ci-label">CULTIVO</span>
+                      <strong class="ci-value">{{ areaSeleccionada()!.ciclo_activo!.cultivo }}</strong>
+                    </div>
+                    <div>
+                      <span class="ci-label">VARIEDAD / HÍBRIDO</span>
+                      <strong class="ci-value">{{ areaSeleccionada()!.ciclo_activo!.variedad_hibrido || 'No especificado' }}</strong>
+                    </div>
+                    <div>
+                      <span class="ci-label">CAMPAÑA</span>
+                      <strong class="ci-value">{{ areaSeleccionada()!.ciclo_activo!.campana }}</strong>
+                    </div>
+                    <div>
+                      <span class="ci-label">ÁREA SEMBRADA</span>
+                      <strong class="ci-value">{{ areaSeleccionada()!.ciclo_activo!.superficie_utilizada_ha }} ha</strong>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- DETALLE DE FASE 1: PREPARACIÓN -->
+                <div class="phase-section-card">
+                  <div class="phase-card-header">
+                    <h4>1. Preparación del Terreno</h4>
+                    <span class="progress-pill">
+                      {{ progresoPreparacion().completadas }} de {{ progresoPreparacion().total }} labores
+                    </span>
+                  </div>
+
+                  <div class="tasks-checklist">
+                    @for (act of areaSeleccionada()!.ciclo_activo!.actividades_preparacion; track act.id) {
+                      <div class="task-checklist-item" [class.is-done]="act.completada">
+                        <label class="task-checkbox-label">
+                          <input
+                            type="checkbox"
+                            [checked]="act.completada"
+                            (change)="toggleActividadPreparacion(act)"
+                          />
+                          <span class="task-name">{{ act.tipo_actividad }}</span>
+                        </label>
+                        <span class="task-date">{{ act.fecha }}</span>
+                      </div>
+                    }
+                  </div>
+
+                  @if (areaSeleccionada()!.ciclo_activo!.fase_actual === 'PREPARACION') {
+                    <div class="phase-action-footer">
+                      <button class="btn btn-sm btn-outline-primary" (click)="abrirModalSiembra()">
+                        🌾 Pasar a Registrar Siembra
+                      </button>
+                    </div>
+                  }
+                </div>
+
+                <!-- DETALLE DE FASE 2: SIEMBRA -->
+                <div class="phase-section-card">
+                  <div class="phase-card-header">
+                    <h4>2. Siembra y Emergencia</h4>
+                    <button class="btn btn-sm btn-link" (click)="abrirModalSiembra()">
+                      Editar Siembra
+                    </button>
+                  </div>
+                  <p class="phase-subtext">
+                    Fecha de siembra: <strong>{{ areaSeleccionada()!.ciclo_activo!.fecha_inicio }}</strong> &bull;
+                    Híbrido: <strong>{{ areaSeleccionada()!.ciclo_activo!.variedad_hibrido || 'General' }}</strong>
+                  </p>
+                </div>
+
+                <!-- DETALLE DE FASE 3: FUMIGACIÓN Y MANEJO -->
+                <div class="phase-section-card">
+                  <div class="phase-card-header">
+                    <h4>3. Fumigaciones y Aplicaciones</h4>
+                    <button class="btn btn-sm btn-primary" (click)="abrirModalManejo()">
+                      + Registrar Aplicación
+                    </button>
+                  </div>
+
+                  @if (areaSeleccionada()!.ciclo_activo!.actividades_manejo.length === 0) {
+                    <p class="empty-phase-text">No hay aplicaciones registradas todavía.</p>
+                  } @else {
+                    <div class="manejo-timeline">
+                      @for (m of areaSeleccionada()!.ciclo_activo!.actividades_manejo; track m.id) {
+                        <div class="manejo-timeline-item">
+                          <div class="timeline-dot"></div>
+                          <div class="timeline-content">
+                            <div class="tc-header">
+                              <span class="tc-type badge-emerald">{{ m.tipo_actividad }}</span>
+                              <span class="tc-date">{{ m.fecha }}</span>
+                              <button
+                                class="btn-delete-tiny"
+                                (click)="eliminarManejo(m.id)"
+                                title="Eliminar registro"
+                              >
+                                &times;
+                              </button>
+                            </div>
+                            <strong class="tc-product">{{ m.producto_utilizado }}</strong>
+                            <span class="tc-dose">
+                              @if (m.dosis_por_ha) {
+                                Dosis: <strong>{{ m.dosis_por_ha }} {{ m.unidad_medida }}/ha</strong> • Total: <strong>{{ m.cantidad_aplicada }} {{ m.unidad_medida }}</strong>
+                                @if (m.superficie_aplicada_ha) {
+                                  ({{ m.superficie_aplicada_ha }} ha)
+                                }
+                              } @else {
+                                Total: <strong>{{ m.cantidad_aplicada }} {{ m.unidad_medida }}</strong>
+                              }
+                            </span>
+                            @if (m.observaciones) {
+                              <p class="tc-obs">{{ m.observaciones }}</p>
+                            }
+                          </div>
+                        </div>
+                      }
+                    </div>
+                  }
+
+                  @if (areaSeleccionada()!.ciclo_activo!.fase_actual === 'MANEJO') {
+                    <div class="phase-action-footer">
+                      <button class="btn btn-sm btn-outline-purple" (click)="abrirModalCosecha()">
+                        🚜 Iniciar Registro de Cosecha
+                      </button>
+                    </div>
+                  }
+                </div>
+
+                <!-- DETALLE DE FASE 4: COSECHA -->
+                <div class="phase-section-card">
+                  <div class="phase-card-header">
+                    <h4>4. Cosecha y Rendimiento</h4>
+                    <button class="btn btn-sm btn-purple" (click)="abrirModalCosecha()">
+                      + Registrar Cosecha
+                    </button>
+                  </div>
+
+                  @if (areaSeleccionada()!.ciclo_activo!.cosechas.length === 0) {
+                    <p class="empty-phase-text">Aún no se han registrado jornadas de cosecha.</p>
+                  } @else {
+                    <div class="cosecha-records-list">
+                      @for (c of areaSeleccionada()!.ciclo_activo!.cosechas; track c.id) {
+                        <div class="cosecha-item-card">
+                          <div class="ci-top">
+                            <span class="ci-date">📅 {{ c.fecha_cosecha }}</span>
+                            <span class="ci-yield-badge font-bold">
+                              {{ c.rendimiento_calculado_ha }} {{ c.unidad_medida }}/ha
+                            </span>
+                          </div>
+                          <div class="ci-details">
+                            <span>Superficie: <strong>{{ c.superficie_cosechada_ha }} ha</strong></span>
+                            <span>Producción: <strong>{{ c.cantidad_producida }} {{ c.unidad_medida }}</strong></span>
+                          </div>
+                          @if (c.observaciones) {
+                            <small class="text-muted">{{ c.observaciones }}</small>
+                          }
+                        </div>
+                      }
+                    </div>
+                  }
+
+                  <!-- BOTÓN DE CIERRE DE CAMPAÑA -->
+                  <div class="finalize-cycle-box">
+                    <button
+                      class="btn btn-block btn-outline-danger"
+                      (click)="modalFinalizarCicloAbierto.set(true)"
+                    >
+                      ✓ Finalizar y Cerrar Campaña Agrícola
+                    </button>
+                  </div>
+                </div>
+              </div>
+            }
+          }
+
+          <!-- CONTENIDO PESTAÑA 2: HISTORIAL DE CICLOS -->
+          @if (tabDrawer() === 'historial') {
+            <div class="historial-container animate-fade-in">
+              @if (historialCiclos().length === 0) {
+                <div class="empty-sublist">
+                  <p>No existen campañas históricas finalizadas en esta parcela.</p>
+                </div>
+              } @else {
+                <div class="historial-list">
+                  @for (c of historialCiclos(); track c.id) {
+                    <div class="historial-cycle-card" [class.is-active-flag]="c.estado === 'ACTIVO'">
+                      <div class="hc-header">
+                        <div>
+                          <strong class="hc-title">{{ c.cultivo }} &bull; {{ c.campana }}</strong>
+                          <span class="hc-variety">{{ c.variedad_hibrido || 'General' }}</span>
+                        </div>
+                        <span class="badge" [ngClass]="c.estado === 'ACTIVO' ? 'badge-success' : 'badge-light'">
+                          {{ c.estado }}
+                        </span>
+                      </div>
+
+                      <div class="hc-grid">
+                        <div>
+                          <small>Fecha Inicio</small>
+                          <span>{{ c.fecha_inicio }}</span>
+                        </div>
+                        <div>
+                          <small>Fecha Cierre</small>
+                          <span>{{ c.fecha_cierre || 'En curso' }}</span>
+                        </div>
+                        <div>
+                          <small>Superficie</small>
+                          <span>{{ c.superficie_utilizada_ha }} ha</span>
+                        </div>
+                        <div>
+                          <small>Rendimiento</small>
+                          <strong class="font-purple">
+                            {{ c.rendimiento_promedio_ha ? c.rendimiento_promedio_ha + ' ' + (c.unidad_cosecha || 'TN') + '/ha' : '---' }}
+                          </strong>
+                        </div>
+                      </div>
+
+                      @if (c.total_cosechado) {
+                        <div class="hc-footer">
+                          <span>Producción Total: <strong>{{ c.total_cosechado }} {{ c.unidad_cosecha }}</strong></span>
+                        </div>
+                      }
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          }
+
+          <!-- CONTENIDO PESTAÑA 3: FICHA DE LA PARCELA -->
+          @if (tabDrawer() === 'editar') {
+            <div class="parcela-details-view animate-fade-in">
+              <div class="details-table-card">
+                <div class="detail-row">
+                  <span class="dr-label">Código Único:</span>
+                  <span class="dr-val font-bold">{{ areaSeleccionada()!.codigo }}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="dr-label">Nombre del Lote:</span>
+                  <span class="dr-val">{{ areaSeleccionada()!.nombre }}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="dr-label">Superficie Total:</span>
+                  <span class="dr-val font-bold">{{ areaSeleccionada()!.superficie_ha }} ha</span>
+                </div>
+                <div class="detail-row">
+                  <span class="dr-label">Coordenadas Centroide:</span>
+                  <span class="dr-val">
+                    {{ areaSeleccionada()!.centroide_lat || '---' }}, {{ areaSeleccionada()!.centroide_lng || '---' }}
+                  </span>
+                </div>
+                <div class="detail-row">
+                  <span class="dr-label">Observaciones:</span>
+                  <span class="dr-val">{{ areaSeleccionada()!.observaciones || 'Sin observaciones' }}</span>
+                </div>
+              </div>
+
+              <div class="drawer-action-buttons">
+                <button class="btn btn-outline-primary" (click)="abrirEditarArea()">
+                  ✏️ Editar Datos de Parcela
+                </button>
+                <button class="btn btn-outline-danger" (click)="modalEliminarAreaAbierto.set(true)">
+                  🗑️ Desactivar Parcela
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+      </aside>
+    }
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- MODALES DE FORMULARIO                                                 -->
+  <!-- ===================================================================== -->
+
+  <!-- MODAL: CREAR NUEVA PARCELA AGRÍCOLA -->
+  @if (modalCrearAreaAbierto()) {
+    <div class="modal-backdrop animate-fade-in">
+      <div class="modal-dialog animate-scale-up">
+        <div class="modal-header">
+          <h3 class="modal-title">🌾 Registrar Nueva Parcela Agrícola</h3>
+          <button class="btn-close" (click)="modalCrearAreaAbierto.set(false)">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Nombre o Identificador del Lote *</label>
+            <input
+              type="text"
+              class="form-control"
+              placeholder="Ej: Parcela Norte 1, Lote Soja A..."
+              [(ngModel)]="areaForm.nombre"
+            />
+          </div>
+
+          <div class="form-group">
+            <label>Superficie Delimitada (Calculada automáticamente)</label>
+            <div class="input-with-addon">
+              <input
+                type="number"
+                step="0.01"
+                class="form-control"
+                [(ngModel)]="areaForm.superficie_ha"
+              />
+              <span class="input-addon">Hectáreas (ha)</span>
+            </div>
+            <small class="text-muted">Calculada automáticamente mediante geometría geodésica WGS84.</small>
+          </div>
+
+          <div class="form-group">
+            <label>Observaciones del Suelo o Lote</label>
+            <textarea
+              class="form-control"
+              rows="3"
+              placeholder="Ej: Suelo franco, curvas de nivel, drenaje natural..."
+              [(ngModel)]="areaForm.observaciones"
+            ></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" (click)="modalCrearAreaAbierto.set(false)">
+            Cancelar
+          </button>
+          <button class="btn btn-primary" (click)="guardarNuevaArea()" [disabled]="guardando()">
+            {{ guardando() ? 'Guardando...' : 'Guardar Parcela' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- MODAL: EDITAR PARCELA -->
+  @if (modalEditarAreaAbierto()) {
+    <div class="modal-backdrop animate-fade-in">
+      <div class="modal-dialog animate-scale-up">
+        <div class="modal-header">
+          <h3 class="modal-title">✏️ Editar Parcela Agrícola</h3>
+          <button class="btn-close" (click)="modalEditarAreaAbierto.set(false)">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Nombre del Lote *</label>
+            <input type="text" class="form-control" [(ngModel)]="areaForm.nombre" />
+          </div>
+          <div class="form-group">
+            <label>Superficie (ha)</label>
+            <input type="number" step="0.01" class="form-control" [(ngModel)]="areaForm.superficie_ha" />
+          </div>
+          <div class="form-group">
+            <label>Observaciones</label>
+            <textarea class="form-control" rows="3" [(ngModel)]="areaForm.observaciones"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" (click)="modalEditarAreaAbierto.set(false)">
+            Cancelar
+          </button>
+          <button class="btn btn-primary" (click)="guardarEdicionArea()" [disabled]="guardando()">
+            Guardar Cambios
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- MODAL: INICIAR CICLO AGRÍCOLA -->
+  @if (modalIniciarCicloAbierto()) {
+    <div class="modal-backdrop animate-fade-in">
+      <div class="modal-dialog animate-scale-up">
+        <div class="modal-header">
+          <h3 class="modal-title">🌱 Iniciar Campaña / Ciclo Agrícola</h3>
+          <button class="btn-close" (click)="modalIniciarCicloAbierto.set(false)">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Cultivo *</label>
+            <select class="form-control" [(ngModel)]="cicloForm.cultivo">
+              @for (c of cultivosDisponibles; track c) {
+                <option [value]="c">{{ c }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Variedad o Híbrido</label>
+            <input
+              type="text"
+              class="form-control"
+              placeholder="Ej: Don Mario 68I68, Pioneer P30F35, Motacú..."
+              [(ngModel)]="cicloForm.variedad_hibrido"
+            />
+          </div>
+
+          <div class="form-group">
+            <label>Campaña Agrícola *</label>
+            <input
+              type="text"
+              class="form-control"
+              placeholder="Ej: Verano 2025/2026, Invierno 2026"
+              [(ngModel)]="cicloForm.campana"
+            />
+          </div>
+
+          <div class="form-group">
+            <label>Fecha de Inicio</label>
+            <input type="date" class="form-control" [(ngModel)]="cicloForm.fecha_inicio" />
+          </div>
+
+          <div class="form-group">
+            <label>Superficie a Utilizar (ha)</label>
+            <input
+              type="number"
+              step="0.01"
+              class="form-control"
+              [(ngModel)]="cicloForm.superficie_utilizada_ha"
+            />
+            <small class="text-muted">Por defecto cubre el 100% de la parcela delimitada.</small>
+          </div>
+
+          <div class="form-group">
+            <label>Observaciones Iniciales</label>
+            <textarea class="form-control" rows="2" [(ngModel)]="cicloForm.observaciones"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" (click)="modalIniciarCicloAbierto.set(false)">
+            Cancelar
+          </button>
+          <button class="btn btn-primary" (click)="guardarNuevoCiclo()" [disabled]="guardando()">
+            Iniciar Ciclo
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- MODAL: REGISTRAR SIEMBRA (FASE 2) -->
+  @if (modalSiembraAbierto()) {
+    <div class="modal-backdrop animate-fade-in">
+      <div class="modal-dialog animate-scale-up">
+        <div class="modal-header">
+          <h3 class="modal-title">🌾 Datos de Siembra (Fase 2)</h3>
+          <button class="btn-close" (click)="modalSiembraAbierto.set(false)">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Cultivo Sembrado</label>
+            <input type="text" class="form-control" [(ngModel)]="siembraForm.cultivo" />
+          </div>
+          <div class="form-group">
+            <label>Variedad o Híbrido Sembrado</label>
+            <input
+              type="text"
+              class="form-control"
+              placeholder="Ej: Don Mario 68I68"
+              [(ngModel)]="siembraForm.variedad_hibrido"
+            />
+          </div>
+          <div class="form-group">
+            <label>Fecha Efectiva de Siembra</label>
+            <input type="date" class="form-control" [(ngModel)]="siembraForm.fecha_siembra" />
+          </div>
+          <div class="form-group">
+            <label>Superficie Efectivamente Sembrada (ha)</label>
+            <input type="number" step="0.01" class="form-control" [(ngModel)]="siembraForm.superficie_sembrada_ha" />
+          </div>
+          <div class="form-group">
+            <label>Observaciones de Siembra</label>
+            <textarea
+              class="form-control"
+              rows="2"
+              placeholder="Ej: Buena humedad de cama de siembra, 14 semillas por metro..."
+              [(ngModel)]="siembraForm.observaciones"
+            ></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" (click)="modalSiembraAbierto.set(false)">
+            Cancelar
+          </button>
+          <button class="btn btn-primary" (click)="guardarSiembra()" [disabled]="guardando()">
+            Confirmar Siembra y Pasar a Manejo
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- MODAL: REGISTRAR FUMIGACIÓN / MANEJO (FASE 3) -->
+  @if (modalManejoAbierto()) {
+    <div class="modal-backdrop animate-fade-in">
+      <div class="modal-dialog animate-scale-up">
+        <div class="modal-header">
+          <h3 class="modal-title">🧪 Registrar Aplicación Fitosanitaria / Manejo</h3>
+          <button class="btn-close" (click)="modalManejoAbierto.set(false)">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Tipo de Aplicación *</label>
+            <select class="form-control" [(ngModel)]="manejoForm.tipo_actividad">
+              @for (tm of tiposManejo; track tm.valor) {
+                <option [value]="tm.valor">{{ tm.etiqueta }}</option>
+              }
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Producto Utilizado *</label>
+            <input
+              type="text"
+              class="form-control"
+              placeholder="Ej: Glifosato 75.7%, Priori Xtra, Clorpirifos, Urea..."
+              [(ngModel)]="manejoForm.producto_utilizado"
+            />
+          </div>
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label>Superficie a Tratar (ha) *</label>
+              <div class="input-with-addon">
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  class="form-control"
+                  placeholder="Hectáreas"
+                  [(ngModel)]="manejoForm.superficie_aplicada_ha"
+                  (input)="onSuperficieManejoCambiada()"
+                />
+                <span class="input-addon">ha</span>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Unidad de Medida</label>
+              <select class="form-control" [(ngModel)]="manejoForm.unidad_medida">
+                <option value="LT">Litros (LT)</option>
+                <option value="KG">Kilogramos (KG)</option>
+                <option value="DOSIS">Dosis</option>
+                <option value="GR">Gramos (GR)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label>Dosis por Hectárea (Dosis / ha) *</label>
+              <div class="input-with-addon">
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  class="form-control"
+                  placeholder="Ej: 2"
+                  [(ngModel)]="manejoForm.dosis_por_ha"
+                  (input)="onDosisCambiada()"
+                />
+                <span class="input-addon">{{ manejoForm.unidad_medida }}/ha</span>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Cantidad Total Aplicada *</label>
+              <div class="input-with-addon">
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  class="form-control"
+                  placeholder="Total lote"
+                  [(ngModel)]="manejoForm.cantidad_aplicada"
+                  (input)="onCantidadTotalCambiada()"
+                />
+                <span class="input-addon">{{ manejoForm.unidad_medida }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- BANNER RESUMEN AUTOMÁTICO DE DOSIFICACIÓN -->
+          <div class="calc-dose-banner">
+            <div class="calc-badge">⚡ Dosificación:</div>
+            <div class="calc-formula">
+              <strong>{{ manejoForm.dosis_por_ha || 0 }} {{ manejoForm.unidad_medida }}/ha</strong>
+              &times;
+              <strong>{{ manejoForm.superficie_aplicada_ha || 0 }} ha</strong>
+              =
+              <span class="total-result">{{ manejoForm.cantidad_aplicada || 0 }} {{ manejoForm.unidad_medida }} en total</span>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Fecha de Aplicación</label>
+            <input type="date" class="form-control" [(ngModel)]="manejoForm.fecha" />
+          </div>
+          <div class="form-group">
+            <label>Observaciones de Campo</label>
+            <textarea
+              class="form-control"
+              rows="2"
+              placeholder="Ej: Aplicación con pico cono hueco a 100 l/ha..."
+              [(ngModel)]="manejoForm.observaciones"
+            ></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" (click)="modalManejoAbierto.set(false)">
+            Cancelar
+          </button>
+          <button class="btn btn-primary" (click)="guardarManejo()" [disabled]="guardando()">
+            Guardar Aplicación
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- MODAL: REGISTRAR COSECHA (FASE 4) -->
+  @if (modalCosechaAbierto()) {
+    <div class="modal-backdrop animate-fade-in">
+      <div class="modal-dialog animate-scale-up">
+        <div class="modal-header">
+          <h3 class="modal-title">🚜 Registrar Jornada de Cosecha</h3>
+          <button class="btn-close" (click)="modalCosechaAbierto.set(false)">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Cultivo Cosechado</label>
+            <input type="text" class="form-control" [(ngModel)]="cosechaForm.cultivo_cosechado" />
+          </div>
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label>Fecha de Cosecha *</label>
+              <input type="date" class="form-control" [(ngModel)]="cosechaForm.fecha_cosecha" />
+            </div>
+            <div class="form-group">
+              <label>Fecha Fin (Opcional)</label>
+              <input type="date" class="form-control" [(ngModel)]="cosechaForm.fecha_fin_cosecha" />
+            </div>
+          </div>
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label>Superficie Cosechada (ha) *</label>
+              <div class="input-with-addon">
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  class="form-control"
+                  placeholder="Hectáreas"
+                  [(ngModel)]="cosechaForm.superficie_cosechada_ha"
+                  (input)="onSuperficieCosechaCambiada()"
+                />
+                <span class="input-addon">ha</span>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Unidad de Medida</label>
+              <select class="form-control" [(ngModel)]="cosechaForm.unidad_medida">
+                <option value="TN">Toneladas (TN)</option>
+                <option value="KG">Kilogramos (KG)</option>
+                <option value="QQ">Quintales (QQ)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label>Rendimiento por Hectárea (Producto / ha) *</label>
+              <div class="input-with-addon">
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  class="form-control"
+                  placeholder="Ej: 3.0"
+                  [(ngModel)]="cosechaForm.rendimiento_por_ha"
+                  (input)="onRendimientoCosechaCambiado()"
+                />
+                <span class="input-addon">{{ cosechaForm.unidad_medida }}/ha</span>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Cantidad Total Producida *</label>
+              <div class="input-with-addon">
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  class="form-control"
+                  placeholder="Total producido"
+                  [(ngModel)]="cosechaForm.cantidad_producida"
+                  (input)="onCantidadProducidaCambiada()"
+                />
+                <span class="input-addon">{{ cosechaForm.unidad_medida }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- BANNER RESUMEN AUTOMÁTICO DE RENDIMIENTO / COSECHA -->
+          <div class="calc-dose-banner banner-cosecha">
+            <div class="calc-badge">🚜 Rendimiento:</div>
+            <div class="calc-formula">
+              <strong>{{ cosechaForm.rendimiento_por_ha || 0 }} {{ cosechaForm.unidad_medida }}/ha</strong>
+              &times;
+              <strong>{{ cosechaForm.superficie_cosechada_ha || 0 }} ha</strong>
+              =
+              <span class="total-result">{{ cosechaForm.cantidad_producida || 0 }} {{ cosechaForm.unidad_medida }} en total</span>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Observaciones de Cosecha</label>
+            <textarea
+              class="form-control"
+              rows="2"
+              placeholder="Ej: Grano limpio, humedad 13%, buena calidad..."
+              [(ngModel)]="cosechaForm.observaciones"
+            ></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" (click)="modalCosechaAbierto.set(false)">
+            Cancelar
+          </button>
+          <button class="btn btn-purple" (click)="guardarCosecha()" [disabled]="guardando()">
+            Guardar Cosecha
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- MODAL: FINALIZAR CAMPAÑA -->
+  @if (modalFinalizarCicloAbierto()) {
+    <div class="modal-backdrop animate-fade-in">
+      <div class="modal-dialog animate-scale-up">
+        <div class="modal-header">
+          <h3 class="modal-title">✓ Finalizar Campaña Agrícola</h3>
+          <button class="btn-close" (click)="modalFinalizarCicloAbierto.set(false)">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p>
+            ¿Está seguro de consolidar y cerrar la campaña
+            <strong>{{ areaSeleccionada()?.ciclo_activo?.campana }}</strong> de
+            <strong>{{ areaSeleccionada()?.ciclo_activo?.cultivo }}</strong>?
+          </p>
+          <p class="text-muted">
+            La información de labores, siembra, aplicaciones y cosechas se archivará en el historial permanente de la parcela, permitiendo iniciar una nueva campaña.
+          </p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" (click)="modalFinalizarCicloAbierto.set(false)">
+            Cancelar
+          </button>
+          <button class="btn btn-danger" (click)="confirmarFinalizarCiclo()" [disabled]="guardando()">
+            Confirmar y Cerrar Campaña
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- MODAL: DESACTIVAR PARCELA -->
+  @if (modalEliminarAreaAbierto()) {
+    <div class="modal-backdrop animate-fade-in">
+      <div class="modal-dialog animate-scale-up">
+        <div class="modal-header">
+          <h3 class="modal-title">🗑️ Desactivar Parcela Agrícola</h3>
+          <button class="btn-close" (click)="modalEliminarAreaAbierto.set(false)">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p>
+            ¿Desea desactivar la parcela <strong>{{ areaSeleccionada()?.nombre }}</strong>?
+          </p>
+          <p class="text-muted">
+            La parcela dejará de mostrarse en el mapa activo, pero todo su historial de campañas se mantendrá archivado en el sistema.
+          </p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" (click)="modalEliminarAreaAbierto.set(false)">
+            Cancelar
+          </button>
+          <button class="btn btn-danger" (click)="confirmarEliminarArea()" [disabled]="guardando()">
+            Desactivar
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- TOAST NOTIFICACIÓN -->
+  @if (toast()) {
+    <div class="toast-floating animate-slide-up" [class]="'toast-' + toast()!.tipo">
+      <span>{{ toast()!.mensaje }}</span>
+      <button class="toast-close" (click)="toast.set(null)">&times;</button>
+    </div>
+  }
+</div>
